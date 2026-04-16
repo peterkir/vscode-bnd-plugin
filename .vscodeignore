@@ -1,0 +1,12 @@
+# Source files — not needed at runtime
+src/
+tsconfig.json
+server/src/
+server/tsconfig.json
+server/package.json
+server/package-lock.json
+
+# Dev artefacts
+.gitignore
+*.vsix
+package-lock.json

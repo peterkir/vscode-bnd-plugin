@@ -1,0 +1,184 @@
+{
+  "name": "vscode-bnd",
+  "displayName": "Bnd and Bndrun Support",
+  "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
+  "version": "0.3.0",
+  "license": "EPL-2.0",
+  "publisher": "bndtools",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:bnd"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "bnd",
+        "aliases": ["Bnd", "bnd"],
+        "extensions": [".bnd", ".bndrun"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bnd",
+        "scopeName": "source.bnd",
+        "path": "./syntaxes/bnd.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "bnd.cli.build",
+        "title": "Build Project",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.run",
+        "title": "Run",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.test",
+        "title": "Test Project",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.runtests",
+        "title": "Run OSGi Tests",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.resolve",
+        "title": "Resolve (.bndrun)",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.clean",
+        "title": "Clean Project",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.baseline",
+        "title": "Baseline Check",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.verify",
+        "title": "Verify JARs",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.print",
+        "title": "Print Bundle Info",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.diff",
+        "title": "Diff Bundles",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.wrap",
+        "title": "Wrap JAR as OSGi Bundle",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.export",
+        "title": "Export (.bndrun)",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.release",
+        "title": "Release Project",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.properties",
+        "title": "Show Project Properties",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.info",
+        "title": "Show Project Info",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.version",
+        "title": "Show bnd Version",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.macro",
+        "title": "Evaluate Macro Expression",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.repo",
+        "title": "Repository Commands",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.showReference",
+        "title": "Show CLI Reference",
+        "category": "Bnd"
+      }
+    ],
+    "configuration": {
+      "title": "Bnd",
+      "properties": {
+        "bnd.cli.executable": {
+          "type": "string",
+          "default": "bnd",
+          "description": "Path or command used to invoke the bnd CLI. Use 'bnd' if it is on your PATH (e.g. installed via brew), or 'java -jar /path/to/biz.aQute.bnd.jar' to run it as an executable JAR."
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        { "command": "bnd.cli.build" },
+        { "command": "bnd.cli.run" },
+        { "command": "bnd.cli.test" },
+        { "command": "bnd.cli.runtests" },
+        { "command": "bnd.cli.resolve" },
+        { "command": "bnd.cli.clean" },
+        { "command": "bnd.cli.baseline" },
+        { "command": "bnd.cli.verify" },
+        { "command": "bnd.cli.print" },
+        { "command": "bnd.cli.diff" },
+        { "command": "bnd.cli.wrap" },
+        { "command": "bnd.cli.export" },
+        { "command": "bnd.cli.release" },
+        { "command": "bnd.cli.properties" },
+        { "command": "bnd.cli.info" },
+        { "command": "bnd.cli.version" },
+        { "command": "bnd.cli.macro" },
+        { "command": "bnd.cli.repo" },
+        { "command": "bnd.cli.showReference" }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile:all",
+    "compile": "tsc -p ./tsconfig.json",
+    "compile:server": "tsc -p ./server/tsconfig.json",
+    "compile:all": "npm run compile && npm run compile:server",
+    "watch": "tsc -watch -p ./",
+    "watch:server": "tsc -watch -p ./server/",
+    "package": "vsce package --allow-missing-repository --no-git-tag-version"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.0.0"
+  }
+}

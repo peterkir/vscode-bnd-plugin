@@ -1,0 +1,110 @@
+{
+  "name": "BND",
+  "scopeName": "source.bnd",
+  "fileTypes": ["bnd", "bndrun"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#instruction-line" },
+    { "include": "#osgi-header-line" },
+    { "include": "#property-line" },
+    { "include": "#macro" },
+    { "include": "#version-range" },
+    { "include": "#string" },
+    { "include": "#directive" },
+    { "include": "#continuation" }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.bnd",
+          "match": "^\\s*#.*$"
+        },
+        {
+          "name": "comment.line.double-slash.bnd",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "instruction-line": {
+      "match": "^\\s*(-[a-zA-Z][a-zA-Z0-9._-]*)\\s*(?:(:=|:|=))",
+      "captures": {
+        "1": { "name": "keyword.control.instruction.bnd" },
+        "2": { "name": "punctuation.separator.key-value.bnd" }
+      }
+    },
+    "osgi-header-line": {
+      "match": "^\\s*([A-Z][a-zA-Z0-9]*(?:-[A-Za-z][a-zA-Z0-9]*)*)\\s*(:)",
+      "captures": {
+        "1": { "name": "storage.type.header.bnd" },
+        "2": { "name": "punctuation.separator.key-value.bnd" }
+      }
+    },
+    "property-line": {
+      "match": "^\\s*([a-zA-Z][a-zA-Z0-9._-]*)\\s*(?:(:=|:|=))",
+      "captures": {
+        "1": { "name": "variable.other.property.bnd" },
+        "2": { "name": "punctuation.separator.key-value.bnd" }
+      }
+    },
+    "macro": {
+      "name": "meta.embedded.macro.bnd",
+      "begin": "\\$\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.begin.bnd" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.end.bnd" }
+      },
+      "patterns": [
+        {
+          "name": "entity.name.function.macro.bnd",
+          "match": "[a-zA-Z_][a-zA-Z0-9_.]*"
+        },
+        { "include": "#macro" }
+      ]
+    },
+    "version-range": {
+      "name": "constant.numeric.version-range.bnd",
+      "match": "[\\[\\(]\\d[^,\\]\\)]*,[^\\]\\)]*[\\]\\)]"
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.bnd",
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.bnd" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.bnd" }
+          },
+          "patterns": [
+            { "include": "#macro" }
+          ]
+        },
+        {
+          "name": "string.quoted.single.bnd",
+          "begin": "'",
+          "end": "'",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.bnd" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.bnd" }
+          }
+        }
+      ]
+    },
+    "directive": {
+      "name": "variable.other.directive.bnd",
+      "match": "\\b([a-zA-Z_][a-zA-Z0-9_-]*)(:=)"
+    },
+    "continuation": {
+      "name": "constant.character.escape.bnd",
+      "match": "\\\\\\s*$"
+    }
+  }
+}
