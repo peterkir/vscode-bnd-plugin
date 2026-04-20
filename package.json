@@ -5,6 +5,23 @@
   "version": "0.3.0",
   "license": "EPL-2.0",
   "publisher": "bndtools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peterkir/vscode-plugin-bnd"
+  },
+  "bugs": {
+    "url": "https://github.com/peterkir/vscode-plugin-bnd/issues"
+  },
+  "homepage": "https://github.com/peterkir/vscode-plugin-bnd#readme",
+  "keywords": [
+    "bnd",
+    "bndtools",
+    "osgi",
+    "bndrun",
+    "java",
+    "bundle",
+    "manifest"
+  ],
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -161,7 +178,59 @@
         { "command": "bnd.cli.repo" },
         { "command": "bnd.cli.showReference" }
       ]
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "bnd.walkthrough",
+        "title": "Get Started with Bnd and Bndrun Support",
+        "description": "Learn the features of this extension: syntax highlighting, IntelliSense, hover docs, and integrated CLI commands.",
+        "steps": [
+          {
+            "id": "bnd.walkthrough.start",
+            "title": "Overview",
+            "description": "This extension activates automatically for `.bnd` and `.bndrun` files and provides syntax highlighting, completions, hover documentation, and 19 integrated bnd CLI commands.",
+            "media": {
+              "markdown": "walkthroughs/01-getting-started.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.completions",
+            "title": "IntelliSense Completions",
+            "description": "Press `Ctrl+Space` on a new line to browse instructions and headers, or type `${` to trigger macro completions.",
+            "media": {
+              "markdown": "walkthroughs/02-completions.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.hover",
+            "title": "Hover Documentation",
+            "description": "Hover over any instruction, header, or macro name to see its signature, description, and a ready-to-use example.",
+            "media": {
+              "markdown": "walkthroughs/03-hover-docs.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.cli",
+            "title": "Integrated CLI Commands",
+            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. Configure the executable path in Settings → `bnd.cli.executable`.",
+            "media": {
+              "markdown": "walkthroughs/04-cli-commands.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.reference",
+            "title": "CLI Reference Panel",
+            "description": "Run **Bnd: Show CLI Reference** to open a searchable panel covering all 77 bnd CLI sub-commands with options and examples.",
+            "completionEvents": [
+              "onCommand:bnd.cli.showReference"
+            ],
+            "media": {
+              "markdown": "walkthroughs/05-cli-reference.md"
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile:all",
@@ -170,7 +239,7 @@
     "compile:all": "npm run compile && npm run compile:server",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
-    "package": "vsce package --allow-missing-repository --no-git-tag-version"
+    "package": "vsce package --no-git-tag-version"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

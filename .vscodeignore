@@ -10,3 +10,8 @@ server/package-lock.json
 .gitignore
 *.vsix
 package-lock.json
+
+# CI / repo metadata
+.github/
+AGENTS.md
+copilot-instructions.md
