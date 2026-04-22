@@ -32,9 +32,13 @@ jobs:
       - name: Package extension
         run: npm run package
 
+      - name: Get VSIX filename
+        id: vsix_name
+        run: echo "name=$(node -p "require('./package.json').name + '-' + require('./package.json').version + '.vsix'")" >> "$GITHUB_OUTPUT"
+
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7
         with:
-          name: vsix
+          name: ${{ steps.vsix_name.outputs.name }}
           path: "*.vsix"
           retention-days: 30
