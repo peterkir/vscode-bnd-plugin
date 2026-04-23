@@ -72,6 +72,25 @@ Do not invent option names, syntaxes, defaults, or examples when canonical docs 
 Before completing work:
 
 - Build extension and server TypeScript successfully.
+- Build and run extension tests (`npm run compile:tests` and `npm test`) when behavior changes.
 - Confirm command registration and invocation paths are consistent.
 - Manually sanity-check at least one completion and one hover case when touching language data.
 - Verify docs links and references still point to canonical bnd docs.
+
+## Extension Test Runner
+
+- The repository uses VS Code Extension Test Runner via `@vscode/test-electron`.
+- Standard test flow:
+   - `npm run compile:all`
+   - `npm run compile:tests`
+   - `npm test`
+
+## Upstream Java Source Parity Checks
+
+- Upstream command parity tests can validate extension CLI command coverage against:
+   - `biz.aQute.bnd/src/aQute/bnd/main/bnd.java`
+- Configure source repo path with one of:
+   - `BND_SOURCE_REPO`
+   - `BND_JAVA_REPO`
+- If unset, tests try sibling path `../bnd`.
+- If no source repo is found, parity tests are skipped.

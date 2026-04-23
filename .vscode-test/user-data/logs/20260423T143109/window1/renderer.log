@@ -1,0 +1,30 @@
+2026-04-23 14:31:12.588 [info] Started initializing default profile extensions in extensions installation folder. file:///c%3A/git/github.com/peterkir/vscode-bnd-plugin/.vscode-test/extensions
+2026-04-23 14:31:12.592 [info] Started local extension host with pid 31388.
+2026-04-23 14:31:13.118 [info] Completed initializing default profile extensions in extensions installation folder. file:///c%3A/git/github.com/peterkir/vscode-bnd-plugin/.vscode-test/extensions
+2026-04-23 14:31:13.152 [info] Loading development extension at c:\git\github.com\peterkir\vscode-bnd-plugin
+2026-04-23 14:31:13.385 [info] Settings Sync: Account status changed from uninitialized to unavailable
+2026-04-23 14:31:18.421 [error] ReferenceError: suite is not defined
+	at Object.<anonymous> (c:\git\github.com\peterkir\vscode-bnd-plugin\out\test\test\suite\manifest.test.js:39:1)
+	at Module._compile (node:internal/modules/cjs/loader:1713:14)
+	at Module._extensions..js (node:internal/modules/cjs/loader:1847:10)
+	at Module.load (node:internal/modules/cjs/loader:1448:32)
+	at Module._load (node:internal/modules/cjs/loader:1270:12)
+	at c._load (node:electron/js2c/node_init:2:18041)
+	at i._load (file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:831:6589)
+	at e._load (file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:649:28611)
+	at n._load (file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:641:25847)
+	at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+	at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+	at Module.require (node:internal/modules/cjs/loader:1470:12)
+	at require (node:internal/modules/helpers:147:16)
+	at c:\git\github.com\peterkir\vscode-bnd-plugin\node_modules\mocha\lib\mocha.js:416:36
+	at Array.forEach (<anonymous>)
+	at Mocha.loadFiles (c:\git\github.com\peterkir\vscode-bnd-plugin\node_modules\mocha\lib\mocha.js:413:14)
+	at Mocha.run (c:\git\github.com\peterkir\vscode-bnd-plugin\node_modules\mocha\lib\mocha.js:988:10)
+	at c:\git\github.com\peterkir\vscode-bnd-plugin\out\test\test\suite\index.js:69:15
+	at new Promise (<anonymous>)
+	at Object.run (c:\git\github.com\peterkir\vscode-bnd-plugin\out\test\test\suite\index.js:68:11)
+	at file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:505:22068
+	at new Promise (<anonymous>)
+	at yP._doHandleExtensionTests (file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:505:21761)
+	at async yP.$extensionTestsExecute (file:///c:/idefix/apps/VSCode/10c8e557c8/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:505:21270)

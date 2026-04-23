@@ -1,4 +1,4 @@
-# Bnd and Bndrun Support for VS Code
+# bnd / bndtools for VS Code
 
 A Visual Studio Code extension providing rich language support for **bnd** (`.bnd`) and **bndrun** (`.bndrun`) files used in [OSGi](https://www.osgi.org/) development with the [bnd/bndtools](https://bnd.bndtools.org) toolchain.
 
@@ -86,6 +86,10 @@ All commands are available in the **Command Palette** (`Ctrl+Shift+P`) under the
 | `Bnd: Show bnd Version` | `bnd version` |
 | `Bnd: Evaluate Macro Expression` | `bnd macro` — enter a macro expression interactively |
 | `Bnd: Repository Commands` | `bnd repo` sub-command picker |
+| `Bnd: Download Latest bnd CLI JAR` | Downloads the latest `biz.aQute.bnd:biz.aQute.bnd` from Maven Central or a configured mirror into the extension tool folder and sets `bnd.cli.executable` automatically |
+| `Bnd: Download bnd CLI JAR Version...` | Lets you choose an older available bnd version on demand and configures `bnd.cli.executable` to use it |
+| `Bnd: Select Java Runtime for bnd CLI` | Selects one of the runtimes from `java.configuration.runtimes` and uses its `bin/java` for bnd JAR execution |
+| `Bnd: Discover Java Runtimes from Folder...` | Recursively scans a root folder for Java runtimes and adds found runtimes to `java.configuration.runtimes` |
 | `Bnd: Show CLI Reference` | Opens a searchable webview panel with all 77 bnd CLI commands |
 
 All commands run in VS Code's integrated terminal named **"bnd"**.
@@ -105,6 +109,21 @@ Set the `bnd.cli.executable` workspace or user setting to point to your bnd inst
 }
 ```
 
+You can run **Bnd: Download Latest bnd CLI JAR** to download and configure the newest available release immediately. If you need an older version such as `7.2.3`, run **Bnd: Download bnd CLI JAR Version...** and select one of the available versions or enter one explicitly. Both commands store the JAR in the extension's `library/tool` storage folder and update `bnd.cli.executable` to `java -jar ...` automatically.
+
+To choose a specific Java runtime for `java -jar`, run **Bnd: Select Java Runtime for bnd CLI**. This reads from VS Code's `java.configuration.runtimes` and updates `bnd.cli.javaExecutable`.
+
+If your Java runtime is not yet listed, run **Bnd: Discover Java Runtimes from Folder...**. The selected root folder is searched recursively, and discovered runtimes are appended to `java.configuration.runtimes`.
+
+If you need to use a Central-compatible mirror instead of Maven Central, set `bnd.cli.mavenRepository` first, for example:
+
+```jsonc
+{
+  "bnd.cli.mavenRepository": "https://repo1.maven.org/maven2",
+  "bnd.cli.javaExecutable": "java"
+}
+```
+
 ### CLI Reference Panel
 
 Run **Bnd: Show CLI Reference** (`Ctrl+Shift+P → Bnd: Show CLI Reference`) to open a searchable panel
@@ -116,7 +135,7 @@ showing all 77 bnd CLI sub-commands with their full option lists and examples fr
 
 ### From VSIX
 
-1. Download or build `vscode-bnd-0.3.0.vsix`.
+1. Download or build `vscode-bnd-<version>.vsix`.
 2. In VS Code open the Extensions view (`Ctrl+Shift+X`).
 3. Click the `...` menu → **Install from VSIX…** and select the file.
 
@@ -125,13 +144,26 @@ See [INSTALL.md](INSTALL.md) for full instructions including command-line instal
 ### Build from Source
 
 ```bash
-cd vscode-bnd
+cd vscode-bnd-plugin
 npm install              # install client deps
 npm install --prefix server  # install server deps
 npm run compile:all      # compile client + server TypeScript
-npx @vscode/vsce package --allow-missing-repository --no-git-tag-version
-# Produces vscode-bnd-0.3.0.vsix
+npm run compile:tests    # compile VS Code extension tests
+npm test                 # run VS Code extension tests
+npm run package          # downloads vsce on demand and builds the VSIX
+# Produces vscode-bnd-<version>.vsix
 ```
+
+### Upstream Java Repo Parity Tests
+
+Some tests validate CLI command parity against bnd Java source in `biz.aQute.bnd/src/aQute/bnd/main/bnd.java`.
+
+Set one of these environment variables before running `npm test`:
+
+- `BND_SOURCE_REPO=<path-to-bnd-repo>`
+- `BND_JAVA_REPO=<path-to-bnd-repo>`
+
+If neither is set, tests also try sibling folder `../bnd`. If no source repo is found, parity checks are skipped.
 
 ## Usage
 

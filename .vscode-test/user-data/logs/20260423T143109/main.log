@@ -1,0 +1,7 @@
+2026-04-23 14:31:10.625 [info] CrossAppIPCService: connecting to peer
+2026-04-23 14:31:10.632 [info] CrossAppIPCService: disconnected (instance-already-active)
+2026-04-23 14:31:10.793 [error] Error: Error mutex already exists
+    at Is.installMutex (file:///C:/idefix/apps/VSCode/10c8e557c8/resources/app/out/main.js:516:26126)
+2026-04-23 14:31:10.957 [info] update#setState disabled
+2026-04-23 14:31:10.957 [info] update#ctor - updates are disabled by the environment
+2026-04-23 14:31:18.540 [info] Extension host with pid 31388 exited with code: 0, signal: unknown.

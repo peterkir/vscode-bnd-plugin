@@ -1,10 +1,11 @@
 {
   "name": "vscode-bnd",
-  "displayName": "Bnd and Bndrun Support",
+  "displayName": "bnd / bndtools",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.3.0",
+  "version": "0.9.0",
   "license": "EPL-2.0",
   "publisher": "bndtools",
+  "icon": "media/swirl-128.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/peterkir/vscode-plugin-bnd"
@@ -141,6 +142,26 @@
         "category": "Bnd"
       },
       {
+        "command": "bnd.cli.downloadCli",
+        "title": "Download Latest bnd CLI JAR",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.downloadCliVersion",
+        "title": "Download bnd CLI JAR Version...",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.selectJavaRuntime",
+        "title": "Select Java Runtime for bnd CLI",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.cli.discoverJavaRuntimes",
+        "title": "Discover Java Runtimes from Folder...",
+        "category": "Bnd"
+      },
+      {
         "command": "bnd.cli.showReference",
         "title": "Show CLI Reference",
         "category": "Bnd"
@@ -153,6 +174,16 @@
           "type": "string",
           "default": "bnd",
           "description": "Path or command used to invoke the bnd CLI. Use 'bnd' if it is on your PATH (e.g. installed via brew), or 'java -jar /path/to/biz.aQute.bnd.jar' to run it as an executable JAR."
+        },
+        "bnd.cli.mavenRepository": {
+          "type": "string",
+          "default": "https://repo.maven.apache.org/maven2",
+          "description": "Base URL of the Maven repository used to download biz.aQute.bnd JARs. Change this to a Central-compatible mirror if needed."
+        },
+        "bnd.cli.javaExecutable": {
+          "type": "string",
+          "default": "java",
+          "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
         }
       }
     },
@@ -176,13 +207,17 @@
         { "command": "bnd.cli.version" },
         { "command": "bnd.cli.macro" },
         { "command": "bnd.cli.repo" },
+        { "command": "bnd.cli.downloadCli" },
+        { "command": "bnd.cli.downloadCliVersion" },
+        { "command": "bnd.cli.selectJavaRuntime" },
+        { "command": "bnd.cli.discoverJavaRuntimes" },
         { "command": "bnd.cli.showReference" }
       ]
     },
     "walkthroughs": [
       {
         "id": "bnd.walkthrough",
-        "title": "Get Started with Bnd and Bndrun Support",
+        "title": "Get Started with bnd / bndtools",
         "description": "Learn the features of this extension: syntax highlighting, IntelliSense, hover docs, and integrated CLI commands.",
         "steps": [
           {
@@ -212,7 +247,7 @@
           {
             "id": "bnd.walkthrough.cli",
             "title": "Integrated CLI Commands",
-            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. Configure the executable path in Settings → `bnd.cli.executable`.",
+            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. Configure the executable path in Settings → `bnd.cli.executable`, or use Bnd: Download Latest bnd CLI JAR to fetch and configure the newest release automatically.",
             "media": {
               "markdown": "walkthroughs/04-cli-commands.md"
             }
@@ -236,18 +271,23 @@
     "vscode:prepublish": "npm run compile:all",
     "compile": "tsc -p ./tsconfig.json",
     "compile:server": "tsc -p ./server/tsconfig.json",
+    "compile:tests": "tsc -p ./tsconfig.test.json",
     "compile:all": "npm run compile && npm run compile:server",
+    "pretest": "npm run compile:all && npm run compile:tests",
+    "test": "node ./out/test/test/runTest.js",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
-    "package": "vsce package --no-git-tag-version"
+    "package": "npx @vscode/vsce package --allow-missing-repository --no-git-tag-version"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "@types/node": "^25.6.0",
     "@types/vscode": "^1.75.0",
-    "@vscode/vsce": "^3.9.1",
+    "@vscode/test-electron": "^2.5.2",
+    "mocha": "^10.8.2",
     "typescript": "^6.0.3"
   }
 }

@@ -1,0 +1,10 @@
+2026-04-23 14:31:40.321 [info] Started local extension host with pid 54532.
+2026-04-23 14:31:40.464 [info] Loading development extension at c:\git\github.com\peterkir\vscode-bnd-plugin
+2026-04-23 14:31:41.047 [info] Settings Sync: Account status changed from uninitialized to unavailable
+2026-04-23 14:31:41.553 [info] [0m%s%s[0m  
+2026-04-23 14:31:41.554 [info] [0m%s%s[0m    Extension manifest
+2026-04-23 14:31:41.599 [info]   [32m  ✔[0m[90m %s[0m contains expected bnd command contributions
+2026-04-23 14:31:41.599 [info]   [32m  ✔[0m[90m %s[0m uses expected bnd language comment syntax
+2026-04-23 14:31:41.599 [info] [0m%s%s[0m    Upstream bnd Java command parity
+2026-04-23 14:31:41.626 [info]   [32m  ✔[0m[90m %s[0m includes extension CLI commands in biz.aQute.bnd command source
+2026-04-23 14:31:41.627 [info] [92m [0m[32m %d passing[0m[90m (%s)[0m 3 74ms

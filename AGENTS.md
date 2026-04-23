@@ -100,11 +100,35 @@ Guardrails:
 - Prefer data updates over logic changes when behavior intent is unchanged.
 - Keep user-facing terms consistent with bnd documentation.
 
+## Test and Build Workflow
+
+- Install dependencies:
+  - `npm install`
+  - `npm install --prefix server`
+- Build all TypeScript targets:
+  - `npm run compile:all`
+- Build extension tests:
+  - `npm run compile:tests`
+- Run VS Code extension tests:
+  - `npm test`
+- Package VSIX:
+  - `npm run package`
+
+### Upstream Java Repo-Based Tests
+
+- The extension test suite can validate CLI command parity against bnd Java source in `biz.aQute.bnd/src/aQute/bnd/main/bnd.java`.
+- To enable this check, set one of:
+  - `BND_SOURCE_REPO=<path-to-bnd-repo>`
+  - `BND_JAVA_REPO=<path-to-bnd-repo>`
+- If neither variable is set, tests also try sibling folder `../bnd`.
+- If no bnd source repo is available, upstream-parity tests are skipped (not failed).
+
 ## Done Criteria
 
 A task is complete when:
 
 - Code compiles for both client and server.
+- Extension tests compile and pass (`npm test`).
 - Affected commands or language features are validated in-context.
 - Documentation references remain accurate.
 - Changes are minimal, focused, and easy to review.
