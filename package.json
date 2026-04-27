@@ -184,6 +184,26 @@
           "type": "string",
           "default": "java",
           "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
+        },
+        "bnd.lsp.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Java-based bnd language server (completion, hover). Requires Java 17+. When disabled the extension falls back to the built-in Node.js server."
+        },
+        "bnd.lsp.javaExecutable": {
+          "type": "string",
+          "default": "java",
+          "description": "Java executable used to launch the bnd language server JAR. Defaults to 'java' (must be on PATH). Override to use a specific JDK, e.g. '/usr/lib/jvm/java-17/bin/java'."
+        },
+        "bnd.lsp.serverVersion": {
+          "type": "string",
+          "default": "latest",
+          "description": "Version of the bnd-lsp server JAR to download. Use 'latest' to always download the newest release, or pin to a specific tag such as 'v0.1.0'."
+        },
+        "bnd.lsp.downloadBaseUrl": {
+          "type": "string",
+          "default": "https://github.com/peterkir/vscode-bnd-plugin/releases",
+          "description": "Base URL for downloading the bnd-lsp server JAR. Defaults to the GitHub Releases page of peterkir/vscode-bnd-plugin."
         }
       }
     },
