@@ -184,6 +184,21 @@
           "type": "string",
           "default": "java",
           "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
+        },
+        "bnd.lsp.javaExecutable": {
+          "type": "string",
+          "default": "java",
+          "description": "Java executable used to launch the bnd language server JAR. Defaults to 'java' (must be on PATH). Override to use a specific JDK, e.g. '/usr/lib/jvm/java-17/bin/java'."
+        },
+        "bnd.lsp.serverVersion": {
+          "type": "string",
+          "default": "latest",
+          "description": "Version of the bnd-lsp server JAR to download. Use 'latest' to always download the newest release, or pin to a specific tag such as 'v0.1.0'."
+        },
+        "bnd.lsp.downloadBaseUrl": {
+          "type": "string",
+          "default": "https://github.com/peterkir/vscode-bnd-plugin/releases",
+          "description": "Base URL for downloading the bnd-lsp server JAR. Defaults to the GitHub Releases page of peterkir/vscode-bnd-plugin."
         }
       }
     },
@@ -270,13 +285,11 @@
   "scripts": {
     "vscode:prepublish": "npm run compile:all",
     "compile": "tsc -p ./tsconfig.json",
-    "compile:server": "tsc -p ./server/tsconfig.json",
     "compile:tests": "tsc -p ./tsconfig.test.json",
-    "compile:all": "npm run compile && npm run compile:server",
+    "compile:all": "npm run compile",
     "pretest": "npm run compile:all && npm run compile:tests",
     "test": "node ./out/test/test/runTest.js",
     "watch": "tsc -watch -p ./",
-    "watch:server": "tsc -watch -p ./server/",
     "package": "npx @vscode/vsce package --allow-missing-repository --no-git-tag-version"
   },
   "dependencies": {

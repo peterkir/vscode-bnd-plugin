@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     LanguageClient,
@@ -7,34 +6,62 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 import { registerCliCommands } from './bndCliCommands';
+import { ensureJar } from './bndLspDownloader';
 
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 
-export function activate(context: vscode.ExtensionContext): void {
-    // Path to the compiled language server
-    const serverModule = context.asAbsolutePath(
-        path.join('server', 'out', 'server.js')
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    // Register bnd CLI commands (always active, independent of the LSP)
+    registerCliCommands(context);
+
+    await startJavaLsp(context);
+
+    // Restart the server when relevant settings change
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(async (e) => {
+            if (
+                e.affectsConfiguration('bnd.lsp.javaExecutable') ||
+                e.affectsConfiguration('bnd.lsp.serverVersion') ||
+                e.affectsConfiguration('bnd.lsp.downloadBaseUrl')
+            ) {
+                await stopClient();
+                await startJavaLsp(context);
+            }
+        })
     );
 
-    // Start the server in a separate Node.js process.
-    // In debug mode the server is started with --inspect so you can attach a debugger.
+    context.subscriptions.push({ dispose: async () => { await stopClient(); } });
+}
+
+export function deactivate(): Thenable<void> | undefined {
+    return stopClient();
+}
+
+// ─── Java LSP ──────────────────────────────────────────────────────────────
+
+/**
+ * Starts the Java-based bnd language server, downloading the JAR if necessary.
+ * On failure a notification is shown but no fallback is attempted.
+ */
+async function startJavaLsp(context: vscode.ExtensionContext): Promise<void> {
+    const lspConfig = vscode.workspace.getConfiguration('bnd.lsp');
+    const javaExe: string = lspConfig.get('javaExecutable', 'java');
+
+    const jarPath = await ensureJar(context);
+    if (!jarPath) {
+        // ensureJar already presented the user with a Retry/Show Output notification
+        return;
+    }
+
     const serverOptions: ServerOptions = {
-        run: {
-            module: serverModule,
-            transport: TransportKind.ipc,
-        },
-        debug: {
-            module: serverModule,
-            transport: TransportKind.ipc,
-            options: { execArgv: ['--nolazy', '--inspect=6009'] },
-        },
+        command: javaExe,
+        args: ['-jar', jarPath],
+        transport: TransportKind.stdio,
     };
 
-    // Register the client for the 'bnd' language
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'bnd' }],
         synchronize: {
-            // Re-send file change events for *.bnd and *.bndrun to the server
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{bnd,bndrun}'),
         },
     };
@@ -46,13 +73,15 @@ export function activate(context: vscode.ExtensionContext): void {
         clientOptions
     );
 
-    client.start();
-    context.subscriptions.push({ dispose: () => client.stop() });
-
-    // Register bnd CLI commands
-    registerCliCommands(context);
+    await client.start();
 }
 
-export function deactivate(): Thenable<void> | undefined {
-    return client ? client.stop() : undefined;
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+async function stopClient(): Promise<void> {
+    if (client) {
+        const c = client;
+        client = undefined;
+        await c.stop();
+    }
 }

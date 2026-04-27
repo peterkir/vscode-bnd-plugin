@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'peterkir'
+version = project.hasProperty('projectVersion') ? project.projectVersion : '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.23.1'
+    implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1'
+    implementation 'biz.aQute.bnd:biz.aQute.bndlib:7.1.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.9'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'peterkir.bndlsp.BndLspLauncher',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'bnd-lsp'
+    archiveClassifier = ''
+    archiveVersion = project.version
+    mergeServiceFiles()
+    manifest {
+        attributes(
+            'Main-Class': 'peterkir.bndlsp.BndLspLauncher',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+// Copy shadow jar to a stable name for release upload
+tasks.register('copyReleaseJar', Copy) {
+    dependsOn shadowJar
+    from(shadowJar.archiveFile)
+    into("${buildDir}/release")
+    rename { 'bnd-lsp.jar' }
+}
+
+build.dependsOn shadowJar
