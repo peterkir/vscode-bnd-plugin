@@ -45,15 +45,11 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 
 ### Language Server Protocol (LSP)
 
-This extension ships with two language server implementations:
+The extension uses a **Java-based language server** (`bnd-lsp`) that is automatically downloaded from [GitHub Releases](https://github.com/peterkir/vscode-bnd-plugin/releases) on first activation, cached locally, and launched via `java -jar`.
 
-#### Java Language Server (default, recommended)
-
-On first activation the extension **automatically downloads** `bnd-lsp.jar` from the [GitHub Releases](https://github.com/peterkir/vscode-bnd-plugin/releases) of this repository, caches it in VS Code's global storage folder, and launches it via `java -jar`.
+The server uses `aQute.bnd.help.Syntax` from `biz.aQute.bndlib` as its canonical data source — completion and hover data are always aligned with the bnd library version bundled in the JAR.
 
 **Requirements:** Java 17 or newer must be on your `PATH` (or configured via `bnd.lsp.javaExecutable`).
-
-The Java server uses `aQute.bnd.help.Syntax` from `biz.aQute.bndlib` as its canonical data source — ensuring completion and hover data is always aligned with the installed version of bndlib.
 
 **Where the JAR is cached:**
 
@@ -63,29 +59,19 @@ The Java server uses `aQute.bnd.help.Syntax` from `biz.aQute.bndlib` as its cano
 | macOS | `~/Library/Application Support/Code/User/globalStorage/bndtools.vscode-bnd/bnd-lsp.jar` |
 | Linux | `~/.config/Code/User/globalStorage/bndtools.vscode-bnd/bnd-lsp.jar` |
 
-#### Node.js Language Server (fallback)
-
-If the Java server is disabled (`bnd.lsp.enable: false`) or fails to download, the extension automatically falls back to the built-in Node.js language server at `server/src/server.ts`.
-
 **Architecture:**
 
 ```
-VS Code (Extension Host)
-────────────────────────
-src/extension.ts
-  │
-  ├─ (Java LSP, default) ──── stdio ──►  bnd-lsp.jar
-  │    src/bndLspDownloader.ts               (Syntax.HELP from bndlib)
-  │
-  └─ (Node.js fallback) ──── IPC ───►  server/out/server.js
-                                           (bndData.ts)
+VS Code (Extension Host)                    Java Language Server (separate process)
+────────────────────────                    ───────────────────────────────────────
+src/extension.ts          ──── stdio ────►  bnd-lsp.jar
+  src/bndLspDownloader.ts                     (Syntax.HELP from biz.aQute.bndlib)
 ```
 
 #### LSP Configuration
 
 | Setting | Default | Description |
 |---|---|---|
-| `bnd.lsp.enable` | `true` | Enable the Java-based bnd language server. |
 | `bnd.lsp.javaExecutable` | `"java"` | Java executable to launch the server JAR. |
 | `bnd.lsp.serverVersion` | `"latest"` | JAR version to download (`"latest"` or e.g. `"v0.1.0"`). |
 | `bnd.lsp.downloadBaseUrl` | GitHub Releases URL | Base URL for downloading the JAR. |
@@ -106,15 +92,7 @@ src/extension.ts
 }
 ```
 
-**Disable the Java LSP (use Node.js fallback):**
-
-```jsonc
-{
-    "bnd.lsp.enable": false
-}
-```
-
-If the download fails, a notification is shown with **Retry**, **Show Output**, and **Disable Java LSP** options. Download progress and errors are logged to the **Bnd Language Server** output channel.
+If the download fails, a notification is shown with **Retry** and **Show Output** options. Download progress and errors are logged to the **Bnd Language Server** output channel.
 
 ## Integrated bnd CLI Commands
 
@@ -199,9 +177,8 @@ See [INSTALL.md](INSTALL.md) for full instructions including command-line instal
 
 ```bash
 cd vscode-bnd-plugin
-npm install              # install client deps
-npm install --prefix server  # install server deps
-npm run compile:all      # compile client + server TypeScript
+npm install              # install extension dependencies
+npm run compile:all      # compile TypeScript
 npm run compile:tests    # compile VS Code extension tests
 npm test                 # run VS Code extension tests
 npm run package          # downloads vsce on demand and builds the VSIX

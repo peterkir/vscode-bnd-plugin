@@ -3,12 +3,6 @@ src/
 out/test/
 tsconfig.json
 tsconfig.test.json
-server/src/
-server/tsconfig.json
-server/package.json
-server/package-lock.json
-server/node_modules/vscode-bnd
-server/node_modules/vscode-bnd/**
 
 # Dev artefacts
 .gitignore

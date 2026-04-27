@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     LanguageClient,
@@ -12,41 +11,21 @@ import { ensureJar } from './bndLspDownloader';
 let client: LanguageClient | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    // Register bnd CLI commands (always, regardless of LSP settings)
+    // Register bnd CLI commands (always active, independent of the LSP)
     registerCliCommands(context);
 
-    const config = vscode.workspace.getConfiguration('bnd.lsp');
-    const lspEnabled: boolean = config.get('enable', true);
-
-    if (lspEnabled) {
-        const started = await tryStartJavaLsp(context);
-        if (!started) {
-            startNodeLsp(context);
-        }
-    } else {
-        startNodeLsp(context);
-    }
+    await startJavaLsp(context);
 
     // Restart the server when relevant settings change
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async (e) => {
             if (
-                e.affectsConfiguration('bnd.lsp.enable') ||
                 e.affectsConfiguration('bnd.lsp.javaExecutable') ||
                 e.affectsConfiguration('bnd.lsp.serverVersion') ||
                 e.affectsConfiguration('bnd.lsp.downloadBaseUrl')
             ) {
                 await stopClient();
-                const newConfig = vscode.workspace.getConfiguration('bnd.lsp');
-                const enabled: boolean = newConfig.get('enable', true);
-                if (enabled) {
-                    const started = await tryStartJavaLsp(context);
-                    if (!started) {
-                        startNodeLsp(context);
-                    }
-                } else {
-                    startNodeLsp(context);
-                }
+                await startJavaLsp(context);
             }
         })
     );
@@ -61,18 +40,17 @@ export function deactivate(): Thenable<void> | undefined {
 // ─── Java LSP ──────────────────────────────────────────────────────────────
 
 /**
- * Attempts to start the Java-based bnd language server.
- * Downloads the JAR if necessary.
- *
- * @returns true if the server was successfully started, false otherwise.
+ * Starts the Java-based bnd language server, downloading the JAR if necessary.
+ * On failure a notification is shown but no fallback is attempted.
  */
-async function tryStartJavaLsp(context: vscode.ExtensionContext): Promise<boolean> {
+async function startJavaLsp(context: vscode.ExtensionContext): Promise<void> {
     const lspConfig = vscode.workspace.getConfiguration('bnd.lsp');
     const javaExe: string = lspConfig.get('javaExecutable', 'java');
 
     const jarPath = await ensureJar(context);
     if (!jarPath) {
-        return false;
+        // ensureJar already presented the user with a Retry/Show Output notification
+        return;
     }
 
     const serverOptions: ServerOptions = {
@@ -81,40 +59,6 @@ async function tryStartJavaLsp(context: vscode.ExtensionContext): Promise<boolea
         transport: TransportKind.stdio,
     };
 
-    client = createLanguageClient(serverOptions);
-    await client.start();
-    return true;
-}
-
-// ─── Node LSP fallback ─────────────────────────────────────────────────────
-
-/**
- * Starts the built-in Node.js-based language server as a fallback.
- */
-function startNodeLsp(context: vscode.ExtensionContext): void {
-    const serverModule = context.asAbsolutePath(
-        path.join('server', 'out', 'server.js')
-    );
-
-    const serverOptions: ServerOptions = {
-        run: {
-            module: serverModule,
-            transport: TransportKind.ipc,
-        },
-        debug: {
-            module: serverModule,
-            transport: TransportKind.ipc,
-            options: { execArgv: ['--nolazy', '--inspect=6009'] },
-        },
-    };
-
-    client = createLanguageClient(serverOptions);
-    client.start();
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function createLanguageClient(serverOptions: ServerOptions): LanguageClient {
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'bnd' }],
         synchronize: {
@@ -122,13 +66,17 @@ function createLanguageClient(serverOptions: ServerOptions): LanguageClient {
         },
     };
 
-    return new LanguageClient(
+    client = new LanguageClient(
         'bndLanguageServer',
         'Bnd Language Server',
         serverOptions,
         clientOptions
     );
+
+    await client.start();
 }
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 async function stopClient(): Promise<void> {
     if (client) {

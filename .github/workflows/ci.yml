@@ -53,10 +53,7 @@ jobs:
       - name: Install client dependencies
         run: npm ci
 
-      - name: Install server dependencies
-        run: npm ci --prefix server
-
-      - name: Compile (client + server)
+      - name: Compile extension
         run: npm run compile:all
 
       - name: Package extension

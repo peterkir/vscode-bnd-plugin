@@ -80,8 +80,7 @@ export async function ensureJar(context: vscode.ExtensionContext): Promise<strin
         const choice = await vscode.window.showErrorMessage(
             `Failed to download bnd-lsp language server JAR: ${message}`,
             'Retry',
-            'Show Output',
-            'Disable Java LSP'
+            'Show Output'
         );
 
         if (choice === 'Retry') {
@@ -89,13 +88,6 @@ export async function ensureJar(context: vscode.ExtensionContext): Promise<strin
         }
         if (choice === 'Show Output') {
             getOutputChannel().show();
-        }
-        if (choice === 'Disable Java LSP') {
-            await vscode.workspace.getConfiguration().update(
-                'bnd.lsp.enable',
-                false,
-                vscode.ConfigurationTarget.Global
-            );
         }
 
         return undefined;
