@@ -50,6 +50,32 @@
         "path": "./syntaxes/bnd.tmLanguage.json"
       }
     ],
+    "debuggers": [
+      {
+        "type": "bnd-java",
+        "label": "Bnd Java",
+        "program": "",
+        "configurationAttributes": {
+          "launch": {
+            "required": ["bndrunFile"],
+            "properties": {
+              "bndrunFile": {
+                "type": "string",
+                "description": "Path to the .bndrun or .bnd file to launch/debug."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "bnd-java",
+            "name": "Debug (bnd .bndrun)",
+            "request": "launch",
+            "bndrunFile": "${workspaceFolder}/example.bndrun"
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "bnd.cli.build",
@@ -164,6 +190,11 @@
       {
         "command": "bnd.cli.showReference",
         "title": "Show CLI Reference",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.debug.run",
+        "title": "Debug (bnd .bndrun)",
         "category": "Bnd"
       }
     ],
