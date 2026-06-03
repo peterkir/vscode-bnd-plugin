@@ -45,22 +45,54 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 
 ### Language Server Protocol (LSP)
 
-This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).  
-The language server runs in a **separate Node.js process**, which means:
+The extension uses a **Java-based language server** (`bnd-lsp`) that is automatically downloaded from [GitHub Releases](https://github.com/peterkir/vscode-bnd-plugin/releases) on first activation, cached locally, and launched via `java -jar`.
 
-- It will never block or crash VS Code's UI thread.
-- The server can be reused by any LSP-compatible editor (Neovim, Emacs, Helix, …) with a small adapter.
-- Adding new capabilities (diagnostics, formatting, go-to-definition) only requires changes in `server/src/server.ts`.
+The server uses `aQute.bnd.help.Syntax` from `biz.aQute.bndlib` as its canonical data source — completion and hover data are always aligned with the bnd library version bundled in the JAR.
+
+**Requirements:** Java 17 or newer must be on your `PATH` (or configured via `bnd.lsp.javaExecutable`).
+
+**Where the JAR is cached:**
+
+| Platform | Path |
+|---|---|
+| Windows | `%APPDATA%\Code\User\globalStorage\bndtools.vscode-bnd\bnd-lsp.jar` |
+| macOS | `~/Library/Application Support/Code/User/globalStorage/bndtools.vscode-bnd/bnd-lsp.jar` |
+| Linux | `~/.config/Code/User/globalStorage/bndtools.vscode-bnd/bnd-lsp.jar` |
 
 **Architecture:**
 
 ```
-VS Code (Extension Host)                Language Server (separate process)
-─────────────────────────               ────────────────────────────────
-client/src/extension.ts  ←── IPC ───►  server/src/server.ts
-  (starts the server,                     (completion, hover,
-   registers the client)                   all LSP logic)
+VS Code (Extension Host)                    Java Language Server (separate process)
+────────────────────────                    ───────────────────────────────────────
+src/extension.ts          ──── stdio ────►  bnd-lsp.jar
+  src/bndLspDownloader.ts                     (Syntax.HELP from biz.aQute.bndlib)
 ```
+
+#### LSP Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| `bnd.lsp.javaExecutable` | `"java"` | Java executable to launch the server JAR. |
+| `bnd.lsp.serverVersion` | `"latest"` | JAR version to download (`"latest"` or e.g. `"v0.1.0"`). |
+| `bnd.lsp.downloadBaseUrl` | GitHub Releases URL | Base URL for downloading the JAR. |
+
+**Pin a specific version:**
+
+```jsonc
+{
+    "bnd.lsp.serverVersion": "v0.1.0"
+}
+```
+
+**Use a specific Java runtime:**
+
+```jsonc
+{
+    "bnd.lsp.javaExecutable": "/usr/lib/jvm/java-17/bin/java"
+}
+```
+
+If the download fails, a notification is shown with **Retry** and **Show Output** options. Download progress and errors are logged to the **Bnd Language Server** output channel.
 
 ## Integrated bnd CLI Commands
 
@@ -145,9 +177,8 @@ See [INSTALL.md](INSTALL.md) for full instructions including command-line instal
 
 ```bash
 cd vscode-bnd-plugin
-npm install              # install client deps
-npm install --prefix server  # install server deps
-npm run compile:all      # compile client + server TypeScript
+npm install              # install extension dependencies
+npm run compile:all      # compile TypeScript
 npm run compile:tests    # compile VS Code extension tests
 npm test                 # run VS Code extension tests
 npm run package          # downloads vsce on demand and builds the VSIX

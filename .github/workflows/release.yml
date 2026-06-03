@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    name: Publish to VS Code Marketplace
+    name: Publish Extension and bnd-lsp JAR
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,6 +15,21 @@ jobs:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build bnd-lsp shadow JAR
+        run: ./gradlew shadowJar -PprojectVersion="${{ github.ref_name }}"
+        working-directory: bnd-lsp
+
+      - name: Copy JAR to stable release name
+        run: |
+          mkdir -p bnd-lsp/build/release
+          cp bnd-lsp/build/libs/bnd-lsp-*.jar bnd-lsp/build/release/bnd-lsp.jar
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -25,10 +40,7 @@ jobs:
       - name: Install client dependencies
         run: npm ci
 
-      - name: Install server dependencies
-        run: npm ci --prefix server
-
-      - name: Compile (client + server)
+      - name: Compile extension
         run: npm run compile:all
 
       - name: Package extension
@@ -37,7 +49,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: "*.vsix"
+          files: |
+            *.vsix
+            bnd-lsp/build/release/bnd-lsp.jar
           generate_release_notes: true
 
       - name: Publish to VS Code Marketplace
