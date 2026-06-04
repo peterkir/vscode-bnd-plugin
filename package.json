@@ -280,7 +280,7 @@
     "package": "npx @vscode/vsce package --allow-missing-repository --no-git-tag-version"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.0.0"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
