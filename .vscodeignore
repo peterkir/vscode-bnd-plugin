@@ -1,12 +1,16 @@
 # Source files — not needed at runtime
 src/
 out/test/
+.vscode/
+.vscode-test/
 tsconfig.json
 tsconfig.test.json
 server/src/
 server/tsconfig.json
 server/package.json
 server/package-lock.json
+server/node_modules/.bin/
+server/node_modules/typescript/
 server/node_modules/vscode-bnd
 server/node_modules/vscode-bnd/**
 
@@ -14,6 +18,7 @@ server/node_modules/vscode-bnd/**
 .gitignore
 *.vsix
 package-lock.json
+CHECKLIST.md
 
 # CI / repo metadata
 .github/

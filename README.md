@@ -45,21 +45,27 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 
 ### Language Server Protocol (LSP)
 
-This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).  
-The language server runs in a **separate Node.js process**, which means:
+This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).
+The language server can be started in three modes:
 
-- It will never block or crash VS Code's UI thread.
-- The server can be reused by any LSP-compatible editor (Neovim, Emacs, Helix, …) with a small adapter.
-- Adding new capabilities (diagnostics, formatting, go-to-definition) only requires changes in `server/src/server.ts`.
+- `java` mode: launches the bundled `biz.aQute.bnd.lsp.jar` with the configured Java executable
+- `node` mode: runs the TypeScript LSP in a separate Node.js process
+- `socket` mode: connects to an already running TCP-based language server on `127.0.0.1:<port>`
+
+This means:
+
+- the server can run in the mode that best matches your environment
+- the extension falls back cleanly if the bundled LSP JAR is missing
+- the LSP remains available for editors that can speak the protocol
 
 **Architecture:**
 
 ```
-VS Code (Extension Host)                Language Server (separate process)
+VS Code (Extension Host)                Language Server (runtime-selected)
 ─────────────────────────               ────────────────────────────────
-client/src/extension.ts  ←── IPC ───►  server/src/server.ts
-  (starts the server,                     (completion, hover,
-   registers the client)                   all LSP logic)
+src/extension.ts  ←── IPC ───►  Java JAR / Node / Socket server
+  (starts and restarts the server,      (completion, hover,
+   registers LSP commands)              diagnostics and command handlers)
 ```
 
 ## Integrated bnd CLI Commands
@@ -94,6 +100,17 @@ All commands are available in the **Command Palette** (`Ctrl+Shift+P`) under the
 
 All commands run in VS Code's integrated terminal named **"bnd"**.
 
+The Java language server also provides these commands through bndlib. A compatible socket server may advertise them as well:
+
+| Command | Description |
+|---|---|
+| `Bnd: Resolve Runbundles (LSP)` | Resolve the active `.bndrun` file |
+| `Bnd: Build Project (LSP)` | Build the project containing the active bnd file |
+| `Bnd: Evaluate Macro (LSP)` | Evaluate a macro in the active document context |
+| `Bnd: Restart Language Server` | Restart using the current `bnd.server.*` settings |
+
+The extension checks server capabilities before invoking an LSP command. Node fallback mode supports completion and hover, but not these bndlib-backed operations.
+
 ### Configuration
 
 Set the `bnd.cli.executable` workspace or user setting to point to your bnd installation:
@@ -108,6 +125,23 @@ Set the `bnd.cli.executable` workspace or user setting to point to your bnd inst
     "bnd.cli.executable": "java -jar /path/to/biz.aQute.bnd.jar"
 }
 ```
+
+For the embedded language server, configure the startup mode in `bnd.server.mode`:
+
+```jsonc
+{
+  "bnd.server.mode": "java",
+  "bnd.server.jar": "",
+  "bnd.server.javaExecutable": "",
+  "bnd.server.jvmArgs": [],
+  "bnd.server.socketPort": 5007
+}
+```
+
+- `java` starts the bundled `server/biz.aQute.bnd.lsp.jar` with the configured Java runtime and provides full bndlib-backed language features and commands.
+- `node` starts the TypeScript language server directly.
+- `socket` connects to an already running LSP on `127.0.0.1:5007`.
+- If no JAR is present, the extension warns and falls back to `node` mode. The fallback provides completion and hover support; bndlib-backed resolve, build, and macro commands require the Java server or a compatible socket server.
 
 You can run **Bnd: Download Latest bnd CLI JAR** to download and configure the newest available release immediately. If you need an older version such as `7.2.3`, run **Bnd: Download bnd CLI JAR Version...** and select one of the available versions or enter one explicitly. Both commands store the JAR in the extension's `library/tool` storage folder and update `bnd.cli.executable` to `java -jar ...` automatically.
 
