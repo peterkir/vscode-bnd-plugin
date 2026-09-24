@@ -1,19 +1,19 @@
 {
-  "name": "vscode-bnd",
-  "displayName": "bnd / bndtools",
+  "name": "bnd",
+  "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "license": "EPL-2.0",
-  "publisher": "bndtools",
+  "publisher": "klibio",
   "icon": "media/swirl-128.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/peterkir/vscode-plugin-bnd"
+    "url": "https://github.com/peterkir/vscode-bnd-plugin"
   },
   "bugs": {
-    "url": "https://github.com/peterkir/vscode-plugin-bnd/issues"
+    "url": "https://github.com/peterkir/vscode-bnd-plugin/issues"
   },
-  "homepage": "https://github.com/peterkir/vscode-plugin-bnd#readme",
+  "homepage": "https://github.com/peterkir/vscode-bnd-plugin#readme",
   "keywords": [
     "bnd",
     "bndtools",
@@ -30,16 +30,24 @@
     "Programming Languages",
     "Other"
   ],
-  "activationEvents": [
-    "onLanguage:bnd"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
         "id": "bnd",
-        "aliases": ["Bnd", "bnd"],
-        "extensions": [".bnd", ".bndrun"],
+        "aliases": [
+          "Bnd",
+          "bnd"
+        ],
+        "extensions": [
+          ".bnd",
+          ".bndrun",
+          ".mvn"
+        ],
+        "filenames": [
+          "packageinfo",
+          "build.bnd"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -165,11 +173,64 @@
         "command": "bnd.cli.showReference",
         "title": "Show CLI Reference",
         "category": "Bnd"
+      },
+      {
+        "command": "bnd.server.restart",
+        "title": "Restart Language Server",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.resolve",
+        "title": "Resolve Runbundles (LSP)",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.build.project",
+        "title": "Build Project (LSP)",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.macro.expand",
+        "title": "Evaluate Macro (LSP)",
+        "category": "Bnd"
       }
     ],
     "configuration": {
       "title": "Bnd",
       "properties": {
+        "bnd.server.mode": {
+          "type": "string",
+          "enum": [
+            "java",
+            "node",
+            "socket"
+          ],
+          "default": "java",
+          "description": "Execution mode for the bnd Language Server: 'java' runs the full embedded bndlib server, 'node' runs the lightweight TypeScript server, and 'socket' connects to an existing server on a TCP port."
+        },
+        "bnd.server.jar": {
+          "type": "string",
+          "default": "",
+          "description": "Optional custom path to the biz.aQute.bnd.lsp.jar. If empty, the bundled JAR is used."
+        },
+        "bnd.server.javaExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "Java executable used to launch the bnd Language Server. If empty, JAVA_HOME or PATH java is used."
+        },
+        "bnd.server.jvmArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional JVM arguments to pass when starting the Java Language Server."
+        },
+        "bnd.server.socketPort": {
+          "type": "number",
+          "default": 5007,
+          "description": "TCP port for socket mode."
+        },
         "bnd.cli.executable": {
           "type": "string",
           "default": "bnd",
@@ -189,29 +250,87 @@
     },
     "menus": {
       "commandPalette": [
-        { "command": "bnd.cli.build" },
-        { "command": "bnd.cli.run" },
-        { "command": "bnd.cli.test" },
-        { "command": "bnd.cli.runtests" },
-        { "command": "bnd.cli.resolve" },
-        { "command": "bnd.cli.clean" },
-        { "command": "bnd.cli.baseline" },
-        { "command": "bnd.cli.verify" },
-        { "command": "bnd.cli.print" },
-        { "command": "bnd.cli.diff" },
-        { "command": "bnd.cli.wrap" },
-        { "command": "bnd.cli.export" },
-        { "command": "bnd.cli.release" },
-        { "command": "bnd.cli.properties" },
-        { "command": "bnd.cli.info" },
-        { "command": "bnd.cli.version" },
-        { "command": "bnd.cli.macro" },
-        { "command": "bnd.cli.repo" },
-        { "command": "bnd.cli.downloadCli" },
-        { "command": "bnd.cli.downloadCliVersion" },
-        { "command": "bnd.cli.selectJavaRuntime" },
-        { "command": "bnd.cli.discoverJavaRuntimes" },
-        { "command": "bnd.cli.showReference" }
+        {
+          "command": "bnd.cli.build"
+        },
+        {
+          "command": "bnd.cli.run"
+        },
+        {
+          "command": "bnd.cli.test"
+        },
+        {
+          "command": "bnd.cli.runtests"
+        },
+        {
+          "command": "bnd.cli.resolve"
+        },
+        {
+          "command": "bnd.cli.clean"
+        },
+        {
+          "command": "bnd.cli.baseline"
+        },
+        {
+          "command": "bnd.cli.verify"
+        },
+        {
+          "command": "bnd.cli.print"
+        },
+        {
+          "command": "bnd.cli.diff"
+        },
+        {
+          "command": "bnd.cli.wrap"
+        },
+        {
+          "command": "bnd.cli.export"
+        },
+        {
+          "command": "bnd.cli.release"
+        },
+        {
+          "command": "bnd.cli.properties"
+        },
+        {
+          "command": "bnd.cli.info"
+        },
+        {
+          "command": "bnd.cli.version"
+        },
+        {
+          "command": "bnd.cli.macro"
+        },
+        {
+          "command": "bnd.cli.repo"
+        },
+        {
+          "command": "bnd.cli.downloadCli"
+        },
+        {
+          "command": "bnd.cli.downloadCliVersion"
+        },
+        {
+          "command": "bnd.cli.selectJavaRuntime"
+        },
+        {
+          "command": "bnd.cli.discoverJavaRuntimes"
+        },
+        {
+          "command": "bnd.cli.showReference"
+        },
+        {
+          "command": "bnd.server.restart"
+        },
+        {
+          "command": "bnd.resolve"
+        },
+        {
+          "command": "bnd.build.project"
+        },
+        {
+          "command": "bnd.macro.expand"
+        }
       ]
     },
     "walkthroughs": [
@@ -223,7 +342,7 @@
           {
             "id": "bnd.walkthrough.start",
             "title": "Overview",
-            "description": "This extension activates automatically for `.bnd` and `.bndrun` files and provides syntax highlighting, completions, hover documentation, and 19 integrated bnd CLI commands.",
+            "description": "This extension activates automatically for bnd files and provides syntax highlighting, completions, hover documentation, and 23 integrated bnd CLI commands.",
             "media": {
               "markdown": "walkthroughs/01-getting-started.md"
             }
@@ -277,7 +396,10 @@
     "test": "node ./out/test/test/runTest.js",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
-    "package": "npx @vscode/vsce package --allow-missing-repository --no-git-tag-version"
+    "package": "vsce package --no-git-tag-version",
+    "package:prerelease": "vsce package --pre-release --no-git-tag-version",
+    "publish": "vsce publish --no-git-tag-version",
+    "publish:prerelease": "vsce publish --pre-release --no-git-tag-version"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
@@ -287,6 +409,7 @@
     "@types/node": "^25.9.1",
     "@types/vscode": "^1.75.0",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^4.0.0",
     "mocha": "^11.7.5",
     "typescript": "^6.0.3"
   }
