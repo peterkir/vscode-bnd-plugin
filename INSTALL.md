@@ -134,6 +134,25 @@ The extension can launch the bnd server in different modes depending on your set
 6. Open the Command Palette and run `Bnd: Restart Language Server`.
 7. Confirm the server starts in the selected mode and that LSP-backed commands like `Bnd: Resolve Runbundles (LSP)` and `Bnd: Evaluate Macro (LSP)` work.
 
+## Troubleshooting Language Server Startup
+
+1. Open **View: Output** and select **bnd Language Server**. The first initialization exception usually appears before any process-exit message.
+2. Run **Developer: Show Running Extensions** and confirm only the intended bnd extension is active.
+3. Run **Developer: Open Logs Folder**, then inspect the current window's `exthost/exthost.log` and `exthost/output_logging_*/*bnd Language Server.log` files.
+4. Enable Java server debug logging and run **Bnd: Restart Language Server**:
+
+```jsonc
+{
+  "bnd.server.jvmArgs": [
+    "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
+  ]
+}
+```
+
+5. Temporarily set `bnd.server.mode` to `node`. If completion and hover then work, the extension host and document activation are healthy and the problem is specific to Java startup or Java server initialization.
+
+An exit code of `0` means the Java process shut down cleanly. Look earlier in the output for the initialization error that caused the language client to send `shutdown` and `exit`.
+
 ## Uninstalling
 
 1. Open the Extensions view (`Ctrl+Shift+X`).

@@ -99,6 +99,10 @@ Guardrails:
 - Treat upstream bnd docs as source of truth.
 - Prefer data updates over logic changes when behavior intent is unchanged.
 - Keep user-facing terms consistent with bnd documentation.
+- Write and maintain all repository documentation in English.
+- For every code change, update the extension version in `package.json` and `package-lock.json` using Semantic Versioning: patch for compatible fixes, minor for compatible features, major for breaking changes. Do not create tags or commits unless requested.
+- Review affected documentation for every change; update outdated commands, settings, examples, links, and version references. Validate the resulting documentation against the implementation and CLI semantics.
+- Run the complete test suite after every code change. Do not report a change as fully validated unless the entire suite passes; report blockers and skipped tests explicitly.
 
 ## Test and Build Workflow
 
@@ -111,6 +115,7 @@ Guardrails:
   - `npm run compile:tests`
 - Run VS Code extension tests:
   - `npm test`
+- For code changes, run `npm run compile:all`, `npm run compile:tests`, and the complete `npm test` suite with `BND_SOURCE_REPO` (or `BND_JAVA_REPO`) set to an existing bnd source repository. Do not rely on a skipped upstream test or a partial test run.
 - Package VSIX:
   - `npm run package`
 
@@ -129,6 +134,8 @@ A task is complete when:
 
 - Code compiles for both client and server.
 - Extension tests compile and pass (`npm test`).
+- The full test suite runs without unintentional skips; any blocker is disclosed rather than counted as a pass.
 - Affected commands or language features are validated in-context.
-- Documentation references remain accurate.
+- Documentation is in English, matches current code and CLI behavior, and its references remain accurate.
+- Code changes include the appropriate Semantic Versioning bump in both extension package files.
 - Changes are minimal, focused, and easy to review.
