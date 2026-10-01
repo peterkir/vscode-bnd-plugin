@@ -199,7 +199,9 @@ npm run package
 npm run package:prerelease
 ```
 
-This generates `bnd-<version>.vsix` (or `vscode-bnd-<version>.vsix`) in root directory without modifying git tags.
+This generates `bnd-<version>.vsix` in root directory without modifying git tags.
+
+Packaging runs `vscode:prepublish` (`compile:all`, then `bundle`). `bundle` uses esbuild to overwrite `out/extension.js` and `server/out/server.js` with self-contained, minified bundles, so `.vscodeignore` excludes `node_modules/` (except the Codicons font and CSS used by the Effective view), other `out/` files, and source maps. Run `npm run compile:all` afterwards to restore unbundled output for debugging; `npm test` does this automatically.
 
 ### Inspect Package Contents
 
@@ -209,7 +211,7 @@ Verify files included in VSIX bundle:
 npx @vscode/vsce ls
 ```
 
-Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled.
+Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled, and that `vsce` reports no bundling warning (the package contains about 25 files).
 
 ---
 
