@@ -14,6 +14,19 @@ server/node_modules/typescript/
 server/node_modules/vscode-bnd
 server/node_modules/vscode-bnd/**
 
+# Bundled by esbuild (npm run bundle); only entry points and webview assets ship
+**/*.map
+out/**
+!out/extension.js
+server/out/**
+!server/out/server.js
+server/node_modules/**
+node_modules/**
+!node_modules/@vscode/codicons/dist/codicon.css
+!node_modules/@vscode/codicons/dist/codicon.ttf
+!node_modules/@vscode/codicons/LICENSE
+!node_modules/@vscode/codicons/LICENSE-CODE
+
 # Dev artefacts
 .gitignore
 *.vsix
