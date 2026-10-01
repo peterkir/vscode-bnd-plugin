@@ -120,8 +120,26 @@ connection.onHover((params: TextDocumentPositionParams): Hover | null => {
 
     // Normalise: instructions always start with -
     const instrWord = word.startsWith('-') ? word : `-${word}`;
-    const instr = INSTRUCTIONS.find(i => i.label === instrWord || i.label === word);
+    let instr = INSTRUCTIONS.find(i => i.label === instrWord || i.label === word);
+
+    // Support merged instruction properties like -runblacklist.win32 or -buildpath.extra
+    let mergedSuffix = '';
+    if (!instr && instrWord.includes('.')) {
+        const baseKey = instrWord.slice(0, instrWord.indexOf('.'));
+        const suffix = instrWord.slice(instrWord.indexOf('.') + 1);
+        const baseInstr = INSTRUCTIONS.find(i => i.label === baseKey);
+        if (baseInstr) {
+            instr = baseInstr;
+            mergedSuffix = suffix;
+        }
+    }
+
     if (instr) {
+        if (mergedSuffix) {
+            const mergedTitle = `${instr.label}.${mergedSuffix} (Merged Property)`;
+            const mergedDoc = `Merged sub-clause for **${instr.label}** with qualifier \`${mergedSuffix}\`.\n\n${instr.documentation}`;
+            return hoverResult(mergedTitle, mergedDoc, instr.insertText);
+        }
         return hoverResult(instr.detail, instr.documentation, instr.insertText);
     }
 

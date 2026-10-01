@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "compile:all",
+      "problemMatcher": "$tsc",
+      "group": "build",
+      "label": "npm: compile:all",
+      "detail": "Compile the VS Code extension and fallback TypeScript language server."
+    },
+    {
+      "type": "npm",
+      "script": "compile:tests",
+      "problemMatcher": "$tsc",
+      "group": "test",
+      "label": "npm: compile:tests",
+      "detail": "Compile the VS Code extension tests."
+    }
+  ]
+}
