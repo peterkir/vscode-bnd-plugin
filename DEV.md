@@ -227,6 +227,8 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
    git push origin main --tags
    ```
 
+Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`), which packages the VSIX, creates the GitHub Release, and publishes to the Marketplace when the `VSCE_PAT` secret is set. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
+
 ### Step 2: Publish to Visual Studio Marketplace
 
 Ensure `VSCE_PAT` environment variable is set with Personal Access Token:
