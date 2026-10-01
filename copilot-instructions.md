@@ -59,6 +59,8 @@ Do not invent option names, syntaxes, defaults, or examples when canonical docs 
 - Prefer examples that match official docs language and syntax.
 - Keep terminology consistent: instruction, header, macro, command, option.
 - When docs are ambiguous, note assumptions in the PR or commit message and keep changes minimal.
+- Write all repository documentation in English, including new or revised examples and release notes.
+- Review affected documentation after every change; correct obsolete commands, settings, examples, links, and version references, then validate them against current code and bnd CLI behavior.
 
 ## Change Hygiene
 
@@ -66,16 +68,17 @@ Do not invent option names, syntaxes, defaults, or examples when canonical docs 
 - Preserve existing coding style and file organization.
 - Update README content when user-visible behavior changes.
 - Do not refactor unrelated areas while adding command/doc updates.
+- For every code change, bump the extension version in `package.json` and `package-lock.json` according to Semantic Versioning: patch for compatible fixes, minor for compatible features, major for breaking changes. Do not create commits or tags unless requested.
 
 ## Validation Checklist
 
 Before completing work:
 
 - Build extension and server TypeScript successfully.
-- Build and run extension tests (`npm run compile:tests` and `npm test`) when behavior changes.
+- Compile extension tests and run the entire extension test suite (`npm run compile:tests` and `npm test`) after every code change. Set `BND_SOURCE_REPO` or `BND_JAVA_REPO` to an existing bnd source repository so repo-dependent tests run instead of skipping. Do not claim full validation if tests fail, are blocked, or are skipped unexpectedly.
 - Confirm command registration and invocation paths are consistent.
 - Manually sanity-check at least one completion and one hover case when touching language data.
-- Verify docs links and references still point to canonical bnd docs.
+- Verify documentation accuracy, English wording, and links to canonical bnd docs.
 
 ## Extension Test Runner
 

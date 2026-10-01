@@ -43,13 +43,23 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 - A documentation summary from the bnd reference docs.
 - An **example** from the official bnd documentation, shown in a `bnd` code block.
 
+### Effective Properties
+
+Use **Bnd: Open Effective** on a `.bnd` or `.bndrun` file, or select **Bnd Effective** from **Reopen Editor With...**. **Bnd: Open Effective to Side** keeps the source editor visible beside the read-only table. The standard text editor remains the default.
+
+The table shows **Key**, **Value**, **Provenance**, and evaluation **Errors**. Filter rows, resize columns, expand long values, and click provenance links to open defining files. **Expanded** evaluates macros; **Merged** combines supported instructions and headers using bnd's decorated-property semantics. Turning expansion off also disables merging.
+
+Current-file edits appear without saving, including added and deleted properties. Included files and workspace settings use their saved contents; a warning identifies unsaved dependencies. Saving dependencies or using **Refresh** recomputes the view. **Show Effective Source** opens generated read-only bnd text; **Open Original Source** returns to the editable file.
+
+This feature requires workspace trust and a Java language server advertising `bnd.properties.effective`. The bundled server supports it; Node fallback and older custom/socket servers report that it is unavailable. Macro evaluation is not a sandbox: trusted bnd configuration can initialize plugins, create caches, access repositories, or run commands. Effective values can contain secrets; copying or exporting them should be deliberate.
+
 ### Language Server Protocol (LSP)
 
 This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).
 The language server can be started in three modes:
 
 - `java` mode: launches the bundled `biz.aQute.bnd.lsp.jar` with the configured Java executable
-- `node` mode: runs the TypeScript LSP in a separate Node.js process
+- `node` mode: runs the TypeScript LSP directly inside the extension host
 - `socket` mode: connects to an already running TCP-based language server on `127.0.0.1:<port>`
 
 This means:
@@ -100,17 +110,6 @@ All commands are available in the **Command Palette** (`Ctrl+Shift+P`) under the
 
 All commands run in VS Code's integrated terminal named **"bnd"**.
 
-The Java language server also provides these commands through bndlib. A compatible socket server may advertise them as well:
-
-| Command | Description |
-|---|---|
-| `Bnd: Resolve Runbundles (LSP)` | Resolve the active `.bndrun` file |
-| `Bnd: Build Project (LSP)` | Build the project containing the active bnd file |
-| `Bnd: Evaluate Macro (LSP)` | Evaluate a macro in the active document context |
-| `Bnd: Restart Language Server` | Restart using the current `bnd.server.*` settings |
-
-The extension checks server capabilities before invoking an LSP command. Node fallback mode supports completion and hover, but not these bndlib-backed operations.
-
 ### Configuration
 
 Set the `bnd.cli.executable` workspace or user setting to point to your bnd installation:
@@ -138,10 +137,10 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 }
 ```
 
-- `java` starts the bundled `server/biz.aQute.bnd.lsp.jar` with the configured Java runtime and provides full bndlib-backed language features and commands.
+- `java` starts the bundled `server/biz.aQute.bnd.lsp.jar` with the configured Java runtime.
 - `node` starts the TypeScript language server directly.
 - `socket` connects to an already running LSP on `127.0.0.1:5007`.
-- If no JAR is present, the extension warns and falls back to `node` mode. The fallback provides completion and hover support; bndlib-backed resolve, build, and macro commands require the Java server or a compatible socket server.
+- If no JAR is present, the extension automatically warns and falls back to `node` mode.
 
 You can run **Bnd: Download Latest bnd CLI JAR** to download and configure the newest available release immediately. If you need an older version such as `7.2.3`, run **Bnd: Download bnd CLI JAR Version...** and select one of the available versions or enter one explicitly. Both commands store the JAR in the extension's `library/tool` storage folder and update `bnd.cli.executable` to `java -jar ...` automatically.
 

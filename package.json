@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -32,6 +32,21 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "bnd.effective",
+        "displayName": "Bnd Effective",
+        "selector": [
+          {
+            "filenamePattern": "*.bnd"
+          },
+          {
+            "filenamePattern": "*.bndrun"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
     "languages": [
       {
         "id": "bnd",
@@ -59,6 +74,30 @@
       }
     ],
     "commands": [
+      {
+        "command": "bnd.showEffective",
+        "title": "Open Effective",
+        "category": "Bnd",
+        "icon": "$(table)"
+      },
+      {
+        "command": "bnd.showEffectiveToSide",
+        "title": "Open Effective to Side",
+        "category": "Bnd",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "bnd.openSource",
+        "title": "Open Original Source",
+        "category": "Bnd",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "bnd.showEffectiveSource",
+        "title": "Show Effective Source",
+        "category": "Bnd",
+        "icon": "$(file-code)"
+      },
       {
         "command": "bnd.cli.build",
         "title": "Build Project",
@@ -150,13 +189,8 @@
         "category": "Bnd"
       },
       {
-        "command": "bnd.cli.downloadCli",
-        "title": "Download Latest bnd CLI JAR",
-        "category": "Bnd"
-      },
-      {
-        "command": "bnd.cli.downloadCliVersion",
-        "title": "Download bnd CLI JAR Version...",
+        "command": "bnd.cli.configureLib",
+        "title": "Configure bnd Library...",
         "category": "Bnd"
       },
       {
@@ -180,17 +214,17 @@
         "category": "Bnd"
       },
       {
-        "command": "bnd.resolve",
+        "command": "bnd.lsp.resolve",
         "title": "Resolve Runbundles (LSP)",
         "category": "Bnd"
       },
       {
-        "command": "bnd.build.project",
+        "command": "bnd.lsp.buildProject",
         "title": "Build Project (LSP)",
         "category": "Bnd"
       },
       {
-        "command": "bnd.macro.expand",
+        "command": "bnd.lsp.expandMacro",
         "title": "Evaluate Macro (LSP)",
         "category": "Bnd"
       }
@@ -234,12 +268,17 @@
         "bnd.cli.executable": {
           "type": "string",
           "default": "bnd",
-          "description": "Path or command used to invoke the bnd CLI. Use 'bnd' if it is on your PATH (e.g. installed via brew), or 'java -jar /path/to/biz.aQute.bnd.jar' to run it as an executable JAR."
+          "description": "Path or command used to invoke the bnd CLI. Managed automatically by the extension unless you set it yourself. Use 'bnd' if it is on your PATH (e.g. installed via brew), or 'java -jar /path/to/biz.aQute.bnd.jar' to run it as an executable JAR."
         },
         "bnd.cli.mavenRepository": {
           "type": "string",
           "default": "https://repo.maven.apache.org/maven2",
-          "description": "Base URL of the Maven repository used to download biz.aQute.bnd JARs. Change this to a Central-compatible mirror if needed."
+          "description": "Base URL of the Maven repository used to download biz.aQute.bnd release JARs. Change this to a Central-compatible mirror if needed."
+        },
+        "bnd.cli.snapshotRepository": {
+          "type": "string",
+          "default": "https://bndtools.jfrog.io/artifactory/libs-snapshot-local",
+          "description": "Base URL of the Maven repository used to download biz.aQute.bnd snapshot JARs."
         },
         "bnd.cli.javaExecutable": {
           "type": "string",
@@ -249,6 +288,35 @@
       }
     },
     "menus": {
+      "editor/title": [
+        {
+          "command": "bnd.showEffective",
+          "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/ && activeCustomEditorId != bnd.effective",
+          "group": "navigation"
+        },
+        {
+          "command": "bnd.showEffectiveToSide",
+          "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
+          "group": "1_bnd"
+        },
+        {
+          "command": "bnd.openSource",
+          "when": "activeCustomEditorId == bnd.effective || resourceScheme == bnd-effective",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "bnd.showEffective",
+          "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
+          "group": "bnd"
+        },
+        {
+          "command": "bnd.showEffectiveToSide",
+          "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
+          "group": "bnd"
+        }
+      ],
       "commandPalette": [
         {
           "command": "bnd.cli.build"
@@ -305,10 +373,7 @@
           "command": "bnd.cli.repo"
         },
         {
-          "command": "bnd.cli.downloadCli"
-        },
-        {
-          "command": "bnd.cli.downloadCliVersion"
+          "command": "bnd.cli.configureLib"
         },
         {
           "command": "bnd.cli.selectJavaRuntime"
@@ -323,13 +388,13 @@
           "command": "bnd.server.restart"
         },
         {
-          "command": "bnd.resolve"
+          "command": "bnd.lsp.resolve"
         },
         {
-          "command": "bnd.build.project"
+          "command": "bnd.lsp.buildProject"
         },
         {
-          "command": "bnd.macro.expand"
+          "command": "bnd.lsp.expandMacro"
         }
       ]
     },
@@ -366,7 +431,7 @@
           {
             "id": "bnd.walkthrough.cli",
             "title": "Integrated CLI Commands",
-            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. Configure the executable path in Settings → `bnd.cli.executable`, or use Bnd: Download Latest bnd CLI JAR to fetch and configure the newest release automatically.",
+            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. The extension downloads and configures the latest bnd release automatically; use Bnd: Configure bnd Library... to switch to another release, a snapshot, or your own URL.",
             "media": {
               "markdown": "walkthroughs/04-cli-commands.md"
             }
@@ -402,6 +467,9 @@
     "publish:prerelease": "vsce publish --pre-release --no-git-tag-version"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.46-24",
+    "http-proxy-agent": "^9.1.0",
+    "https-proxy-agent": "^9.1.0",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
