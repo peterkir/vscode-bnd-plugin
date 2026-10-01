@@ -4,12 +4,30 @@ All bnd CLI commands are available directly from the VS Code Command Palette —
 
 ## Setting Up the bnd Executable
 
-Open **Settings** (`Ctrl+,`) and search for `bnd.cli.executable`.
+The extension downloads the latest bnd release on first activation and configures `bnd.cli.executable` for you.
+
+Run **Bnd: Configure bnd Library...** to switch to another release, a snapshot build, or a JAR from your own https URL. The choice is stored in the workspace settings.
+
+To use an existing installation instead, set `bnd.cli.executable` yourself (**Settings**, `Ctrl+,`):
 
 | Installation method | Setting value |
 |---|---|
-| `bnd` on your PATH (e.g. `brew install bnd`) | `bnd` (default) |
+| `bnd` on your PATH (e.g. `brew install bnd`) | `bnd` |
 | Executable JAR | `java -jar /path/to/biz.aQute.bnd.jar` |
+
+## Language Server Startup
+
+The extension can start its language server in three modes:
+
+| Mode | Purpose |
+|---|---|
+| `java` | Launch the bundled `biz.aQute.bnd.lsp.jar` using Java |
+| `node` | Run the TypeScript language server directly |
+| `socket` | Connect to an existing TCP LSP server |
+
+The relevant settings are `bnd.server.mode`, `bnd.server.jar`, `bnd.server.javaExecutable`, `bnd.server.jvmArgs`, and `bnd.server.socketPort`.
+
+If the bundled JAR is missing, the extension issues a warning and falls back to the Node server.
 
 ## Running a Command
 

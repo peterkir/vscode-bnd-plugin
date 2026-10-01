@@ -1,0 +1,293 @@
+# Development, Testing, and Publishing Guide
+
+Guide for developing, testing, packaging, publishing, and verifying the `vscode-bnd` extension.
+
+---
+
+## 1. Prerequisites
+
+- **Node.js**: v18 or later
+- **npm**: v9 or later (bundled with Node.js)
+- **Java**: Java 17+ (required for bnd CLI JAR and Java-mode language server)
+- **VS Code**: 1.116.0 or higher
+- **VS Code Extension Publisher Account**: Personal Access Token (PAT) with `Marketplace (Manage)` permissions under publisher `klibio`
+
+---
+
+## 2. Workspace Setup
+
+Clone and install dependencies for both extension client and embedded language server:
+
+```bash
+git clone https://github.com/peterkir/vscode-bnd-plugin.git
+cd vscode-bnd-plugin
+
+# Install extension client dependencies
+npm install
+
+# Install language server dependencies
+npm install --prefix server
+```
+
+### Local Workspace Layout
+
+This setup uses three separate workspaces:
+
+| Purpose | Path |
+|---|---|
+| VS Code extension and TypeScript fallback LSP | This repository (`.`) |
+| Upstream bnd Gradle workspace containing the Java LSP project | `../../bndtools/bnd.wt/fea-bnd-ls` |
+| Sample bnd/RCP project to open in the development host | `../../klibio/example.bnd.rcp` |
+
+The extension repository root is the extension development path. The Java LSP project is a subproject of the upstream bnd workspace; it is not the VS Code extension workspace. The sample project is opened in the Extension Development Host to exercise the extension against a real bnd workspace.
+
+The relative paths above assume the repositories are checked out under the same `github.com` directory. Override them with `BND_LSP_WORKSPACE` or `BND_SAMPLE_WORKSPACE` if your checkout layout differs.
+
+From Git Bash, install and compile the extension workspace:
+
+```bash
+cd /c/git/github.com/peterkir/vscode-bnd-plugin
+npm install
+npm install --prefix server
+npm run compile:all
+```
+
+`compile:all` compiles the extension client and the Node-based fallback LSP. The Java LSP is supplied separately as `server/biz.aQute.bnd.lsp.jar`.
+
+---
+
+## 3. Development Workflow
+
+### Build Scripts
+
+| Command | Action |
+|---|---|
+| `npm run compile` | Compiles extension client (`src/` → `out/`) |
+| `npm run compile:server` | Compiles TypeScript language server (`server/src/` → `server/out/`) |
+| `npm run compile:all` | Compiles both client and server |
+| `npm run compile:tests` | Compiles extension test suite |
+| `npm run watch` | Watches and incrementally recompiles extension client |
+| `npm run watch:server` | Watches and incrementally recompiles language server |
+
+### Debugging in VS Code
+
+1. Open workspace in VS Code.
+2. Switch to **Run and Debug** view (`Ctrl+Shift+D`).
+3. Select **Run Extension** configuration and press `F5`.
+4. New **Extension Development Host** window launches with extension active.
+5. Set breakpoints in `src/` or `server/src/`.
+
+To launch the development extension directly on the sample workspace, close any older Extension Development Host and run this from Git Bash:
+
+```bash
+# Run from the extension repository root. Override any value for your setup.
+VSCODE_CLI="${VSCODE_CLI:-code}"
+BND_EXTENSION_DIR="${BND_EXTENSION_DIR:-$(pwd -W)}"
+BND_SAMPLE_WORKSPACE="${BND_SAMPLE_WORKSPACE:-../../klibio/example.bnd.rcp}"
+
+"$VSCODE_CLI" \
+   --extensionDevelopmentPath="$BND_EXTENSION_DIR" \
+   --new-window "$BND_SAMPLE_WORKSPACE"
+```
+
+If `code` is not on `PATH`, set `VSCODE_CLI` to your VS Code command-line launcher (for example, `/path/to/VSCode/bin/code`). Set `BND_SAMPLE_WORKSPACE` to an absolute path or a path relative to the current directory to use a different sample.
+
+This opens the sample folder in a new Extension Development Host with the extension loaded from this checkout. Open a `.bnd` or `.bndrun` file to activate language features. In the host, use **Developer: Show Running Extensions** to confirm the active bnd extension comes from this repository, then use **View: Output** → **bnd Language Server** to inspect server startup. The default `bnd.server.mode` is `java`; set it to `node` in the Extension Development Host settings when specifically testing the TypeScript fallback.
+
+Workspace settings override User settings. If the sample workspace's `.vscode/settings.json` sets `"bnd.server.mode": "node"`, the Node server starts even when your User settings select `java`, and restarting VS Code does not change that. Check the effective value with **Preferences: Open Workspace Settings (JSON)**; the output channel must show `Starting bnd Language Server JAR with Java ...` for Java-only features.
+
+### Java Language Server Development (`biz.aQute.bnd.lsp`)
+
+Upstream Java LSP server lives in:
+- **Repo / Workspace**: `../../bndtools/bnd.wt/fea-bnd-ls` relative to this repository root (override with `BND_LSP_WORKSPACE`)
+- **Project**: `$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp`
+
+To test modifications in `biz.aQute.bnd.lsp`:
+1. Build the LSP JAR in the bnd workspace:
+   ```bash
+   BND_LSP_WORKSPACE="${BND_LSP_WORKSPACE:-../../bndtools/bnd.wt/fea-bnd-ls}"
+   cd "$BND_LSP_WORKSPACE"
+   ./gradlew :biz.aQute.bnd.lsp:build
+   ```
+2. In the Extension Development Host, configure User or Workspace `settings.json` to use the generated JAR:
+   ```jsonc
+   {
+     "bnd.server.mode": "java",
+     "bnd.server.jar": "<absolute path to the generated biz.aQute.bnd.lsp.jar>",
+     "bnd.server.javaExecutable": "java"
+   }
+   ```
+   In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables.
+3. Restart the language server with **Bnd: Restart Language Server**, or close and relaunch the development host. On Windows, stop the host before rebuilding if the running Java process is holding the JAR open.
+
+---
+
+## 4. Local Testing
+
+### Effective Editor
+
+The optional `bnd.effective` custom text editor uses `workspace/executeCommand` with `bnd.properties.effective`. The request contains `uri`, `documentVersion`, `expanded`, and `merged`. The Java server evaluates an isolated snapshot of the current document and reads dependencies from disk. Responses use schema version 1 and contain rows, provenance URIs, diagnostics, dependency URIs, and generated effective source. Initialization must include `workspaceTrusted: true` to enable evaluation.
+
+If the view reports `Effective properties require an updated Java bnd Language Server`, the running server did not advertise `bnd.properties.effective`. Usual causes: `bnd.server.mode` resolves to `node` (often through workspace settings), Java 17+ was not found and the extension fell back to Node, or `bnd.server.jar` points to an older JAR. Check **Output** → **bnd Language Server** for the startup line and Java version, fix the setting, then run **Bnd: Restart Language Server** and refresh the view.
+
+After Java changes, rebuild and update the bundled JAR before running `npm test`. The suite checks the actual bundled JAR, unsaved text, stale-version rejection, and custom-editor/source commands, not only Java compilation.
+
+On Windows, a running development server may lock its generated JAR. Stop that development host before rebuilding, or temporarily set `target-dir: generated/effective` in the Java LSP project's `bnd.bnd`, build there, and restore the setting afterward. Changing only `-outputmask` is insufficient because bnd also writes a canonical JAR name. Do not replace a running user's server process without approval.
+
+Manual checks: open Effective to Side, edit/add/delete current-file properties without saving, toggle raw/merged modes, follow provenance links, save an included file, and inspect generated source. Check light, dark, and high-contrast themes and narrow editor groups. The view must not write the source document, render property text as HTML, or retain values in webview state.
+
+### Automated Test Suite
+
+Run automated extension tests using VS Code test runner:
+
+```bash
+# Compile and run test suite
+npm test
+```
+
+`npm test` automatically runs `npm run pretest` (`compile:all` + `compile:tests`), then launches VS Code Extension Test Host.
+
+The automated test host is separate from the sample workspace launch above. It opens the extension test suite, not `example.bnd.rcp`. Tests that start the Java LSP use the bundled `server/biz.aQute.bnd.lsp.jar`; rebuild/update that JAR before testing Java LSP changes. `npm test` uses a locally discoverable VS Code executable when available, otherwise the VS Code test runner may download one.
+
+#### Upstream CLI Parity Tests
+
+The test suite includes parity checks against `biz.aQute.bnd` CLI options. To run parity checks against upstream bnd Java source:
+
+```bash
+# Point to local bnd repository
+export BND_SOURCE_REPO="/path/to/bnd"
+# or export BND_JAVA_REPO="/path/to/bnd"
+
+npm test
+```
+
+If neither environment variable is set and `../bnd` does not exist, parity tests are cleanly skipped.
+
+### Manual Verification in Extension Development Host
+
+Launch the workspace configured by `BND_SAMPLE_WORKSPACE` using the command above, then open its `.bnd` and `.bndrun` files in the Extension Development Host and test:
+
+1. **Syntax Highlighting**:
+   - Check headers, instructions (`-keyword:`), macros (`${...}`), line continuations (`\`), and comments (`#`, `//`).
+2. **Completions & Hover**:
+   - Instructions / headers completion (`Ctrl+Space`).
+   - Macro completions (`${`).
+   - Hover cards showing signatures, docs, and code examples.
+3. **Language Server Modes**:
+   - Test `bnd.server.mode`: `node`, `java`, `socket`.
+   - Run command: `Bnd: Restart Language Server`.
+   - Run command: `Bnd: Resolve Runbundles (LSP)`.
+   - Run command: `Bnd: Build Project (LSP)`.
+   - Run command: `Bnd: Evaluate Macro (LSP)`.
+4. **CLI Commands**:
+   - Run `Bnd: Build Project`, `Bnd: Resolve (.bndrun)`, `Bnd: Run`.
+   - Run `Bnd: Download Latest bnd CLI JAR` to verify automatic JAR acquisition and path configuration.
+   - Run `Bnd: Discover Java Runtimes from Folder...`.
+   - Run `Bnd: Show CLI Reference` to check webview functionality.
+
+---
+
+## 5. Packaging
+
+Build a `.vsix` installer package:
+
+```bash
+# Standard release packaging
+npm run package
+
+# Pre-release packaging
+npm run package:prerelease
+```
+
+This generates `bnd-<version>.vsix` (or `vscode-bnd-<version>.vsix`) in root directory without modifying git tags.
+
+### Inspect Package Contents
+
+Verify files included in VSIX bundle:
+
+```bash
+npx @vscode/vsce ls
+```
+
+Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled.
+
+---
+
+## 6. Publishing
+
+### Step 1: Version Bump & Changelog
+
+1. Update `"version"` in `package.json`.
+2. Document release notes and changes in `CHANGELOG.md`.
+3. Commit version changes:
+   ```bash
+   git add package.json CHANGELOG.md
+   git commit -m "chore: release v<version>"
+   git tag "v<version>"
+   git push origin main --tags
+   ```
+
+### Step 2: Publish to Visual Studio Marketplace
+
+Ensure `VSCE_PAT` environment variable is set with Personal Access Token:
+
+```bash
+# Standard production release
+npm run publish -- -p <YOUR_PERSONAL_ACCESS_TOKEN>
+
+# Or pre-release track
+npm run publish:prerelease -- -p <YOUR_PERSONAL_ACCESS_TOKEN>
+```
+
+Alternatively, upload `.vsix` manually via [Visual Studio Marketplace Management Portal](https://marketplace.visualstudio.com/manage).
+
+### Step 3: Publish to Open VSX Registry (Optional)
+
+If publishing to [Open VSX](https://open-vsx.org/):
+
+```bash
+npx ovsx publish bnd-<version>.vsix -p <OPEN_VSX_PAT>
+```
+
+---
+
+## 7. Testing Published Version
+
+### Step 1: Install from Marketplace
+
+1. Open standard VS Code (clean profile recommended).
+2. Install extension via CLI:
+   ```bash
+   code --install-extension klibio.bnd --force
+   ```
+   Or search `bnd` / `klibio` in Extensions view (`Ctrl+Shift+X`) and click **Install**.
+
+### Step 2: Clean Profile Verification
+
+To test without interference from previous configuration:
+
+```bash
+# Launch fresh isolated VS Code profile
+code --profile "Bnd-Test" --extensions-dir ~/.vscode/extensions-test
+```
+
+### Step 3: Smoke Test Matrix
+
+| Area | Test Steps | Expected Result |
+|---|---|---|
+| Activation | Open any `bnd.bnd` or `launch.bndrun` | Status bar shows bnd LSP activating; syntax highlighting applied |
+| IntelliSense | Type `-run` + `Ctrl+Space` | Completion items with bnd doc snippets appear |
+| Hover | Hover over `-buildpath:` | Hover tooltip renders with description and example |
+| LSP Commands | `Ctrl+Shift+P` → `Bnd: Restart Language Server` | Server restarts cleanly without errors |
+| CLI Download | `Ctrl+Shift+P` → `Bnd: Download Latest bnd CLI JAR` | Downloads latest CLI JAR to tool cache and updates `bnd.cli.executable` |
+| CLI Commands | `Ctrl+Shift+P` → `Bnd: Show CLI Reference` | Searchable reference webview opens with all commands |
+
+### Step 4: Uninstall / Upgrade Check
+
+```bash
+# Uninstall
+code --uninstall-extension klibio.bnd
+
+# Re-install
+code --install-extension klibio.bnd
+```

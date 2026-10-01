@@ -3,10 +3,8 @@ import type { Dirent } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BND_COMMANDS } from './bndCommandData';
-
-const BND_GROUP_PATH = 'biz/aQute/bnd';
-const BND_ARTIFACT_ID = 'biz.aQute.bnd';
-const BND_DEFAULT_VERSION = '7.2.3';
+import { cmdConfigureLibrary } from './bndLibrary';
+import { inspectJavaExecutable, normalizePath, outputChannel } from './extension';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -16,12 +14,7 @@ function bndExec(): string {
     return expandEnvironmentPlaceholders(cfg.get<string>('cli.executable', 'bnd'));
 }
 
-function bndMavenRepository(): string {
-    const cfg = vscode.workspace.getConfiguration('bnd');
-    return cfg.get<string>('cli.mavenRepository', 'https://repo.maven.apache.org/maven2').replace(/\/+$/, '');
-}
-
-function bndJavaExecutable(): string {
+export function bndJavaExecutable(): string {
     const cfg = vscode.workspace.getConfiguration('bnd');
     return expandEnvironmentPlaceholders(cfg.get<string>('cli.javaExecutable', 'java'));
 }
@@ -122,6 +115,13 @@ function toGitBashPath(executablePath: string): string {
     return `/${drive}/${tail}`;
 }
 
+function convertWindowsPathsToBash(text: string): string {
+    return text.replace(/(["']?)([A-Za-z]):[\\/]([^"'\n\r]+)(["']?)/g, (_match, q1, drive, rest, q2) => {
+        const bashPath = `/${drive.toLowerCase()}/${rest.replace(/\\/g, '/')}`;
+        return `${q1}${bashPath}${q2}`;
+    });
+}
+
 function quoteForBash(value: string): string {
     return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
@@ -137,7 +137,8 @@ function commandForActiveShell(command: string): string {
 
     if (shellKind === 'bash') {
         const bashExecutable = toGitBashPath(unquotedExecutable);
-        return `${quoteForBash(bashExecutable)}${remainder}`;
+        const bashRemainder = convertWindowsPathsToBash(remainder);
+        return `${quoteForBash(bashExecutable)}${bashRemainder}`;
     }
 
     if (shellKind === 'powershell') {
@@ -297,92 +298,380 @@ async function ensureJavaRuntimeConfigured(): Promise<string | undefined> {
     return undefined;
 }
 
+async function validateBndExecutable(): Promise<boolean> {
+    const exec = bndExec();
+    const jarMatch = exec.match(/-jar\s+["']?([^"']+\.jar)["']?/i);
+    if (jarMatch) {
+        let rawPath = jarMatch[1].trim();
+        if (process.platform === 'win32' && /^\/[a-zA-Z]\//.test(rawPath)) {
+            rawPath = `${rawPath.charAt(1).toUpperCase()}:${rawPath.slice(2)}`;
+        }
+        try {
+            await fs.access(rawPath);
+        } catch {
+            const action = await vscode.window.showErrorMessage(
+                `bnd CLI JAR not found at "${jarMatch[1]}".`,
+                'Configure bnd Library...',
+                'Open Settings'
+            );
+            if (action === 'Configure bnd Library...') {
+                await vscode.commands.executeCommand('bnd.cli.configureLib');
+            } else if (action === 'Open Settings') {
+                await vscode.commands.executeCommand('workbench.action.openSettings', 'bnd.cli.executable');
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Extracts a major version number from an execution environment string.
+ * Examples: "JavaSE-17" -> 17, "JavaSE-1.8" -> 8, "JavaSE-21" -> 21, "JavaSE-8" -> 8, "11" -> 11.
+ */
+export function parseRuneeMajorVersion(runee: string): number | undefined {
+    const trimmed = runee.trim().replace(/^['"]|['"]$/g, '');
+    const match = trimmed.match(/(?:javase(?:\/compact\d+)?-)?(?:1\.)?(\d+)/i);
+    if (!match) {
+        return undefined;
+    }
+    const val = parseInt(match[1], 10);
+    return isNaN(val) ? undefined : val;
+}
+
+/**
+ * Finds the bnd workspace root directory (containing cnf/) by traversing parent directories.
+ */
+export async function findBndWorkspaceRoot(startPath: string): Promise<string> {
+    try {
+        let currentDir = (await fs.stat(startPath).catch(() => undefined))?.isDirectory()
+            ? startPath
+            : path.dirname(startPath);
+
+        while (currentDir && currentDir !== path.dirname(currentDir)) {
+            const cnfPath = path.join(currentDir, 'cnf');
+            try {
+                const stat = await fs.stat(cnfPath);
+                if (stat.isDirectory()) {
+                    return currentDir;
+                }
+            } catch {
+                // Continue walking up
+            }
+            currentDir = path.dirname(currentDir);
+        }
+    } catch {
+        // Ignore errors
+    }
+
+    return workspaceRoot() || path.dirname(startPath);
+}
+
+function expandIncludeMacros(includeItem: string, wsRoot: string, projectDir: string): string {
+    let expanded = includeItem.trim();
+    expanded = expanded.replace(/\$\{(?:workspace|workspaceURI)\}/gi, wsRoot);
+    expanded = expanded.replace(/\$\{(?:project|projectURI|\.|dir)\}/gi, projectDir);
+    expanded = expanded.replace(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/gi, (_f, name) => process.env[name] || '');
+    return expanded;
+}
+
+/**
+ * Parses a .bndrun or .bnd file for its -runee instruction, resolving recursive -include directives.
+ */
+export async function parseRuneeFromFile(
+    filePath: string,
+    wsRoot?: string,
+    visited = new Set<string>()
+): Promise<string | undefined> {
+    const normalized = path.normalize(filePath);
+    const key = normalized.toLowerCase();
+    if (visited.has(key)) {
+        return undefined;
+    }
+    visited.add(key);
+
+    let content: string;
+    try {
+        content = await fs.readFile(normalized, 'utf8');
+    } catch {
+        return undefined;
+    }
+
+    if (!wsRoot) {
+        wsRoot = await findBndWorkspaceRoot(normalized);
+    }
+    const fileDir = path.dirname(normalized);
+
+    const rawLines = content.split(/\r?\n/);
+    const logicalLines: string[] = [];
+    let currentLine = '';
+
+    for (const raw of rawLines) {
+        const trimmed = raw.trim();
+        if (trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('!')) {
+            if (currentLine) {
+                logicalLines.push(currentLine);
+                currentLine = '';
+            }
+            continue;
+        }
+
+        if (raw.endsWith('\\')) {
+            currentLine += raw.slice(0, -1) + ' ';
+        } else {
+            currentLine += raw;
+            logicalLines.push(currentLine);
+            currentLine = '';
+        }
+    }
+    if (currentLine) {
+        logicalLines.push(currentLine);
+    }
+
+    let directRunee: string | undefined;
+    const includePaths: string[] = [];
+
+    for (const line of logicalLines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            continue;
+        }
+
+        const runeeMatch = trimmed.match(/^-\s*runee(?:\.[a-zA-Z0-9_-]+)?\s*(?::=|=|:)\s*([^\r\n#]+)/i);
+        if (runeeMatch && !directRunee) {
+            let val = runeeMatch[1].trim();
+            val = val.replace(/^['"]|['"]$/g, '').trim();
+            val = val.split(/\s*#/)[0].trim();
+            if (val) {
+                directRunee = val;
+            }
+        }
+
+        const incMatch = trimmed.match(/^-\s*include(?:\.[a-zA-Z0-9_-]+)?\s*(?::=|=|:)\s*([^\r\n#]+)/i);
+        if (incMatch) {
+            const rawInc = incMatch[1].trim();
+            const parts = rawInc.split(',');
+            for (const part of parts) {
+                let cleanPart = part.trim();
+                cleanPart = cleanPart.replace(/^[-~]+/, '').trim();
+                cleanPart = cleanPart.replace(/^['"]|['"]$/g, '').trim();
+                cleanPart = cleanPart.split(/\s*#/)[0].trim();
+                if (!cleanPart) {
+                    continue;
+                }
+                const expanded = expandIncludeMacros(cleanPart, wsRoot, fileDir);
+                const resolved = path.isAbsolute(expanded)
+                    ? path.normalize(expanded)
+                    : path.resolve(fileDir, expanded);
+                includePaths.push(resolved);
+            }
+        }
+    }
+
+    if (directRunee) {
+        return directRunee;
+    }
+
+    for (const inc of includePaths) {
+        const incRunee = await parseRuneeFromFile(inc, wsRoot, visited);
+        if (incRunee) {
+            return incRunee;
+        }
+    }
+
+    return undefined;
+}
+
+async function isJavaHomeValid(home: string): Promise<boolean> {
+    const javaExec = javaBinaryPath(home);
+    try {
+        await fs.access(javaExec);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function getJavaMajorVersionFromHome(home: string): Promise<number | undefined> {
+    try {
+        const releasePath = path.join(home, 'release');
+        const content = await fs.readFile(releasePath, 'utf8');
+        const versionMatch = content.match(/^JAVA_VERSION="([^"]+)"/m);
+        if (versionMatch) {
+            const raw = versionMatch[1];
+            let major = parseInt(raw.split('.')[0], 10);
+            if (major === 1) {
+                const parts = raw.split('.');
+                major = parts.length > 1 ? parseInt(parts[1], 10) : 1;
+            }
+            if (!isNaN(major)) {
+                return major;
+            }
+        }
+    } catch {
+        // Fallback to executable inspection
+    }
+
+    const exec = javaBinaryPath(home);
+    const info = inspectJavaExecutable(exec);
+    return info.valid ? info.major : undefined;
+}
+
+/**
+ * Searches configured Java runtimes and the system environment for a Java runtime
+ * matching the requested -runee execution environment.
+ */
+export async function findJavaRuntimeHomeForRunee(runee: string): Promise<{ home: string; major: number } | undefined> {
+    const targetMajor = parseRuneeMajorVersion(runee);
+    if (!targetMajor) {
+        return undefined;
+    }
+
+    // 1. Check java.configuration.runtimes
+    const runtimes = getConfiguredJavaRuntimes()
+        .filter((runtime): runtime is JavaRuntimeEntry & { path: string } => typeof runtime.path === 'string' && runtime.path.length > 0);
+
+    for (const entry of runtimes) {
+        if (entry.name && parseRuneeMajorVersion(entry.name) === targetMajor) {
+            if (await isJavaHomeValid(entry.path)) {
+                return { home: entry.path, major: targetMajor };
+            }
+        }
+    }
+
+    for (const entry of runtimes) {
+        const major = await getJavaMajorVersionFromHome(entry.path);
+        if (major === targetMajor && (await isJavaHomeValid(entry.path))) {
+            return { home: entry.path, major: targetMajor };
+        }
+    }
+
+    // 2. Check bnd.cli.javaExecutable / configuredExecutableHome
+    const cliExec = bndJavaExecutable();
+    const cliHome = getJavaHomeFromExecutable(cliExec);
+    if (cliHome) {
+        const major = await getJavaMajorVersionFromHome(cliHome);
+        if (major === targetMajor && (await isJavaHomeValid(cliHome))) {
+            return { home: cliHome, major: targetMajor };
+        }
+    }
+
+    // 3. Check JAVA_HOME environment variable
+    const envJavaHome = process.env['JAVA_HOME'];
+    if (envJavaHome) {
+        const normalizedHome = normalizePath(envJavaHome);
+        const major = await getJavaMajorVersionFromHome(normalizedHome);
+        if (major === targetMajor && (await isJavaHomeValid(normalizedHome))) {
+            return { home: normalizedHome, major: targetMajor };
+        }
+    }
+
+    // 4. Check default PATH java
+    const info = inspectJavaExecutable('java');
+    if (info.valid && info.major === targetMajor) {
+        const pathHome = getJavaHomeFromExecutable(info.executablePath);
+        if (pathHome && (await isJavaHomeValid(pathHome))) {
+            return { home: pathHome, major: targetMajor };
+        }
+    }
+
+    // 5. Try discovering from parent directory of known Java runtimes
+    const candidateRoots = new Set<string>();
+    if (envJavaHome) {
+        candidateRoots.add(path.dirname(normalizePath(envJavaHome)));
+    }
+    for (const entry of runtimes) {
+        candidateRoots.add(path.dirname(normalizePath(entry.path)));
+    }
+    for (const root of candidateRoots) {
+        try {
+            const discovered = await findJavaRuntimeHomes(root);
+            for (const home of discovered) {
+                const major = await getJavaMajorVersionFromHome(home);
+                if (major === targetMajor && (await isJavaHomeValid(home))) {
+                    return { home, major: targetMajor };
+                }
+            }
+        } catch {
+            // Ignore discovery failures
+        }
+    }
+
+    return undefined;
+}
+
+function extractTargetFileFromArgs(args: string): string | undefined {
+    // Look for arguments ending with .bndrun or .bnd (e.g. "run foo.bndrun" or "resolve file.bndrun")
+    const match = args.match(/(?:^|\s)["']?([^"'\r\n\t\s]+\.(?:bndrun|bnd))["']?(?:\s|$)/i);
+    if (match) {
+        return match[1].trim();
+    }
+    return activeRunFile();
+}
+
 function runInTerminal(args: string): void {
     void runInTerminalInternal(args);
 }
 
 async function runInTerminalInternal(args: string): Promise<void> {
-    const javaHome = await ensureJavaRuntimeConfigured();
+    const valid = await validateBndExecutable();
+    if (!valid) {
+        return;
+    }
+
+    let javaHome: string | undefined;
+    let effectiveBndExec = bndExec();
+
+    const targetFile = extractTargetFileFromArgs(args);
+    let runeeInfo = 'none';
+
+    if (targetFile) {
+        const wsRoot = workspaceRoot() || process.cwd();
+        const absTarget = path.isAbsolute(targetFile) ? targetFile : path.resolve(wsRoot, targetFile);
+        const runee = await parseRuneeFromFile(absTarget);
+        if (runee) {
+            runeeInfo = runee;
+            const matchedRuntime = await findJavaRuntimeHomeForRunee(runee);
+            if (matchedRuntime) {
+                javaHome = matchedRuntime.home;
+                const javaExec = javaBinaryPath(matchedRuntime.home);
+                effectiveBndExec = replaceJavaExecutable(effectiveBndExec, javaExec);
+                vscode.window.setStatusBarMessage(`bnd: using Java ${matchedRuntime.major} (${runee})`, 4000);
+            } else {
+                const requiredMajor = parseRuneeMajorVersion(runee);
+                void vscode.window.showWarningMessage(
+                    `File requires ${runee} (Java ${requiredMajor ?? '?'}), but no matching Java runtime (Java >= ${requiredMajor ?? '?'}) was found in settings. Using default runtime.`
+                );
+            }
+        }
+    }
+
+    if (!javaHome) {
+        javaHome = await ensureJavaRuntimeConfigured();
+    }
+
     if (!javaHome) {
         return;
+    }
+
+    const command = commandForActiveShell(`${effectiveBndExec} ${args}`);
+
+    if (outputChannel) {
+        outputChannel.appendLine(`[CLI Execution] Command: bnd ${args}`);
+        outputChannel.appendLine(`  - Target file: ${targetFile ?? 'none'}`);
+        outputChannel.appendLine(`  - Detected -runee: ${runeeInfo}`);
+        outputChannel.appendLine(`  - Selected JAVA_HOME: ${javaHome}`);
+        outputChannel.appendLine(`  - Raw Executable: ${effectiveBndExec}`);
+        outputChannel.appendLine(`  - Terminal Command: ${command}`);
     }
 
     const wsRoot = workspaceRoot();
     const term = createBndTerminal(buildTerminalEnvironment(javaHome), wsRoot);
     term.show(true);
-    const command = commandForActiveShell(`${bndExec()} ${args}`);
     term.sendText(command);
 }
 
-async function fetchUrl(url: string): Promise<Uint8Array> {
-    const response = await fetch(url, {
-        headers: {
-            'User-Agent': 'vscode-bnd',
-            'Accept': '*/*',
-        },
-        redirect: 'follow',
-    });
-    if (!response.ok) {
-        throw new Error(`Request failed with ${response.status} ${response.statusText}`);
-    }
-    return new Uint8Array(await response.arrayBuffer());
-}
-
-async function fetchText(url: string): Promise<string> {
-    const bytes = await fetchUrl(url);
-    return new TextDecoder('utf-8').decode(bytes);
-}
-
-function parseVersions(metadataXml: string): string[] {
-    const versions = [...metadataXml.matchAll(/<version>([^<]+)<\/version>/g)]
-        .map(match => match[1].trim())
-        .filter(Boolean);
-    return [...new Set(versions)];
-}
-
-function parseLatestVersion(metadataXml: string, versions: string[]): string {
-    const release = metadataXml.match(/<release>([^<]+)<\/release>/)?.[1]?.trim();
-    const latest = metadataXml.match(/<latest>([^<]+)<\/latest>/)?.[1]?.trim();
-    return release || latest || versions[versions.length - 1] || BND_DEFAULT_VERSION;
-}
-
-interface BndVersionMetadata {
-    latest: string;
-    versions: string[];
-}
-
-async function fetchBndVersionMetadata(): Promise<BndVersionMetadata> {
-    const metadataUrl = `${bndMavenRepository()}/${BND_GROUP_PATH}/${BND_ARTIFACT_ID}/maven-metadata.xml`;
-    const metadataXml = await fetchText(metadataUrl);
-    const versions = parseVersions(metadataXml);
-    return {
-        latest: parseLatestVersion(metadataXml, versions),
-        versions,
-    };
-}
-
-function jarFileName(version: string): string {
-    return `${BND_ARTIFACT_ID}-${version}.jar`;
-}
-
-function jarDownloadUrl(version: string): string {
-    return `${bndMavenRepository()}/${BND_GROUP_PATH}/${BND_ARTIFACT_ID}/${version}/${jarFileName(version)}`;
-}
-
-async function ensureDirectory(uri: vscode.Uri): Promise<void> {
-    await vscode.workspace.fs.createDirectory(uri);
-}
-
-async function configureDownloadedJar(jarUri: vscode.Uri): Promise<void> {
-    const executable = `${quoteForCommand(bndJavaExecutable())} -jar "${jarUri.fsPath}"`;
-    await vscode.workspace.getConfiguration('bnd').update(
-        'cli.executable',
-        executable,
-        vscode.ConfigurationTarget.Global,
-    );
-}
-
-function quoteForCommand(commandPart: string): string {
+export function quoteForCommand(commandPart: string): string {
     const expanded = expandEnvironmentPlaceholders(commandPart);
     const stripped = stripWrappedQuotes(expanded);
     if (/^".*"$/.test(expanded)) {
@@ -500,47 +789,19 @@ async function findJavaRuntimeHomes(rootFolder: string): Promise<string[]> {
     return [...foundHomes];
 }
 
-async function downloadBndJar(context: vscode.ExtensionContext, version: string): Promise<vscode.Uri> {
-    const toolDir = vscode.Uri.joinPath(context.globalStorageUri, 'library', 'tool');
-    await ensureDirectory(toolDir);
-
-    const jarUri = vscode.Uri.joinPath(toolDir, jarFileName(version));
-    const jarBytes = await fetchUrl(jarDownloadUrl(version));
-    await vscode.workspace.fs.writeFile(jarUri, jarBytes);
-    return jarUri;
-}
-
-async function pickBndVersion(versions: string[], latest: string): Promise<string | undefined> {
-    const recentVersions = [...versions].reverse().slice(0, 20);
-
-    const quickPickItems: vscode.QuickPickItem[] = [
-        ...recentVersions.map(version => ({
-            label: version,
-            description: version === latest ? 'Latest release' : version === BND_DEFAULT_VERSION ? 'Default recommended version' : undefined,
-        })),
-        {
-            label: 'Enter another version...',
-            description: 'Type an explicit older or newer version',
-        },
-    ];
-
-    const choice = await vscode.window.showQuickPick(quickPickItems, {
-        title: 'Bnd: Download bnd CLI JAR Version',
-        placeHolder: 'Select an available version or enter another one',
-    });
-    if (!choice) { return undefined; }
-    if (choice.label === 'Enter another version...') {
-        return vscode.window.showInputBox({
-            title: 'Bnd: Download bnd CLI JAR Version',
-            prompt: 'Enter the bnd version to download from Maven Central or your configured mirror',
-            value: BND_DEFAULT_VERSION,
-            validateInput: value => value.trim() ? undefined : 'Version is required.',
-        });
-    }
-    return choice.label;
-}
-
 // ─── Active-editor helper ─────────────────────────────────────────────────────
+
+/**
+ * If an explicit URI or the currently active editor is a `.bndrun` file, returns its
+ * workspace-relative path so it can be passed directly to the CLI.
+ * Returns `undefined` when no `.bndrun` file is active.
+ */
+export function activeBndrunFile(uri?: vscode.Uri): string | undefined {
+    const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+    if (!targetUri || targetUri.scheme !== 'file') { return undefined; }
+    if (!targetUri.fsPath.endsWith('.bndrun')) { return undefined; }
+    return vscode.workspace.asRelativePath(targetUri);
+}
 
 /**
  * If the currently active editor is a `.bnd` or `.bndrun` file, returns its
@@ -630,56 +891,99 @@ async function pickBndrunFile(title: string, allowDefault: boolean): Promise<str
     });
 }
 
+// ─── CLI Argument Builders ────────────────────────────────────────────────────
+
+/** Single source of truth for the argument strings passed to the bnd JAR. */
+export const cliArgs = {
+    build: (mode: '' | '--test' | '--watch' = '') => `build ${mode}`.trim(),
+    run: (bndrun?: string) => (bndrun ? `run ${bndrun}` : 'run'),
+    test: () => 'test',
+    runtests: (bndrun?: string) => (bndrun ? `runtests ${bndrun}` : 'runtests'),
+    // `resolve` is a command group; the `resolve` sub-command does the work, `-W` writes -runbundles back
+    resolve: (bndruns?: string) => (bndruns ? `resolve resolve -W ${bndruns}` : 'resolve resolve -W'),
+    clean: () => 'clean',
+    baseline: () => 'baseline',
+    verify: (jars: string) => `verify ${jars}`,
+    print: (flag: string, jar: string) => `print ${flag} ${jar}`,
+    diff: (newer?: string, older?: string) => (newer && older ? `diff ${newer} ${older}` : 'diff'),
+    wrap: (jar: string) => `wrap ${jar}`,
+    export: (bndrun: string) => `export ${bndrun}`,
+    release: () => 'release',
+    properties: () => 'properties',
+    info: () => 'info',
+    version: () => 'version',
+    macro: (expression: string) => `macro '${expression}'`,
+    repo: (subCommand: string) => `repo ${subCommand}`,
+} as const;
+
 // ─── Individual Command Handlers ──────────────────────────────────────────────
 
 /** bnd build [-t] [-w] */
 async function cmdBuild(): Promise<void> {
     const choice = await vscode.window.showQuickPick(
         [
-            { label: 'Build', description: 'bnd build', cmd: '' },
-            { label: 'Build for test', description: 'bnd build --test', cmd: '--test' },
-            { label: 'Watch (continuous)', description: 'bnd build --watch', cmd: '--watch' },
+            { label: 'Build', description: 'bnd build', cmd: '' as const },
+            { label: 'Build for test', description: 'bnd build --test', cmd: '--test' as const },
+            { label: 'Watch (continuous)', description: 'bnd build --watch', cmd: '--watch' as const },
         ],
         { title: 'Bnd: Build Project', placeHolder: 'Select build mode' },
     );
     if (!choice) { return; }
-    runInTerminal(`build ${choice.cmd}`.trim());
+    runInTerminal(cliArgs.build(choice.cmd));
 }
 
 /** bnd run [bndrun] */
-async function cmdRun(): Promise<void> {
+async function cmdRun(uri?: vscode.Uri): Promise<void> {
+    const active = activeBndrunFile(uri);
+    if (active) {
+        runInTerminal(cliArgs.run(active));
+        return;
+    }
+
     const files = await vscode.workspace.findFiles('**/*.bndrun', '**/node_modules/**');
     if (files.length === 0) {
-        runInTerminal('run');
+        runInTerminal(cliArgs.run());
         return;
     }
     const file = await pickBndrunFile('Bnd: Run', true);
     if (file === undefined) { return; }
-    runInTerminal(file ? `run ${file}` : 'run');
+    runInTerminal(cliArgs.run(file || undefined));
 }
 
 /** bnd test */
 async function cmdTest(): Promise<void> {
-    runInTerminal('test');
+    runInTerminal(cliArgs.test());
 }
 
 /** bnd runtests [bndrun] */
-async function cmdRunTests(): Promise<void> {
+async function cmdRunTests(uri?: vscode.Uri): Promise<void> {
+    const active = activeBndrunFile(uri);
+    if (active) {
+        runInTerminal(cliArgs.runtests(active));
+        return;
+    }
+
     const files = await vscode.workspace.findFiles('**/*.bndrun', '**/node_modules/**');
     if (files.length === 0) {
-        runInTerminal('runtests');
+        runInTerminal(cliArgs.runtests());
         return;
     }
     const file = await pickBndrunFile('Bnd: Run OSGi Tests', true);
     if (file === undefined) { return; }
-    runInTerminal(file ? `runtests ${file}` : 'runtests');
+    runInTerminal(cliArgs.runtests(file || undefined));
 }
 
-/** bnd resolve [bndrun...] */
-async function cmdResolve(): Promise<void> {
+/** bnd resolve resolve -W [bndrun...] */
+async function cmdResolve(uri?: vscode.Uri): Promise<void> {
+    const active = activeBndrunFile(uri);
+    if (active) {
+        runInTerminal(cliArgs.resolve(active));
+        return;
+    }
+
     const files = await vscode.workspace.findFiles('**/*.bndrun', '**/node_modules/**');
     if (files.length === 0) {
-        runInTerminal('resolve');
+        runInTerminal(cliArgs.resolve());
         return;
     }
     const items = files.map(f => ({
@@ -694,17 +998,17 @@ async function cmdResolve(): Promise<void> {
     });
     if (!choices) { return; }
     const paths = choices.map(c => c.label).join(' ');
-    runInTerminal(paths ? `resolve ${paths}` : 'resolve');
+    runInTerminal(cliArgs.resolve(paths || undefined));
 }
 
 /** bnd clean */
 async function cmdClean(): Promise<void> {
-    runInTerminal('clean');
+    runInTerminal(cliArgs.clean());
 }
 
 /** bnd baseline */
 async function cmdBaseline(): Promise<void> {
-    runInTerminal('baseline');
+    runInTerminal(cliArgs.baseline());
 }
 
 /** bnd verify [jar...] */
@@ -725,7 +1029,7 @@ async function cmdVerify(): Promise<void> {
         canPickMany: true,
     });
     if (!choices) { return; }
-    runInTerminal(`verify ${choices.map(c => c.label).join(' ')}`);
+    runInTerminal(cliArgs.verify(choices.map(c => c.label).join(' ')));
 }
 
 /** bnd print [jar] */
@@ -752,7 +1056,7 @@ async function cmdPrint(): Promise<void> {
             placeHolder: 'path/to/bundle.jar',
         });
         if (!jarPath) { return; }
-        runInTerminal(`print ${modeChoice.flag} ${jarPath}`);
+        runInTerminal(cliArgs.print(modeChoice.flag, jarPath));
         return;
     }
 
@@ -764,7 +1068,7 @@ async function cmdPrint(): Promise<void> {
         title: 'Bnd: Print Bundle — select JAR',
     });
     if (!jarChoice) { return; }
-    runInTerminal(`print ${modeChoice.flag} ${jarChoice.label}`);
+    runInTerminal(cliArgs.print(modeChoice.flag, jarChoice.label));
 }
 
 /** bnd diff [newer] [older] */
@@ -776,7 +1080,7 @@ async function cmdDiff(): Promise<void> {
     });
     if (newerPath === undefined) { return; }
     if (!newerPath) {
-        runInTerminal('diff');
+        runInTerminal(cliArgs.diff());
         return;
     }
     const olderPath = await vscode.window.showInputBox({
@@ -785,7 +1089,7 @@ async function cmdDiff(): Promise<void> {
         placeHolder: 'archive/bundle-1.0.0.jar',
     });
     if (!olderPath) { return; }
-    runInTerminal(`diff ${newerPath} ${olderPath}`);
+    runInTerminal(cliArgs.diff(newerPath, olderPath));
 }
 
 /** bnd wrap [jar] */
@@ -796,11 +1100,17 @@ async function cmdWrap(): Promise<void> {
         placeHolder: 'lib/library.jar',
     });
     if (!jarPath) { return; }
-    runInTerminal(`wrap ${jarPath}`);
+    runInTerminal(cliArgs.wrap(jarPath));
 }
 
 /** bnd export [bndrun] */
-async function cmdExport(): Promise<void> {
+async function cmdExport(uri?: vscode.Uri): Promise<void> {
+    const active = activeBndrunFile(uri);
+    if (active) {
+        runInTerminal(cliArgs.export(active));
+        return;
+    }
+
     const files = await vscode.workspace.findFiles('**/*.bndrun', '**/node_modules/**');
     if (files.length === 0) {
         vscode.window.showInformationMessage('No .bndrun files found in workspace.');
@@ -815,7 +1125,7 @@ async function cmdExport(): Promise<void> {
         placeHolder: 'Select a .bndrun file to export',
     });
     if (!choice) { return; }
-    runInTerminal(`export ${choice.label}`);
+    runInTerminal(cliArgs.export(choice.label));
 }
 
 /** bnd release */
@@ -826,22 +1136,22 @@ async function cmdRelease(): Promise<void> {
         'Release',
     );
     if (confirm !== 'Release') { return; }
-    runInTerminal('release');
+    runInTerminal(cliArgs.release());
 }
 
 /** bnd properties */
 async function cmdProperties(): Promise<void> {
-    runInTerminal('properties');
+    runInTerminal(cliArgs.properties());
 }
 
 /** bnd info */
 async function cmdInfo(): Promise<void> {
-    runInTerminal('info');
+    runInTerminal(cliArgs.info());
 }
 
 /** bnd version */
 async function cmdVersion(): Promise<void> {
-    runInTerminal('version');
+    runInTerminal(cliArgs.version());
 }
 
 /** bnd macro <expr> */
@@ -852,7 +1162,7 @@ async function cmdMacro(): Promise<void> {
         placeHolder: '${version;===;1.2.3.qualifier}',
     });
     if (!expr) { return; }
-    runInTerminal(`macro '${expr}'`);
+    runInTerminal(cliArgs.macro(expr));
 }
 
 /** bnd repo ... — interactive sub-command selection */
@@ -861,67 +1171,13 @@ async function cmdRepo(): Promise<void> {
         { label: 'list', description: 'List all bundles in repos', cmd: 'list' },
         { label: 'get', description: 'Get bundle from repo', cmd: 'get' },
         { label: 'put', description: 'Put bundle into repo', cmd: 'put' },
-        { label: 'info', description: 'Show repo info', cmd: 'info' },
+        { label: 'repos', description: 'List the configured repositories', cmd: 'repos' },
     ];
     const choice = await vscode.window.showQuickPick(subItems, {
         title: 'Bnd: Repo — select sub-command',
     });
     if (!choice) { return; }
-    runInTerminal(`repo ${choice.cmd}`);
-}
-
-async function cmdDownloadCli(context: vscode.ExtensionContext): Promise<void> {
-    try {
-        const { latest } = await fetchBndVersionMetadata();
-
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `Downloading bnd ${latest}`,
-                cancellable: false,
-            },
-            async progress => {
-                progress.report({ message: 'Downloading JAR from configured Maven repository...' });
-                const jarUri = await downloadBndJar(context, latest);
-                progress.report({ message: 'Updating bnd.cli.executable...' });
-                await configureDownloadedJar(jarUri);
-                vscode.window.showInformationMessage(
-                    `Configured bnd.cli.executable to use ${path.basename(jarUri.fsPath)} from ${path.dirname(jarUri.fsPath)}.`
-                );
-            },
-        );
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`Failed to download bnd CLI JAR: ${message}`);
-    }
-}
-
-async function cmdDownloadCliVersion(context: vscode.ExtensionContext): Promise<void> {
-    try {
-        const { latest, versions } = await fetchBndVersionMetadata();
-        const version = await pickBndVersion(versions, latest);
-        if (!version) { return; }
-
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `Downloading bnd ${version}`,
-                cancellable: false,
-            },
-            async progress => {
-                progress.report({ message: 'Downloading JAR from configured Maven repository...' });
-                const jarUri = await downloadBndJar(context, version);
-                progress.report({ message: 'Updating bnd.cli.executable...' });
-                await configureDownloadedJar(jarUri);
-                vscode.window.showInformationMessage(
-                    `Configured bnd.cli.executable to use ${path.basename(jarUri.fsPath)} from ${path.dirname(jarUri.fsPath)}.`
-                );
-            },
-        );
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`Failed to download bnd CLI JAR version: ${message}`);
-    }
+    runInTerminal(cliArgs.repo(choice.cmd));
 }
 
 async function cmdSelectJavaRuntime(): Promise<void> {
@@ -1125,7 +1381,7 @@ function cmdShowReference(): void {
 
 /** Register all bnd CLI VS Code commands. */
 export function registerCliCommands(context: vscode.ExtensionContext): void {
-    const register = (id: string, handler: () => unknown) =>
+    const register = (id: string, handler: (...args: any[]) => unknown) =>
         context.subscriptions.push(vscode.commands.registerCommand(id, handler));
 
     register('bnd.cli.build',         cmdBuild);
@@ -1146,8 +1402,7 @@ export function registerCliCommands(context: vscode.ExtensionContext): void {
     register('bnd.cli.version',       cmdVersion);
     register('bnd.cli.macro',         cmdMacro);
     register('bnd.cli.repo',          cmdRepo);
-    register('bnd.cli.downloadCli',   () => cmdDownloadCli(context));
-    register('bnd.cli.downloadCliVersion', () => cmdDownloadCliVersion(context));
+    register('bnd.cli.configureLib',  () => cmdConfigureLibrary(context));
     register('bnd.cli.selectJavaRuntime', cmdSelectJavaRuntime);
     register('bnd.cli.discoverJavaRuntimes', cmdDiscoverJavaRuntimes);
     register('bnd.cli.showReference', cmdShowReference);
