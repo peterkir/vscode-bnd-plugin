@@ -4,6 +4,17 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build (e.g. v0.11.0)"
+        required: true
+        type: string
+      publish:
+        description: "Publish to VS Code Marketplace"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   release:
@@ -15,6 +26,8 @@ jobs:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -37,11 +50,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           files: "*.vsix"
           generate_release_notes: true
 
       - name: Publish to VS Code Marketplace
-        if: ${{ env.VSCE_PAT != '' }}
+        if: ${{ env.VSCE_PAT != '' && (github.event_name == 'push' || inputs.publish) }}
         run: npx @vscode/vsce publish --packagePath *.vsix
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
