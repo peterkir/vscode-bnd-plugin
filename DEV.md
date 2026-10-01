@@ -199,7 +199,7 @@ npm run package
 npm run package:prerelease
 ```
 
-This generates `bnd-<version>.vsix` in root directory without modifying git tags.
+This generates `bnd-<version>.vsix` in root directory without modifying git tags. Tagged releases attach the same file to the GitHub Release (see [Publishing](#6-publishing)).
 
 Packaging runs `vscode:prepublish` (`compile:all`, then `bundle`). `bundle` uses esbuild to overwrite `out/extension.js` and `server/out/server.js` with self-contained, minified bundles, so `.vscodeignore` excludes `node_modules/` (except the Codicons font and CSS used by the Effective view), other `out/` files, and source maps. Run `npm run compile:all` afterwards to restore unbundled output for debugging; `npm test` does this automatically.
 
@@ -229,7 +229,7 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
    git push origin main --tags
    ```
 
-Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`), which packages the VSIX, creates the GitHub Release, and publishes to the Marketplace when the `VSCE_PAT` secret is set. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
+Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`), which packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
 
 ### Step 2: Publish to Visual Studio Marketplace
 
