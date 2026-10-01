@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+### Improved
+- Extension client and fallback language server are bundled with esbuild; the VSIX shrinks from about 1,290 files to 25 and the Marketplace bundling warning is resolved.
+- CI and release workflows pin the `ubuntu-24.04` runner instead of `ubuntu-latest`, ahead of the Ubuntu 26 label migration.
+- Release workflow names the GitHub Release `bnd v<version>`, attaches `bnd-<version>.vsix` for download, and fails when no VSIX is produced; install docs point to GitHub Releases.
+
 ## Unreleased
 
 ### Added
