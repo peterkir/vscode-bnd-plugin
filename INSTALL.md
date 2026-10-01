@@ -2,7 +2,7 @@
 
 ## Quick Install (from pre-built VSIX)
 
-A pre-built extension package (`vscode-bnd-<version>.vsix`) is included in this directory.
+Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag publishes one, and GitHub shows its SHA-256 digest.
 
 ### Option A: Via VS Code UI
 
@@ -10,21 +10,14 @@ A pre-built extension package (`vscode-bnd-<version>.vsix`) is included in this 
 2. Open the Extensions view with `Ctrl+Shift+X` (Windows/Linux) or `Cmd+Shift+X` (macOS).
 3. Click the `...` (More Actions) menu at the top-right of the Extensions panel.
 4. Select **Install from VSIX…**
-5. Navigate to this directory and select `vscode-bnd-<version>.vsix`.
+5. Select the downloaded `bnd-<version>.vsix`.
 6. Click **Install**.
 7. Reload VS Code if prompted.
 
 ### Option B: Via Command Line
 
 ```bash
-code --install-extension /path/to/vscode-bnd/vscode-bnd-<version>.vsix
-```
-
-Replace `/path/to/vscode-bnd/` with the actual path to this directory, e.g.:
-
-```bash
-# From the root of the bnd workspace:
-code --install-extension vscode-bnd/vscode-bnd-<version>.vsix
+code --install-extension /path/to/bnd-<version>.vsix
 ```
 
 ## Build from Source
@@ -61,7 +54,7 @@ npm test
 npm run package
 ```
 
-This produces `vscode-bnd-<version>.vsix` in the current directory.  
+This produces `bnd-<version>.vsix` in the current directory.  
 Install it using either option above.
 
 ## Publish to the Visual Studio Marketplace

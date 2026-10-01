@@ -168,7 +168,7 @@ showing all 77 bnd CLI sub-commands with their full option lists and examples fr
 
 ### From VSIX
 
-1. Download or build `vscode-bnd-<version>.vsix`.
+1. Download `bnd-<version>.vsix` from [GitHub Releases](https://github.com/peterkir/vscode-bnd-plugin/releases), or build it.
 2. In VS Code open the Extensions view (`Ctrl+Shift+X`).
 3. Click the `...` menu → **Install from VSIX…** and select the file.
 
@@ -184,7 +184,7 @@ npm run compile:all      # compile client + server TypeScript
 npm run compile:tests    # compile VS Code extension tests
 npm test                 # run VS Code extension tests
 npm run package          # downloads vsce on demand and builds the VSIX
-# Produces vscode-bnd-<version>.vsix
+# Produces bnd-<version>.vsix
 ```
 
 ### Upstream Java Repo Parity Tests
