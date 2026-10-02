@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -471,13 +471,13 @@
     "@vscode/codicons": "^0.0.46-24",
     "http-proxy-agent": "^9.1.0",
     "https-proxy-agent": "^9.1.0",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.1.2"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.6.3",
     "@types/vscode": "^1.75.0",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "mocha": "^11.7.5",
