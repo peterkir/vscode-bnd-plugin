@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.0
+
+### Added
+- **Bnd: Select Language Server JAR...** chooses the Java language server JAR: bundled, release (Maven Central), snapshot (bndtools Artifactory), custom https URL, or local file.
+- Settings `bnd.server.jarSource`, `bnd.server.jarVersion` (`latest` follows new versions), `bnd.server.jarUrl`, and `bnd.server.jarSha256` (machine-scoped).
+- Downloaded language server JARs are verified (`.sha1` for repository downloads, optional SHA-256 for custom URLs), cached in global storage, and fetched in the background while the bundled JAR keeps the server available.
+
+### Fixed
+- A configured but missing `bnd.server.jar` now produces a warning instead of silently using the bundled JAR.
+- Several language server setting changes in a row trigger a single restart.
+
+### Improved
+- CI runs the full extension test suite on Java 17 under Xvfb, against the bnd `fea-bnd-ls` sources and a checksum-verified bnd 7.4.0 CLI JAR, before packaging.
+
 ## 0.11.3
 
 ### Changed

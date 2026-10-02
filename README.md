@@ -58,7 +58,7 @@ This feature requires workspace trust and a Java language server advertising `bn
 This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).
 The language server can be started in three modes:
 
-- `java` mode: launches the bundled `biz.aQute.bnd.lsp.jar` with the configured Java executable
+- `java` mode: launches `biz.aQute.bnd.lsp.jar` (bundled, downloaded, or local; see below) with the configured Java executable
 - `node` mode: runs the TypeScript LSP directly inside the extension host
 - `socket` mode: connects to an already running TCP-based language server on `127.0.0.1:<port>`
 
@@ -137,10 +137,28 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 }
 ```
 
-- `java` starts the bundled `server/biz.aQute.bnd.lsp.jar` with the configured Java runtime.
+- `java` starts `biz.aQute.bnd.lsp.jar` with the configured Java runtime.
 - `node` starts the TypeScript language server directly.
 - `socket` connects to an already running LSP on `127.0.0.1:5007`.
 - If no JAR is present, the extension automatically warns and falls back to `node` mode.
+
+#### Language server JAR selection
+
+Run **Bnd: Select Language Server JAR...** to choose the JAR used in `java` mode:
+
+| Choice | Settings written (User) | Source |
+|---|---|---|
+| Bundled | `bnd.server.jarSource: bundled` | `server/biz.aQute.bnd.lsp.jar` shipped with the extension |
+| Release | `jarSource: release`, `jarVersion` | `biz.aQute.bnd:biz.aQute.bnd.lsp` from `bnd.cli.mavenRepository` (Maven Central), verified against `.sha1` |
+| Snapshot | `jarSource: snapshot`, `jarVersion` | `bnd.cli.snapshotRepository` (bndtools Artifactory), verified against `.sha1` |
+| Custom URL | `jarSource: url`, `jarUrl`, optional `jarSha256` | Any https URL |
+| Local file | `bnd.server.jar` | A local JAR, e.g. a build output |
+
+- `bnd.server.jar` always wins; a configured but missing path produces a warning.
+- `jarVersion: latest` checks for the newest release or snapshot on each language server start.
+- Downloads are cached in the extension's global storage (`library/lsp`, newest three JARs kept). Startup never waits for the network: until a download is cached, the bundled JAR is used, and a notification offers a restart once a different JAR is ready.
+- `jarSource`, `jarVersion`, `jarUrl`, and `jarSha256` are machine-scoped, so a workspace cannot redirect the server to a different JAR.
+- `biz.aQute.bnd.lsp` is not yet published to Maven Central or the bndtools snapshot repository; until then, use Bundled, Custom URL, or Local file.
 
 You can run **Bnd: Download Latest bnd CLI JAR** to download and configure the newest available release immediately. If you need an older version such as `7.2.3`, run **Bnd: Download bnd CLI JAR Version...** and select one of the available versions or enter one explicitly. Both commands store the JAR in the extension's `library/tool` storage folder and update `bnd.cli.executable` to `java -jar ...` automatically.
 

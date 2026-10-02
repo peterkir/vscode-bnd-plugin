@@ -13,9 +13,11 @@ import {
 } from 'vscode-languageclient/node';
 import { registerCliCommands } from './bndCliCommands';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
+import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
 
 let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
+let configRestartTimer: NodeJS.Timeout | undefined;
 export let outputChannel: vscode.LogOutputChannel;
 let effectiveProvider: EffectivePropertiesProvider | undefined;
 
@@ -52,19 +54,27 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.commands.executeCommand('bnd.server.restart');
     }));
 
-    // Watch for configuration changes and reload language server automatically
+    // Debounced: selecting a server JAR updates several settings in a row.
     context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration(async (event) => {
+        vscode.workspace.onDidChangeConfiguration((event) => {
             if (event.affectsConfiguration('bnd.server') || event.affectsConfiguration('bnd.cli.javaExecutable')) {
-                outputChannel.appendLine('Configuration changed for bnd language server. Restarting...');
-                if (client) {
-                    await client.stop();
-                    client = undefined;
-                    clientReady = undefined;
-                }
-                clientReady = startLanguageClient(context).catch(handleLanguageClientError);
+                clearTimeout(configRestartTimer);
+                configRestartTimer = setTimeout(async () => {
+                    outputChannel.appendLine('Configuration changed for bnd language server. Restarting...');
+                    if (client) {
+                        await client.stop();
+                        client = undefined;
+                        clientReady = undefined;
+                    }
+                    clientReady = startLanguageClient(context).catch(handleLanguageClientError);
+                }, 300);
             }
-        })
+        }),
+        { dispose: () => clearTimeout(configRestartTimer) },
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('bnd.server.selectJar', () => cmdSelectServerJar(context))
     );
 
     // Command to restart language server
@@ -328,6 +338,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
     const mode = config.get<string>('server.mode', 'java');
 
     let serverOptions: ServerOptions;
+    let launchedJar: ReturnType<typeof resolveServerJar> | undefined;
 
     if (mode === 'socket') {
         const port = config.get<number>('server.socketPort', 5007);
@@ -340,16 +351,13 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
             return Promise.resolve(streamInfo);
         };
     } else if (mode === 'java') {
-        // Resolve JAR path
-        let jarPath = config.get<string>('server.jar');
-        if (jarPath) {
-            jarPath = normalizePath(jarPath);
-        }
-        if (!jarPath || !fs.existsSync(jarPath)) {
-            jarPath = context.asAbsolutePath(path.join('server', 'biz.aQute.bnd.lsp.jar'));
-        } else {
-            jarPath = copyCustomServerJar(context, jarPath);
-        }
+        const resolved = resolveServerJar(context, config, message => {
+            outputChannel.appendLine(message);
+            void vscode.window.showWarningMessage(message);
+        });
+        const jarPath = resolved.isLocalBuild ? copyCustomServerJar(context, resolved.path) : resolved.path;
+        outputChannel.appendLine(`bnd Language Server JAR source: ${resolved.origin}`);
+        launchedJar = resolved;
 
         if (!fs.existsSync(jarPath)) {
             outputChannel.appendLine(`bnd Language Server JAR not found at ${jarPath}. Falling back to Node.js server.`);
@@ -406,6 +414,11 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         }
     } else {
         serverOptions = createNodeServerOptions(context);
+    }
+
+    // Download in parallel to the start, so startup never waits on the network.
+    if (launchedJar?.pending) {
+        void refreshServerJar(context, launchedJar.pending, launchedJar.path);
     }
 
     const clientOptions: LanguageClientOptions = {
