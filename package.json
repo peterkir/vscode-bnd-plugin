@@ -481,6 +481,6 @@
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "mocha": "^11.7.5",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
