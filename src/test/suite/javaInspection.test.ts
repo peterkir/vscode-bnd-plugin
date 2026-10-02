@@ -67,6 +67,8 @@ suite('Java runtime inspection', () => {
         const clientOptions: LanguageClientOptions = {
             documentSelector: [{ scheme: 'file', language: 'bnd' }],
             initializationOptions: { workspaceTrusted: true },
+            // Not disposed: the server may still write stderr after stop, and a client-owned channel would be closed by then.
+            outputChannel: vscode.window.createOutputChannel('Test bnd Language Server', { log: true }),
             initializationFailedHandler: (err) => {
                 console.error('Test LSP initializationFailedHandler caught:', err);
                 return false;

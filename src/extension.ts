@@ -16,7 +16,7 @@ import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } f
 
 let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
-export let outputChannel: vscode.OutputChannel;
+export let outputChannel: vscode.LogOutputChannel;
 let effectiveProvider: EffectivePropertiesProvider | undefined;
 
 export interface JavaVersionInfo {
@@ -28,7 +28,7 @@ export interface JavaVersionInfo {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    outputChannel = vscode.window.createOutputChannel('bnd Language Server');
+    outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
     // Assigned synchronously (not inside startLanguageClient) so callers awaiting clientReady
     // never observe it as undefined while Java-version detection is still in progress.
