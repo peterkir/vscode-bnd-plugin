@@ -53,6 +53,16 @@ Current-file edits appear without saving, including added and deleted properties
 
 This feature requires workspace trust and a Java language server advertising `bnd.properties.effective`. The bundled server supports it; Node fallback and older custom/socket servers report that it is unavailable. Macro evaluation is not a sandbox: trusted bnd configuration can initialize plugins, create caches, access repositories, or run commands. Effective values can contain secrets; copying or exporting them should be deliberate.
 
+### Run and Debug
+
+`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files.
+
+- **Run OSGi** / **Debug OSGi** and **Run OSGi tests** / **Debug OSGi tests** CodeLens on `.bndrun` and `bnd.bnd` files (`bnd.launch.codeLens`), the editor title run menu, the Explorer context menu, and the Command Palette.
+- A `bnd` debug type for `launch.json` with `target`, `kind` (`run` or `test`), `tests`, `vmArgs`, `args`, `env`, `console`, `buildBeforeLaunch`, `javaExec`, and `shortenCommandLine`. The Run and Debug view lists every `.bndrun` file and test project dynamically.
+- The Java runtime defaults to the bnd `java` property, then a runtime matching `-runee`. `-runjdb` is ignored because the Java debugger owns the JDWP connection.
+
+Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. See [walkthroughs/06-launch-debug.md](walkthroughs/06-launch-debug.md) for details.
+
 ### Language Server Protocol (LSP)
 
 This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).

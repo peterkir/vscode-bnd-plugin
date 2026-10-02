@@ -22,6 +22,7 @@ Use for changes in:
 
 - `src/extension.ts`
 - `src/bndCliCommands.ts`
+- `src/bndLaunch.ts`
 - `package.json` command/menu/config contributions
 
 Responsibilities:

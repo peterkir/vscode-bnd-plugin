@@ -12,6 +12,7 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 import { registerCliCommands } from './bndCliCommands';
+import { registerLaunchSupport } from './bndLaunch';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
 
@@ -50,6 +51,14 @@ export function activate(context: vscode.ExtensionContext): void {
         return parseEffectiveResult(result);
     });
     context.subscriptions.push(effectiveProvider);
+    registerLaunchSupport(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error('bnd Language Server is not running.');
+            return client.sendRequest('workspace/executeCommand', { command, arguments: args }, token);
+        },
+    }, outputChannel);
     context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
         void vscode.commands.executeCommand('bnd.server.restart');
     }));

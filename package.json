@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -232,6 +232,168 @@
         "command": "bnd.lsp.expandMacro",
         "title": "Evaluate Macro (LSP)",
         "category": "Bnd"
+      },
+      {
+        "command": "bnd.launch.run",
+        "title": "Run OSGi Framework",
+        "category": "Bnd",
+        "icon": "$(run)"
+      },
+      {
+        "command": "bnd.launch.debug",
+        "title": "Debug OSGi Framework",
+        "category": "Bnd",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "bnd.launch.runTests",
+        "title": "Run OSGi Tests (Launch)",
+        "category": "Bnd",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "bnd.launch.debugTests",
+        "title": "Debug OSGi Tests",
+        "category": "Bnd",
+        "icon": "$(debug-all)"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "bnd",
+        "label": "bnd OSGi",
+        "languages": [
+          "bnd"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "type": "string",
+                "default": "${file}",
+                "description": "Absolute path of the .bndrun or bnd.bnd file to launch."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "run",
+                  "test"
+                ],
+                "enumDescriptions": [
+                  "Launch the OSGi framework described by -runfw, -runbundles and related instructions.",
+                  "Run the OSGi tests of the project or .bndrun through the bnd tester (-testpath, -tester)."
+                ],
+                "default": "run",
+                "description": "Whether to run the framework or the OSGi tests."
+              },
+              "tests": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Test names to run when kind is 'test', e.g. com.example.FooTest or com.example.FooTest:testBar. Empty runs all tests."
+              },
+              "vmArgs": {
+                "type": [
+                  "array",
+                  "string"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional JVM arguments appended after -runvm."
+              },
+              "args": {
+                "type": [
+                  "array",
+                  "string"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional program arguments appended after -runprogramargs."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "default": {},
+                "description": "Additional environment variables; override values from -runenv."
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "default": "integratedTerminal",
+                "description": "Where the Java debugger runs the OSGi framework. The integrated terminal supports the Gogo shell."
+              },
+              "buildBeforeLaunch": {
+                "type": "boolean",
+                "default": true,
+                "description": "Build the project and the workspace projects it depends on before launching."
+              },
+              "javaExec": {
+                "type": "string",
+                "description": "Java executable for the launched framework. Defaults to the bnd 'java' property, then a runtime matching -runee."
+              },
+              "shortenCommandLine": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "jarmanifest",
+                  "argfile",
+                  "auto"
+                ],
+                "default": "auto",
+                "description": "How the Java debugger shortens long command lines."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "bnd",
+            "request": "launch",
+            "name": "bnd: Launch current file",
+            "target": "${file}",
+            "kind": "run"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "bnd: Launch .bndrun",
+            "description": "Run or debug an OSGi framework described by a .bndrun file.",
+            "body": {
+              "type": "bnd",
+              "request": "launch",
+              "name": "bnd: ${1:app}.bndrun",
+              "target": "^\"\\${workspaceFolder}/${2:project}/${1:app}.bndrun\"",
+              "kind": "run"
+            }
+          },
+          {
+            "label": "bnd: OSGi tests",
+            "description": "Run or debug the OSGi tests of a bnd project.",
+            "body": {
+              "type": "bnd",
+              "request": "launch",
+              "name": "bnd tests: ${1:project}",
+              "target": "^\"\\${workspaceFolder}/${1:project}/bnd.bnd\"",
+              "kind": "test",
+              "tests": []
+            }
+          }
+        ]
       }
     ],
     "configuration": {
@@ -326,10 +488,37 @@
           "type": "string",
           "default": "java",
           "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
+        },
+        "bnd.launch.codeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Run and Debug CodeLens actions at the top of .bndrun and bnd.bnd files."
         }
       }
     },
     "menus": {
+      "editor/title/run": [
+        {
+          "command": "bnd.launch.run",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@1"
+        },
+        {
+          "command": "bnd.launch.debug",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@2"
+        },
+        {
+          "command": "bnd.launch.runTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@3"
+        },
+        {
+          "command": "bnd.launch.debugTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@4"
+        }
+      ],
       "editor/title": [
         {
           "command": "bnd.showEffective",
@@ -357,6 +546,26 @@
           "command": "bnd.showEffectiveToSide",
           "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
           "group": "bnd"
+        },
+        {
+          "command": "bnd.launch.run",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@1"
+        },
+        {
+          "command": "bnd.launch.debug",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@2"
+        },
+        {
+          "command": "bnd.launch.runTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@3"
+        },
+        {
+          "command": "bnd.launch.debugTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@4"
         }
       ],
       "commandPalette": [
@@ -440,6 +649,18 @@
         },
         {
           "command": "bnd.lsp.expandMacro"
+        },
+        {
+          "command": "bnd.launch.run"
+        },
+        {
+          "command": "bnd.launch.debug"
+        },
+        {
+          "command": "bnd.launch.runTests"
+        },
+        {
+          "command": "bnd.launch.debugTests"
         }
       ]
     },
@@ -490,6 +711,14 @@
             ],
             "media": {
               "markdown": "walkthroughs/05-cli-reference.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.launch",
+            "title": "Run and Debug OSGi Frameworks",
+            "description": "Use the Run and Debug CodeLens on .bndrun and bnd.bnd files, or add a `bnd` launch configuration, to start and debug OSGi frameworks and tests with the Java debugger.",
+            "media": {
+              "markdown": "walkthroughs/06-launch-debug.md"
             }
           }
         ]
