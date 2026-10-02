@@ -35,5 +35,6 @@ CHECKLIST.md
 
 # CI / repo metadata
 .github/
+scripts/
 AGENTS.md
 copilot-instructions.md

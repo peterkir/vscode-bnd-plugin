@@ -68,6 +68,8 @@ This means:
 - the extension falls back cleanly if the bundled LSP JAR is missing
 - the LSP remains available for editors that can speak the protocol
 
+`Bnd: Resolve Runbundles (LSP)` resolves the active or selected `.bndrun` file through a Java language server and reports resolution errors. For Node mode, use `Bnd: Resolve (.bndrun)` instead.
+
 **Architecture:**
 
 ```
