@@ -9,7 +9,7 @@ Guide for developing, testing, packaging, publishing, and verifying the `vscode-
 - **Node.js**: v18 or later
 - **npm**: v9 or later (bundled with Node.js)
 - **Java**: Java 17+ (required for bnd CLI JAR and Java-mode language server)
-- **VS Code**: 1.116.0 or higher
+- **VS Code**: 1.140.0 or higher
 - **VS Code Extension Publisher Account**: Personal Access Token (PAT) with `Marketplace (Manage)` permissions under publisher `klibio`
 
 ---
