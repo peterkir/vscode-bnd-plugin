@@ -29,6 +29,10 @@ export interface JavaVersionInfo {
     error?: string;
 }
 
+export function resolveBndrunUri(uri: vscode.Uri): string {
+    return uri.toString().replace(/^file:\/\/\/([a-z])%3A/i, 'file:///$1:');
+}
+
 export function activate(context: vscode.ExtensionContext): void {
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
@@ -109,8 +113,11 @@ export function activate(context: vscode.ExtensionContext): void {
                 }
                 const res = await client.sendRequest('workspace/executeCommand', {
                     command: 'bnd.resolve',
-                    arguments: [targetUri.toString()],
+                    arguments: [resolveBndrunUri(targetUri)],
                 });
+                if (res && typeof res === 'object' && 'error' in res) {
+                    throw new Error(String(res.error));
+                }
                 vscode.window.showInformationMessage(`bnd resolution completed: ${JSON.stringify(res)}`);
             } catch (err: any) {
                 vscode.window.showErrorMessage(`Resolution failed: ${err?.message ?? err}`);
