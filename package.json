@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.11.3",
+  "version": "0.12.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -214,6 +214,11 @@
         "category": "Bnd"
       },
       {
+        "command": "bnd.server.selectJar",
+        "title": "Select Language Server JAR...",
+        "category": "Bnd"
+      },
+      {
         "command": "bnd.lsp.resolve",
         "title": "Resolve Runbundles (LSP)",
         "category": "Bnd"
@@ -245,7 +250,44 @@
         "bnd.server.jar": {
           "type": "string",
           "default": "",
-          "description": "Optional custom path to the biz.aQute.bnd.lsp.jar. If empty, the bundled JAR is used."
+          "description": "Optional path to a local biz.aQute.bnd.lsp.jar, e.g. a build output. Takes precedence over bnd.server.jarSource and is launched from a copy so it can be rebuilt while running."
+        },
+        "bnd.server.jarSource": {
+          "type": "string",
+          "enum": [
+            "bundled",
+            "release",
+            "snapshot",
+            "url"
+          ],
+          "enumDescriptions": [
+            "The JAR shipped with the extension.",
+            "A biz.aQute.bnd.lsp release from bnd.cli.mavenRepository (Maven Central), verified against its .sha1 file.",
+            "A biz.aQute.bnd.lsp snapshot from bnd.cli.snapshotRepository (bndtools Artifactory), verified against its .sha1 file.",
+            "The https URL in bnd.server.jarUrl, optionally verified against bnd.server.jarSha256."
+          ],
+          "default": "bundled",
+          "scope": "machine",
+          "description": "Source of the bnd Language Server JAR. Downloads are cached in the extension's global storage and run in the background; until available, the bundled JAR is used. Use 'Bnd: Select Language Server JAR...' to choose."
+        },
+        "bnd.server.jarVersion": {
+          "type": "string",
+          "default": "latest",
+          "scope": "machine",
+          "description": "Version for the 'release' or 'snapshot' source, e.g. 7.5.0 or 7.5.0-SNAPSHOT. 'latest' checks for the newest version on every language server start."
+        },
+        "bnd.server.jarUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "https URL of a biz.aQute.bnd.lsp JAR for the 'url' source."
+        },
+        "bnd.server.jarSha256": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "pattern": "^([0-9a-fA-F]{64})?$",
+          "description": "Optional SHA-256 of the JAR at bnd.server.jarUrl. The download is rejected on mismatch."
         },
         "bnd.server.javaExecutable": {
           "type": "string",
@@ -386,6 +428,9 @@
         },
         {
           "command": "bnd.server.restart"
+        },
+        {
+          "command": "bnd.server.selectJar"
         },
         {
           "command": "bnd.lsp.resolve"

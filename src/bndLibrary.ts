@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { httpGet, httpGetText } from './bndHttp';
@@ -5,9 +6,17 @@ import { bndJavaExecutable, quoteForCommand } from './bndCliCommands';
 import { outputChannel } from './extension';
 
 const BND_GROUP_PATH = 'biz/aQute/bnd';
-const BND_ARTIFACT_ID = 'biz.aQute.bnd';
 const JAR_MAGIC = [0x50, 0x4b, 0x03, 0x04];
 const MAX_JAR_BYTES = 200 * 1024 * 1024;
+
+export interface BndArtifact {
+    artifactId: string;
+    /** Sub folder of `globalStorage/library` holding downloaded JARs. */
+    storage: string;
+}
+
+export const BND_CLI_ARTIFACT: BndArtifact = { artifactId: 'biz.aQute.bnd', storage: 'tool' };
+export const BND_LSP_ARTIFACT: BndArtifact = { artifactId: 'biz.aQute.bnd.lsp', storage: 'lsp' };
 
 export type LibraryKind = 'release' | 'snapshot' | 'custom';
 
@@ -17,6 +26,11 @@ export interface LibrarySelection {
     version: string;
     url: string;
     fileName: string;
+    artifact: BndArtifact;
+    /** Expected SHA-256 (hex) of the JAR. */
+    sha256?: string;
+    /** URL of a Maven `.sha1` file the JAR must match. */
+    sha1Url?: string;
 }
 
 export interface BndVersionMetadata {
@@ -44,8 +58,8 @@ function snapshotRepository(): string {
     );
 }
 
-function artifactBaseUrl(repository: string): string {
-    return `${repository}/${BND_GROUP_PATH}/${BND_ARTIFACT_ID}`;
+function artifactBaseUrl(repository: string, artifact: BndArtifact): string {
+    return `${repository}/${BND_GROUP_PATH}/${artifact.artifactId}`;
 }
 
 // ─── Metadata parsing ─────────────────────────────────────────────────────────
@@ -64,7 +78,11 @@ export function parseLatestVersion(metadataXml: string, versions: string[]): str
 }
 
 /** Picks the timestamped JAR name from a snapshot `maven-metadata.xml`. */
-export function parseSnapshotJarName(metadataXml: string, version: string): string | undefined {
+export function parseSnapshotJarName(
+    metadataXml: string,
+    version: string,
+    artifactId = BND_CLI_ARTIFACT.artifactId,
+): string | undefined {
     for (const block of metadataXml.matchAll(/<snapshotVersion>([\s\S]*?)<\/snapshotVersion>/g)) {
         const body = block[1];
         if (/<classifier>/.test(body)) {
@@ -75,7 +93,7 @@ export function parseSnapshotJarName(metadataXml: string, version: string): stri
         }
         const value = body.match(/<value>([^<]+)<\/value>/)?.[1]?.trim();
         if (value) {
-            return `${BND_ARTIFACT_ID}-${value}.jar`;
+            return `${artifactId}-${value}.jar`;
         }
     }
 
@@ -83,17 +101,19 @@ export function parseSnapshotJarName(metadataXml: string, version: string): stri
     const buildNumber = metadataXml.match(/<buildNumber>([^<]+)<\/buildNumber>/)?.[1]?.trim();
     if (timestamp && buildNumber) {
         const base = version.replace(/-SNAPSHOT$/i, '');
-        return `${BND_ARTIFACT_ID}-${base}-${timestamp}-${buildNumber}.jar`;
+        return `${artifactId}-${base}-${timestamp}-${buildNumber}.jar`;
     }
 
     return undefined;
 }
 
 /** Fallback when the repository serves only a directory listing. */
-export function parseJarNamesFromListing(html: string): string[] {
+export function parseJarNamesFromListing(html: string, artifactId = BND_CLI_ARTIFACT.artifactId): string[] {
+    // A version always follows the artifact id, so `biz.aQute.bnd-` never matches `biz.aQute.bnd.lsp-…`.
+    const prefix = new RegExp(`^${artifactId.replace(/\./g, '\\.')}-\\d`);
     const names = [...html.matchAll(/href="([^"]+\.jar)"/gi)]
         .map(match => decodeURIComponent(match[1]).split('/').pop() as string)
-        .filter(name => name.startsWith(`${BND_ARTIFACT_ID}-`) && !/-(sources|javadoc)\.jar$/i.test(name));
+        .filter(name => prefix.test(name) && !/-(sources|javadoc)\.jar$/i.test(name));
     return [...new Set(names)].sort();
 }
 
@@ -137,21 +157,35 @@ function assertJarBytes(bytes: Uint8Array, source: string): void {
     }
 }
 
+/** Throws unless `bytes` hash to `expected` (hex, case-insensitive; Maven checksum files may append a file name). */
+export function assertChecksum(bytes: Uint8Array, algorithm: 'sha1' | 'sha256', expected: string, source: string): void {
+    const wanted = expected.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
+    const actual = crypto.createHash(algorithm).update(bytes).digest('hex');
+    if (!wanted || actual !== wanted) {
+        throw new Error(`${algorithm.toUpperCase()} mismatch for ${source}: expected ${wanted || '<empty>'}, got ${actual}.`);
+    }
+}
+
 // ─── Remote lookups ───────────────────────────────────────────────────────────
 
-export async function fetchReleaseMetadata(): Promise<BndVersionMetadata> {
-    const url = `${artifactBaseUrl(releaseRepository())}/maven-metadata.xml`;
-    const xml = await httpGetText(url, { log });
+export async function fetchReleaseMetadata(artifact = BND_CLI_ARTIFACT): Promise<BndVersionMetadata> {
+    const url = `${artifactBaseUrl(releaseRepository(), artifact)}/maven-metadata.xml`;
+    let xml: string;
+    try {
+        xml = await httpGetText(url, { log });
+    } catch (error) {
+        throw new Error(`No ${artifact.artifactId} releases available from ${url}: ${describe(error)}`);
+    }
     const versions = parseVersions(xml).filter(version => !/-SNAPSHOT$/i.test(version));
     const latest = parseLatestVersion(xml, versions);
     if (!latest) {
-        throw new Error(`No bnd releases found in ${url}`);
+        throw new Error(`No ${artifact.artifactId} releases found in ${url}`);
     }
     return { latest, versions };
 }
 
-export async function fetchSnapshotVersions(): Promise<string[]> {
-    const base = artifactBaseUrl(snapshotRepository());
+export async function fetchSnapshotVersions(artifact = BND_CLI_ARTIFACT): Promise<string[]> {
+    const base = artifactBaseUrl(snapshotRepository(), artifact);
     try {
         const xml = await httpGetText(`${base}/maven-metadata.xml`, { log });
         const versions = parseVersions(xml).filter(version => /-SNAPSHOT$/i.test(version));
@@ -166,11 +200,11 @@ export async function fetchSnapshotVersions(): Promise<string[]> {
     return parseVersionsFromListing(listing).filter(version => /-SNAPSHOT$/i.test(version));
 }
 
-async function resolveSnapshotJarName(version: string): Promise<string> {
-    const versionBase = `${artifactBaseUrl(snapshotRepository())}/${version}`;
+async function resolveSnapshotJarName(version: string, artifact: BndArtifact): Promise<string> {
+    const versionBase = `${artifactBaseUrl(snapshotRepository(), artifact)}/${version}`;
     try {
         const xml = await httpGetText(`${versionBase}/maven-metadata.xml`, { log });
-        const name = parseSnapshotJarName(xml, version);
+        const name = parseSnapshotJarName(xml, version, artifact.artifactId);
         if (name) {
             return name;
         }
@@ -179,7 +213,7 @@ async function resolveSnapshotJarName(version: string): Promise<string> {
     }
 
     const listing = await httpGetText(`${versionBase}/`, { log });
-    const names = parseJarNamesFromListing(listing);
+    const names = parseJarNamesFromListing(listing, artifact.artifactId);
     const newest = names[names.length - 1];
     if (!newest) {
         throw new Error(`No JAR found for snapshot version ${version}`);
@@ -187,38 +221,40 @@ async function resolveSnapshotJarName(version: string): Promise<string> {
     return newest;
 }
 
-export function releaseSelection(version: string): LibrarySelection {
-    const fileName = `${BND_ARTIFACT_ID}-${version}.jar`;
+export function releaseSelection(version: string, artifact = BND_CLI_ARTIFACT): LibrarySelection {
+    const fileName = `${artifact.artifactId}-${version}.jar`;
     return {
         kind: 'release',
         version,
         fileName,
-        url: `${artifactBaseUrl(releaseRepository())}/${version}/${fileName}`,
+        artifact,
+        url: `${artifactBaseUrl(releaseRepository(), artifact)}/${version}/${fileName}`,
     };
 }
 
-export async function snapshotSelection(version: string): Promise<LibrarySelection> {
-    const fileName = await resolveSnapshotJarName(version);
+export async function snapshotSelection(version: string, artifact = BND_CLI_ARTIFACT): Promise<LibrarySelection> {
+    const fileName = await resolveSnapshotJarName(version, artifact);
     return {
         kind: 'snapshot',
         version,
         fileName,
-        url: `${artifactBaseUrl(snapshotRepository())}/${version}/${fileName}`,
+        artifact,
+        url: `${artifactBaseUrl(snapshotRepository(), artifact)}/${version}/${fileName}`,
     };
 }
 
-export function customSelection(url: string): LibrarySelection {
-    const fileName = decodeURIComponent(new URL(url).pathname).split('/').pop() || `${BND_ARTIFACT_ID}.jar`;
-    return { kind: 'custom', version: fileName.replace(/\.jar$/i, ''), fileName, url };
+export function customSelection(url: string, artifact = BND_CLI_ARTIFACT): LibrarySelection {
+    const fileName = decodeURIComponent(new URL(url).pathname).split('/').pop() || `${artifact.artifactId}.jar`;
+    return { kind: 'custom', version: fileName.replace(/\.jar$/i, ''), fileName, artifact, url };
 }
 
 // ─── Download & configuration ─────────────────────────────────────────────────
 
-function libraryUri(context: vscode.ExtensionContext, selection: LibrarySelection): vscode.Uri {
+export function libraryUri(context: vscode.ExtensionContext, selection: LibrarySelection): vscode.Uri {
     return vscode.Uri.joinPath(
         context.globalStorageUri,
         'library',
-        'tool',
+        selection.artifact.storage,
         selection.kind,
         selection.version,
         selection.fileName,
@@ -246,8 +282,17 @@ export async function downloadLibrary(
 
     const bytes = await httpGet(selection.url, { log });
     assertJarBytes(bytes, selection.url);
+    if (selection.sha256) {
+        assertChecksum(bytes, 'sha256', selection.sha256, selection.url);
+    }
+    if (selection.sha1Url) {
+        assertChecksum(bytes, 'sha1', await httpGetText(selection.sha1Url, { log }), selection.url);
+    }
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(target, '..'));
-    await vscode.workspace.fs.writeFile(target, bytes);
+    // Rename after writing so a partially written file is never picked up as a cache hit.
+    const partial = vscode.Uri.joinPath(target, '..', `${selection.fileName}.part`);
+    await vscode.workspace.fs.writeFile(partial, bytes);
+    await vscode.workspace.fs.rename(partial, target, { overwrite: true });
     log(`Stored ${selection.fileName} at ${target.fsPath}`);
     return target;
 }
@@ -309,9 +354,22 @@ export async function ensureBndLibrary(context: vscode.ExtensionContext): Promis
 
 // ─── Command ──────────────────────────────────────────────────────────────────
 
-async function pickReleaseVersion(): Promise<string | undefined> {
-    const { latest, versions } = await fetchReleaseMetadata();
+export const TRACK_LATEST = 'latest';
+
+export interface VersionPickOptions {
+    artifact?: BndArtifact;
+    title?: string;
+    /** Offers a `latest` entry that follows the newest version on every start. */
+    offerTrackLatest?: boolean;
+}
+
+const trackLatestItem: vscode.QuickPickItem = { label: TRACK_LATEST, description: 'Always use the newest version' };
+
+export async function pickReleaseVersion(options: VersionPickOptions = {}): Promise<string | undefined> {
+    const title = options.title ?? 'Bnd: Configure bnd Library';
+    const { latest, versions } = await fetchReleaseMetadata(options.artifact);
     const items: vscode.QuickPickItem[] = [
+        ...(options.offerTrackLatest ? [trackLatestItem] : []),
         ...[...versions].reverse().slice(0, 30).map(version => ({
             label: version,
             description: version === latest ? 'Latest release' : undefined,
@@ -320,14 +378,14 @@ async function pickReleaseVersion(): Promise<string | undefined> {
     ];
 
     const choice = await vscode.window.showQuickPick(items, {
-        title: 'Bnd: Configure bnd Library — release version',
+        title: `${title} — release version`,
         placeHolder: 'Select a release version',
     });
     if (!choice) { return undefined; }
     if (choice.label === 'Enter another version...') {
         return vscode.window.showInputBox({
-            title: 'Bnd: Configure bnd Library',
-            prompt: 'Enter the bnd release version',
+            title,
+            prompt: 'Enter the release version',
             value: latest,
             validateInput: value => (value.trim() ? undefined : 'Version is required.'),
         });
@@ -335,20 +393,24 @@ async function pickReleaseVersion(): Promise<string | undefined> {
     return choice.label;
 }
 
-async function pickSnapshotVersion(): Promise<string | undefined> {
-    const versions = await fetchSnapshotVersions();
+export async function pickSnapshotVersion(options: VersionPickOptions = {}): Promise<string | undefined> {
+    const artifact = options.artifact ?? BND_CLI_ARTIFACT;
+    const versions = await fetchSnapshotVersions(artifact);
     if (versions.length === 0) {
-        throw new Error(`No snapshot versions found in ${snapshotRepository()}`);
+        throw new Error(`No ${artifact.artifactId} snapshot versions found in ${snapshotRepository()}`);
     }
 
     const ordered = [...versions].reverse();
-    const items = ordered.map((version, index) => ({
-        label: version,
-        description: index === 0 ? 'Newest snapshot' : undefined,
-    }));
+    const items: vscode.QuickPickItem[] = [
+        ...(options.offerTrackLatest ? [trackLatestItem] : []),
+        ...ordered.map((version, index) => ({
+            label: version,
+            description: index === 0 ? 'Newest snapshot' : undefined,
+        })),
+    ];
 
     const choice = await vscode.window.showQuickPick(items, {
-        title: 'Bnd: Configure bnd Library — snapshot version',
+        title: `${options.title ?? 'Bnd: Configure bnd Library'} — snapshot version`,
         placeHolder: 'Select a snapshot version',
     });
     return choice?.label;

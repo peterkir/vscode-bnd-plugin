@@ -112,7 +112,7 @@ The extension can launch the bnd server in different modes depending on your set
 }
 ```
 
-- `java` uses the bundled `server/biz.aQute.bnd.lsp.jar` and provides full bndlib-backed features.
+- `java` uses `biz.aQute.bnd.lsp.jar` and provides full bndlib-backed features. By default the bundled `server/biz.aQute.bnd.lsp.jar` is used; run **Bnd: Select Language Server JAR...** to switch to a release, snapshot, custom URL, or local JAR (settings `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.jar`).
 - `node` runs the TypeScript LSP directly, providing completion and hover support.
 - `socket` connects to a running TCP socket server.
 - If the JAR is missing, the extension warns and falls back to the Node-based server. Resolve, build, and macro commands require the Java server or a compatible socket server.

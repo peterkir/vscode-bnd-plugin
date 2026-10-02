@@ -21,11 +21,13 @@ The extension can start its language server in three modes:
 
 | Mode | Purpose |
 |---|---|
-| `java` | Launch the bundled `biz.aQute.bnd.lsp.jar` using Java |
+| `java` | Launch `biz.aQute.bnd.lsp.jar` using Java |
 | `node` | Run the TypeScript language server directly |
 | `socket` | Connect to an existing TCP LSP server |
 
-The relevant settings are `bnd.server.mode`, `bnd.server.jar`, `bnd.server.javaExecutable`, `bnd.server.jvmArgs`, and `bnd.server.socketPort`.
+The relevant settings are `bnd.server.mode`, `bnd.server.jar`, `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.javaExecutable`, `bnd.server.jvmArgs`, and `bnd.server.socketPort`.
+
+Run **Bnd: Select Language Server JAR...** to switch between the bundled JAR, a release, a snapshot, a custom https URL, or a local file.
 
 If the bundled JAR is missing, the extension issues a warning and falls back to the Node server.
 

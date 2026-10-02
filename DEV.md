@@ -117,8 +117,8 @@ To test modifications in `biz.aQute.bnd.lsp`:
      "bnd.server.javaExecutable": "java"
    }
    ```
-   In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables.
-3. Restart the language server with **Bnd: Restart Language Server**, or close and relaunch the development host. On Windows, stop the host before rebuilding if the running Java process is holding the JAR open.
+   In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables. Alternatively, run **Bnd: Select Language Server JAR...** → **Local file...**, which writes the User setting. `bnd.server.jar` takes precedence over `bnd.server.jarSource`.
+3. Restart the language server with **Bnd: Restart Language Server**, or close and relaunch the development host. The extension launches a copy of the `bnd.server.jar` file from its global storage, so the build can overwrite the generated JAR while the server runs.
 
 ---
 
