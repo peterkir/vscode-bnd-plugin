@@ -29,6 +29,41 @@ jobs:
       - name: Compile (client + server)
         run: npm run compile:all
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Checkout bnd source (CLI parity and invocation tests)
+        uses: actions/checkout@v6
+        with:
+          repository: bndtools/bnd
+          ref: fea-bnd-ls
+          path: bnd-src
+          sparse-checkout: |
+            biz.aQute.bnd/src/aQute/bnd/main
+            biz.aQute.bnd/testdata/workspace
+
+      - name: Download bnd CLI JAR
+        env:
+          BND_VERSION: "7.4.0"
+        run: |
+          url="https://repo.maven.apache.org/maven2/biz/aQute/bnd/biz.aQute.bnd/${BND_VERSION}/biz.aQute.bnd-${BND_VERSION}.jar"
+          jar="${RUNNER_TEMP}/biz.aQute.bnd.jar"
+          curl -fsSL -o "$jar" "$url"
+          echo "$(curl -fsSL "${url}.sha1")  ${jar}" | sha1sum -c -
+          echo "BND_CLI_JAR=${jar}" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: xvfb-run -a npm test
+        env:
+          BND_SOURCE_REPO: ${{ github.workspace }}/bnd-src
+
+      # vsce packages the whole workspace folder.
+      - name: Remove bnd source checkout
+        run: rm -rf bnd-src
+
       - name: Package extension
         run: npm run package
 
