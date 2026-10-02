@@ -134,6 +134,10 @@ After Java changes, rebuild and update the bundled JAR before running `npm test`
 
 On Windows, a running development server may lock its generated JAR. Stop that development host before rebuilding, or temporarily set `target-dir: generated/effective` in the Java LSP project's `bnd.bnd`, build there, and restore the setting afterward. Changing only `-outputmask` is insufficient because bnd also writes a canonical JAR name. Do not replace a running user's server process without approval.
 
+### Launch and Debug
+
+`src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.
+
 Manual checks: open Effective to Side, edit/add/delete current-file properties without saving, toggle raw/merged modes, follow provenance links, save an included file, and inspect generated source. Check light, dark, and high-contrast themes and narrow editor groups. The view must not write the source document, render property text as HTML, or retain values in webview state.
 
 ### Automated Test Suite

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0
+
+### Added
+- Run and debug `.bndrun` files, bnd projects, and OSGi tests through VS Code's Run and Debug facility. A new `bnd` debug type asks the Java language server to prepare the launch (`bnd.launch.prepare`) and hands it to Debugger for Java; `bnd.launch.dispose` cleans up when the session ends.
+- Run/Debug CodeLens (`bnd.launch.codeLens`), editor title run menu, Explorer context menu, and commands **Bnd: Run OSGi Framework**, **Bnd: Debug OSGi Framework**, **Bnd: Run OSGi Tests (Launch)**, **Bnd: Debug OSGi Tests**.
+- `launch.json` snippets and dynamic configurations for all `.bndrun` files and test projects.
+- Walkthrough step **Run and Debug OSGi Frameworks**.
+
+### Changed
+- Bundled Java language server adds `bnd.launch.prepare` and `bnd.launch.dispose`, and resolves the project for files inside a project directory (fixes **Build Project (LSP)** on `bnd.bnd`).
+
 ## 0.12.0
 
 ### Added

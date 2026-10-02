@@ -48,6 +48,10 @@ suite('Extension manifest', () => {
             'bnd.lsp.resolve',
             'bnd.lsp.buildProject',
             'bnd.lsp.expandMacro',
+            'bnd.launch.run',
+            'bnd.launch.debug',
+            'bnd.launch.runTests',
+            'bnd.launch.debugTests',
         ];
 
         const missing = expected.filter(name => !commands.has(name));
@@ -69,6 +73,9 @@ suite('Extension manifest', () => {
             'bnd.resolve',
             'bnd.build.project',
             'bnd.macro.expand',
+            'bnd.properties.effective',
+            'bnd.launch.prepare',
+            'bnd.launch.dispose',
         ];
 
         const collisions = serverCommands.filter(command => commands.has(command));
@@ -90,6 +97,19 @@ suite('Extension manifest', () => {
             (config.brackets ?? []).some(pair => pair[0] === '{' && pair[1] === '}'),
             'Expected {} bracket pair in language configuration',
         );
+    });
+
+    test('contributes the bnd debugger for bnd files', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const debuggerEntry = pkg.contributes.debuggers.find((item: { type: string }) => item.type === 'bnd');
+        assert.ok(debuggerEntry, 'Expected bnd debugger contribution');
+        assert.deepStrictEqual(debuggerEntry.languages, ['bnd']);
+        const attributes = debuggerEntry.configurationAttributes.launch;
+        assert.deepStrictEqual(attributes.required, ['target']);
+        assert.deepStrictEqual(attributes.properties.kind.enum, ['run', 'test']);
+        assert.strictEqual(pkg.contributes.configuration.properties['bnd.launch.codeLens'].default, true);
+        const runMenu = pkg.contributes.menus['editor/title/run'].map((item: { command: string }) => item.command);
+        assert.deepStrictEqual(runMenu, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
     });
 
     test('Effective is optional and does not replace the default source editor', () => {
