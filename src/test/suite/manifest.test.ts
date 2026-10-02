@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { resolveBndrunUri } from '../../extension';
 
 interface PackageJsonCommand {
     command: string;
@@ -12,6 +14,13 @@ suite('Extension manifest', () => {
     const workspaceRoot = path.resolve(__dirname, '../../../../');
     const packageJsonPath = path.join(workspaceRoot, 'package.json');
     const languageConfigPath = path.join(workspaceRoot, 'language-configuration.json');
+
+    test('passes Windows bndrun URIs with a literal drive colon to Java resolve', () => {
+        const uri = vscode.Uri.parse('file:///c%3A/workspace/my%20app/launch.bndrun');
+        assert.strictEqual(resolveBndrunUri(uri), 'file:///c:/workspace/my%20app/launch.bndrun');
+        assert.strictEqual(resolveBndrunUri(vscode.Uri.parse('file:///workspace/launch.bndrun')),
+            'file:///workspace/launch.bndrun');
+    });
 
     test('contains expected bnd command contributions', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
