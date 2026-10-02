@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.3
+
+### Changed
+- Dependencies: `vscode-languageclient` 10.1.2, `vscode-languageserver` 10.1.2, `vscode-languageserver-textdocument` 1.0.15, `@types/node` 26.6.3, `@vscode/test-electron` 3.1.0, TypeScript 7.0.2.
+- The **bnd Language Server** output channel is a log channel (required by `vscode-languageclient` 10); server stderr appears as error entries.
+
 ## 0.11.1
 
 ### Improved
