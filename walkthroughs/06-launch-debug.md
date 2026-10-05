@@ -6,7 +6,8 @@ The extension launches `.bndrun` files and bnd projects through the VS Code **Ru
 
 - A trusted workspace.
 - `bnd.server.mode` set to `java` (or `socket` with a server that supports `bnd.launch.prepare`). The Node fallback server cannot launch.
-- The [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension. It installs Language Support for Java; source lookup for breakpoints works best when that language server has imported your bnd projects (for example through the bnd Gradle workspace build).
+- The [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension and Language Support for Java. The bundled adapter imports bnd projects directly into JDT LS, including source/test roots and build/test dependencies. Native import requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS, separate from the launched framework's `-runee`.
+- Valid `java.configuration.runtimes` names, such as `JavaSE-21` or `JavaSE-25`. After adding native import to an existing workspace, run **Java: Clean Java Language Server Workspace** and allow reimport.
 
 ## Starting a Launch
 
@@ -40,5 +41,7 @@ The extension launches `.bndrun` files and bnd projects through the VS Code **Ru
 | `buildBeforeLaunch` | Build the project and its workspace dependencies first. Default `true`. |
 | `javaExec` | Java executable. Defaults to the bnd `java` property, then a runtime matching `-runee` from `java.configuration.runtimes`, `bnd.cli.javaExecutable`, `JAVA_HOME`, or `PATH`. |
 | `shortenCommandLine` | Passed to the Java debugger. Default `auto`. |
+| `sourcePaths` | Additional debugger source roots appended to sources of launched workspace bundles. |
+| `projectName` | Optional imported Java project used by the Java debugger. |
 
 `-runjdb` is ignored because the Java debugger owns the JDWP connection. Temporary launcher files are deleted when the debug session ends.

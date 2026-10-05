@@ -26,6 +26,7 @@ const prepared = {
     runee: 'JavaSE-17',
     name: 'p',
     warnings: [],
+    sourcePaths: ['/ws/p/src'],
 };
 
 function log(): vscode.LogOutputChannel {
@@ -43,6 +44,7 @@ suite('bnd launch', () => {
         assert.strictEqual(config.name, 'my launch');
         assert.strictEqual(config.mainClass, prepared.mainClass);
         assert.deepStrictEqual(config.classPaths, prepared.classPaths);
+        assert.deepStrictEqual(config.sourcePaths, prepared.sourcePaths);
         assert.deepStrictEqual(config.vmArgs, [...prepared.vmArgs, '-Xmx1g', '-Dx=a b']);
         assert.deepStrictEqual(config.args, ['--one', '--two']);
         assert.deepStrictEqual(config.env, { A: '1', B: 'override' });

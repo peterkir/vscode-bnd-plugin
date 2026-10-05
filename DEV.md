@@ -134,6 +134,24 @@ After Java changes, rebuild and update the bundled JAR before running `npm test`
 
 On Windows, a running development server may lock its generated JAR. Stop that development host before rebuilding, or temporarily set `target-dir: generated/effective` in the Java LSP project's `bnd.bnd`, build there, and restore the setting afterward. Changing only `-outputmask` is insufficient because bnd also writes a canonical JAR name. Do not replace a running user's server process without approval.
 
+### Native JDT LS Adapter
+
+`contributes.javaExtensions` loads `server/jdtls/org.bndtools.jdtls.adapter.jar` into Red Hat Java's JDT LS. Its importer runs ahead of Gradle and creates source/test entries, separate outputs, compiler settings, JRE mapping and a bnd dependency container. Build support refreshes project models after `.bnd` or `.mvn` changes; a configuration project tracks `cnf`. Imported bnd metadata is managed by this adapter, not Buildship. Source/output directories outside the project are currently rejected.
+
+Build with Java 21 or later and the installed JDT LS core API JAR:
+
+```bash
+export JDT_LS_HOME="$(cygpath -m "$HOME/.vscode/extensions/redhat.java-1.56.0-win32-x64/server")"
+export JDT_LS_CORE_JAR="$(find "$JDT_LS_HOME/plugins" -name 'org.eclipse.jdt.ls.core_*.jar' -print -quit)"
+export JAVA_HOME="$(cygpath -m "$HOME/.ecdev/java/ee/JAVA25")"
+export PATH="$(cygpath -u "$JAVA_HOME")/bin:$PATH"
+BND_LSP_WORKSPACE="${BND_LSP_WORKSPACE:-../../bndtools/bnd.wt/fea-bnd-ls}"
+"$BND_LSP_WORKSPACE/gradlew" -p "$BND_LSP_WORKSPACE" :org.bndtools.jdtls.adapter:jar
+cp "$BND_LSP_WORKSPACE/org.bndtools.jdtls.adapter/generated/org.bndtools.jdtls.adapter.jar" server/jdtls/
+```
+
+`npm run test:jdtls` starts an isolated JDT LS and temporary bnd workspace, checking native import, a real dependency JAR, source/test outputs and live classpath refresh. Set `JDT_LS_HOME`, `JDT_LS_JAVA` (Java executable) and `JDT_LS_JAVA_HOME` (Java 21 JDK home). `BND_JDT_LS_JAR` optionally selects a freshly built adapter. This check does not modify the running user's Java workspace. For manual verification, clean the development host's Java language-server workspace and reimport, then inspect dependencies and source roots before checking breakpoints.
+
 ### Launch and Debug
 
 `src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.

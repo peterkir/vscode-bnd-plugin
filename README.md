@@ -63,6 +63,12 @@ This feature requires workspace trust and a Java language server advertising `bn
 
 Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. See [walkthroughs/06-launch-debug.md](walkthroughs/06-launch-debug.md) for details.
 
+### Native Java Project Import
+
+The extension contributes a headless bnd adapter to Language Support for Java (`redhat.java`). It requires JDT LS 1.61 or later (Red Hat Java 1.56 or later), running on Java 21 or later. In a bnd workspace, it imports Java projects ahead of Gradle: source/test roots, separate output directories, `-buildpath`, `-testpath`, compiler settings and JRE containers. Changes to `.bnd` and `.mvn` configuration refresh the classpath.
+
+The adapter owns imported bnd Java project metadata; do not have Gradle/Buildship manage the same projects in the same Java language-server workspace. After upgrading, run **Java: Clean Java Language Server Workspace** and allow reimport to remove stale unmanaged source roots. Use valid names in `java.configuration.runtimes`, such as `JavaSE-21` and `JavaSE-25`, not folder names such as `JAVA21`. Source and output directories must currently be inside their project directory.
+
 ### Language Server Protocol (LSP)
 
 This extension implements the [Language Server Protocol](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide).

@@ -112,6 +112,14 @@ suite('Extension manifest', () => {
         assert.deepStrictEqual(runMenu, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
     });
 
+    test('ships the native bnd JDT LS adapter', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        assert.deepStrictEqual(pkg.contributes.javaExtensions, ['./server/jdtls/org.bndtools.jdtls.adapter.jar']);
+        for (const jar of pkg.contributes.javaExtensions) {
+            assert.ok(fs.existsSync(path.join(workspaceRoot, jar)), `Missing Java extension ${jar}`);
+        }
+    });
+
     test('Effective is optional and does not replace the default source editor', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         const editor = pkg.contributes.customEditors.find((item: { viewType: string }) => item.viewType === 'bnd.effective');

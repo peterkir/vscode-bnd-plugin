@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     Executable,
+    ExecuteCommandRequest,
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
@@ -43,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!activeClient?.initializeResult?.capabilities.executeCommandProvider?.commands.includes(effectiveCommand)) {
             throw new Error('Effective properties require an updated Java bnd Language Server. Node and older servers do not support this view.');
         }
-        const result = await activeClient.sendRequest('workspace/executeCommand', {
+        const result = await activeClient.sendRequest(ExecuteCommandRequest.type, {
             command: effectiveCommand,
             arguments: [{ uri: document.uri.toString(), documentVersion: document.version, ...options }],
         }, token);
@@ -56,7 +57,7 @@ export function activate(context: vscode.ExtensionContext): void {
         execute: async (command, args, token) => {
             await clientReady;
             if (!client) throw new Error('bnd Language Server is not running.');
-            return client.sendRequest('workspace/executeCommand', { command, arguments: args }, token);
+            return executeServerCommand(client, command, args, token);
         },
     }, outputChannel);
     context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
@@ -188,6 +189,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Register bnd CLI commands
     registerCliCommands(context);
+}
+
+export function executeServerCommand(activeClient: LanguageClient, command: string, args: unknown[],
+    token?: vscode.CancellationToken): Promise<unknown> {
+    return activeClient.sendRequest(ExecuteCommandRequest.type, { command, arguments: args }, token);
 }
 
 function stripQuotes(value: string): string {
