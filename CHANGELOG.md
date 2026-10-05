@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0
+
+### Added
+- A bundled headless JDT LS adapter imports bnd Java projects natively, ahead of Gradle, with source/test roots, separate outputs, compiler/JRE settings and resolved build/test dependencies. Requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS.
+- Native classpath refresh for `.bnd` and `.mvn` changes, including workspace configuration under `cnf`.
+- Debugger source paths for launched workspace bundles, with optional `sourcePaths` and `projectName` launch overrides.
+- `npm run test:jdtls` validates import and live classpath refresh in an isolated real JDT LS.
+
+## 0.13.1
+
+### Fixed
+- Launch cleanup and Effective properties requests use the typed LSP execute-command request so an omitted cancellation token does not become an extra JSON-RPC parameter rejected by the Java server.
+
 ## 0.13.0
 
 ### Added

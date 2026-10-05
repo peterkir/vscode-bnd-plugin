@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -32,6 +32,9 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "javaExtensions": [
+      "./server/jdtls/org.bndtools.jdtls.adapter.jar"
+    ],
     "customEditors": [
       {
         "viewType": "bnd.effective",
@@ -356,6 +359,16 @@
                 ],
                 "default": "auto",
                 "description": "How the Java debugger shortens long command lines."
+              },
+              "sourcePaths": {
+                "type": "array",
+                "items": { "type": "string" },
+                "default": [],
+                "description": "Additional source roots appended to the bnd workspace bundle sources for debugger source lookup."
+              },
+              "projectName": {
+                "type": "string",
+                "description": "Optional imported Java project used by the Java debugger."
               }
             }
           }
@@ -734,6 +747,7 @@
     "compile:all": "npm run compile && npm run compile:server",
     "pretest": "npm run compile:all && npm run compile:tests",
     "test": "node ./out/test/test/runTest.js",
+    "test:jdtls": "node scripts/testJdtls.cjs",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
     "package": "vsce package --no-git-tag-version",

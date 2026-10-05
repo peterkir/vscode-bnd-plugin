@@ -21,6 +21,8 @@ export interface BndLaunchConfiguration extends vscode.DebugConfiguration {
     buildBeforeLaunch?: boolean;
     javaExec?: string;
     shortenCommandLine?: string;
+    sourcePaths?: string[];
+    projectName?: string;
 }
 
 export interface PreparedLaunch {
@@ -35,6 +37,7 @@ export interface PreparedLaunch {
     runee?: string | null;
     name?: string | null;
     warnings: string[];
+    sourcePaths?: string[];
 }
 
 export interface LaunchServer {
@@ -55,7 +58,7 @@ export function parsePreparedLaunch(value: unknown): PreparedLaunch {
         || !isStringArray(result.classPaths) || !isStringArray(result.vmArgs) || !isStringArray(result.args)
         || typeof result.cwd !== 'string' || !result.env || typeof result.env !== 'object'
         || !Object.values(result.env).every(item => typeof item === 'string')
-        || !isStringArray(result.warnings ?? [])) {
+        || !isStringArray(result.warnings ?? []) || !isStringArray(result.sourcePaths ?? [])) {
         throw new Error('The language server returned an incompatible launch response.');
     }
     return { ...result, warnings: result.warnings ?? [] } as PreparedLaunch;
@@ -96,6 +99,7 @@ export function toJavaDebugConfiguration(prepared: PreparedLaunch, config: BndLa
         name: config.name || prepared.name || 'bnd launch',
         mainClass: prepared.mainClass,
         classPaths: prepared.classPaths,
+        sourcePaths: [...new Set([...(prepared.sourcePaths ?? []), ...(config.sourcePaths ?? [])])],
         vmArgs: [...prepared.vmArgs, ...splitArguments(config.vmArgs)],
         args: [...prepared.args, ...splitArguments(config.args)],
         env: { ...prepared.env, ...(config.env ?? {}) },
@@ -106,6 +110,7 @@ export function toJavaDebugConfiguration(prepared: PreparedLaunch, config: BndLa
     };
     const exec = config.javaExec || prepared.javaExecutable || javaExec;
     if (exec) java.javaExec = exec;
+    if (config.projectName) java.projectName = config.projectName;
     if (config.noDebug) java.noDebug = true;
     return java;
 }
