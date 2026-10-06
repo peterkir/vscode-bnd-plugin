@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.1
+
+### Fixed
+- Preserve repository browsing, bnd Explorer, JAR Viewer, Resolution, launch/debug, and Effective features when merging current `main`.
+- Include the Windows `.bndrun` URI fix and its regression test alongside the feature branch's manifest tests.
+
+### Changed
+- Integrate `main` dependency updates: Mocha 12.0.3 and `@types/node` 26.6.4.
+
 ## 0.19.0
 
 ### Added
