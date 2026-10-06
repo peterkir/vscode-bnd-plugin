@@ -106,8 +106,8 @@ export class EffectivePropertiesProvider implements vscode.CustomTextEditorProvi
     }
 
     private command(name: string, action: (uri?: vscode.Uri) => Promise<unknown>): void {
-        this.subscriptions.push(vscode.commands.registerCommand(name, async (uri?: vscode.Uri) => {
-            try { await action(uri); }
+        this.subscriptions.push(vscode.commands.registerCommand(name, async (arg?: vscode.Uri | { uri?: vscode.Uri }) => {
+            try { await action(arg instanceof vscode.Uri ? arg : arg?.uri); }
             catch (error) { void vscode.window.showErrorMessage(message(error)); }
         }));
     }

@@ -1,8 +1,8 @@
 {
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
-  "description": "Language support for bnd and bndrun files — syntax highlighting, IntelliSense completions, hover docs (LSP), and integrated bnd CLI commands",
-  "version": "0.12.1",
+  "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
+  "version": "0.19.1",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -31,7 +31,13 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onFileSystem:bnd-jar"
+  ],
   "contributes": {
+    "javaExtensions": [
+      "./server/jdtls/org.bndtools.jdtls.adapter.jar"
+    ],
     "customEditors": [
       {
         "viewType": "bnd.effective",
@@ -45,6 +51,75 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "bnd.jarViewer",
+        "displayName": "bnd JAR Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.jar"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bnd",
+          "title": "bnd",
+          "icon": "media/bndtools-activity.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "bndPanel",
+          "title": "Resolution",
+          "icon": "media/bndtools.svg"
+        }
+      ]
+    },
+    "views": {
+      "bnd": [
+        {
+          "id": "bnd.explorer",
+          "name": "Explorer",
+          "contextualTitle": "bnd Workspace Files"
+        },
+        {
+          "id": "bnd.repositories",
+          "name": "Repositories",
+          "icon": "media/bndtools.svg",
+          "contextualTitle": "bnd"
+        }
+      ],
+      "bndPanel": [
+        {
+          "id": "bnd.resolution",
+          "name": "Resolution",
+          "type": "webview"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "bnd.explorer",
+        "contents": "No folder opened.\n[Open Folder](command:workbench.action.files.openFolder)"
+      },
+      {
+        "view": "bnd.repositories",
+        "contents": "Repositories require a trusted workspace.\n[Manage Workspace Trust](command:workbench.trust.manage)",
+        "when": "!isWorkspaceTrusted"
+      },
+      {
+        "view": "bnd.repositories",
+        "contents": "Repositories require the Java bnd Language Server. Set bnd.server.mode to java and make Java 17 or later available.\n[Open Settings](command:workbench.action.openSettings?%22bnd.server.mode%22)\n[Restart Language Server](command:bnd.server.restart)",
+        "when": "isWorkspaceTrusted && bnd.repositories.state == unsupported"
+      },
+      {
+        "view": "bnd.repositories",
+        "contents": "No bnd workspace found. A bnd workspace contains cnf/build.bnd.",
+        "when": "isWorkspaceTrusted && bnd.repositories.state == empty"
       }
     ],
     "languages": [
@@ -74,6 +149,110 @@
       }
     ],
     "commands": [
+      {
+        "command": "bnd.explorer.refresh",
+        "title": "Refresh Workspace Files",
+        "category": "Bnd",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bnd.explorer.reveal",
+        "title": "Reveal in Explorer View",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.copyRelativePath",
+        "title": "Copy Relative Path",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.newFile",
+        "title": "New File...",
+        "category": "Bnd",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "bnd.explorer.newFolder",
+        "title": "New Folder...",
+        "category": "Bnd",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "bnd.explorer.openToSide",
+        "title": "Open to the Side",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.openWith",
+        "title": "Open With...",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.revealInOS",
+        "title": "Reveal in File Explorer",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.openInTerminal",
+        "title": "Open in Integrated Terminal",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.findInFolder",
+        "title": "Find in Folder...",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.cut",
+        "title": "Cut",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.copy",
+        "title": "Copy",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.paste",
+        "title": "Paste",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.copyPath",
+        "title": "Copy Path",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.rename",
+        "title": "Rename...",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.delete",
+        "title": "Delete",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.selectForCompare",
+        "title": "Select for Compare",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.compareWithSelected",
+        "title": "Compare with Selected",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.explorer.compareSelected",
+        "title": "Compare Selected",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.jar.open",
+        "title": "Open with bnd JAR Viewer",
+        "category": "Bnd",
+        "icon": "$(file-zip)"
+      },
       {
         "command": "bnd.showEffective",
         "title": "Open Effective",
@@ -232,11 +411,305 @@
         "command": "bnd.lsp.expandMacro",
         "title": "Evaluate Macro (LSP)",
         "category": "Bnd"
+      },
+      {
+        "command": "bnd.launch.run",
+        "title": "Run OSGi Framework",
+        "category": "Bnd",
+        "icon": "$(run)"
+      },
+      {
+        "command": "bnd.launch.debug",
+        "title": "Debug OSGi Framework",
+        "category": "Bnd",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "bnd.launch.runTests",
+        "title": "Run OSGi Tests (Launch)",
+        "category": "Bnd",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "bnd.launch.debugTests",
+        "title": "Debug OSGi Tests",
+        "category": "Bnd",
+        "icon": "$(debug-all)"
+      },
+      {
+        "command": "bnd.repositories.refresh",
+        "title": "Refresh Repositories",
+        "category": "Bnd",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bnd.repositories.filter",
+        "title": "Filter Repositories...",
+        "category": "Bnd",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "bnd.repositories.clearFilter",
+        "title": "Clear Repository Filter",
+        "category": "Bnd",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "bnd.repositories.advancedSearch",
+        "title": "Advanced Search...",
+        "category": "Bnd",
+        "icon": "$(search)"
+      },
+      {
+        "command": "bnd.repositories.clearSearch",
+        "title": "Clear Advanced Search",
+        "category": "Bnd",
+        "icon": "$(search-stop)"
+      },
+      {
+        "command": "bnd.repositories.goOffline",
+        "title": "Work Offline",
+        "category": "Bnd",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "bnd.repositories.goOnline",
+        "title": "Work Online",
+        "category": "Bnd",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "bnd.repositories.download",
+        "title": "Download Repository Content",
+        "category": "Bnd",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "bnd.repositories.addFiles",
+        "title": "Add Bundles to Repository...",
+        "category": "Bnd",
+        "icon": "$(add)"
+      },
+      {
+        "command": "bnd.repositories.copyBsn",
+        "title": "Copy Bundle Symbolic Name",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.repositories.copyVersion",
+        "title": "Copy Version",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.repositories.copyEntry",
+        "title": "Copy as bnd Entry",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.repositories.revealFile",
+        "title": "Reveal JAR File",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.repositories.showManifest",
+        "title": "Show Manifest",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.repositories.actions",
+        "title": "Repository Actions...",
+        "category": "Bnd"
+      },
+      {
+        "command": "bnd.resolution.add",
+        "title": "Add Resource to Resolution View...",
+        "category": "Bnd",
+        "icon": "$(add)"
+      },
+      {
+        "command": "bnd.resolution.refresh",
+        "title": "Refresh Resolution View",
+        "category": "Bnd",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bnd.resolution.clear",
+        "title": "Clear Resolution View",
+        "category": "Bnd",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "bnd.repositories.addToResolution",
+        "title": "Analyze in Resolution View",
+        "category": "Bnd",
+        "icon": "$(references)"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "bnd",
+        "label": "bnd OSGi",
+        "languages": [
+          "bnd"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "type": "string",
+                "default": "${file}",
+                "description": "Absolute path of the .bndrun or bnd.bnd file to launch."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "run",
+                  "test"
+                ],
+                "enumDescriptions": [
+                  "Launch the OSGi framework described by -runfw, -runbundles and related instructions.",
+                  "Run the OSGi tests of the project or .bndrun through the bnd tester (-testpath, -tester)."
+                ],
+                "default": "run",
+                "description": "Whether to run the framework or the OSGi tests."
+              },
+              "tests": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Test names to run when kind is 'test', e.g. com.example.FooTest or com.example.FooTest:testBar. Empty runs all tests."
+              },
+              "vmArgs": {
+                "type": [
+                  "array",
+                  "string"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional JVM arguments appended after -runvm."
+              },
+              "args": {
+                "type": [
+                  "array",
+                  "string"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional program arguments appended after -runprogramargs."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "default": {},
+                "description": "Additional environment variables; override values from -runenv."
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "default": "integratedTerminal",
+                "description": "Where the Java debugger runs the OSGi framework. The integrated terminal supports the Gogo shell."
+              },
+              "buildBeforeLaunch": {
+                "type": "boolean",
+                "default": true,
+                "description": "Build the project and the workspace projects it depends on before launching."
+              },
+              "javaExec": {
+                "type": "string",
+                "description": "Java executable for the launched framework. Defaults to the bnd 'java' property, then a runtime matching -runee."
+              },
+              "shortenCommandLine": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "jarmanifest",
+                  "argfile",
+                  "auto"
+                ],
+                "default": "auto",
+                "description": "How the Java debugger shortens long command lines."
+              },
+              "sourcePaths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional source roots appended to the bnd workspace bundle sources for debugger source lookup."
+              },
+              "projectName": {
+                "type": "string",
+                "description": "Optional imported Java project used by the Java debugger."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "bnd",
+            "request": "launch",
+            "name": "bnd: Launch current file",
+            "target": "${file}",
+            "kind": "run"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "bnd: Launch .bndrun",
+            "description": "Run or debug an OSGi framework described by a .bndrun file.",
+            "body": {
+              "type": "bnd",
+              "request": "launch",
+              "name": "bnd: ${1:app}.bndrun",
+              "target": "^\"\\${workspaceFolder}/${2:project}/${1:app}.bndrun\"",
+              "kind": "run"
+            }
+          },
+          {
+            "label": "bnd: OSGi tests",
+            "description": "Run or debug the OSGi tests of a bnd project.",
+            "body": {
+              "type": "bnd",
+              "request": "launch",
+              "name": "bnd tests: ${1:project}",
+              "target": "^\"\\${workspaceFolder}/${1:project}/bnd.bnd\"",
+              "kind": "test",
+              "tests": []
+            }
+          }
+        ]
       }
     ],
     "configuration": {
       "title": "Bnd",
       "properties": {
+        "bnd.explorer.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".git",
+            "node_modules"
+          ],
+          "scope": "resource",
+          "description": "File and folder names hidden at every level of the bnd Explorer. Exact names, not glob patterns. Independent of files.exclude and the built-in Explorer."
+        },
         "bnd.server.mode": {
           "type": "string",
           "enum": [
@@ -326,10 +799,301 @@
           "type": "string",
           "default": "java",
           "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
+        },
+        "bnd.launch.codeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Run and Debug CodeLens actions at the top of .bndrun and bnd.bnd files."
         }
       }
     },
     "menus": {
+      "view/title": [
+        {
+          "command": "bnd.explorer.newFile",
+          "when": "view == bnd.explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bnd.explorer.newFolder",
+          "when": "view == bnd.explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bnd.explorer.refresh",
+          "when": "view == bnd.explorer",
+          "group": "navigation@3"
+        },
+        {
+          "command": "bnd.resolution.add",
+          "when": "view == bnd.resolution",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bnd.resolution.refresh",
+          "when": "view == bnd.resolution",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bnd.resolution.clear",
+          "when": "view == bnd.resolution",
+          "group": "navigation@3"
+        },
+        {
+          "command": "bnd.repositories.filter",
+          "when": "view == bnd.repositories && !bnd.repositories.filtered",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bnd.repositories.clearFilter",
+          "when": "view == bnd.repositories && bnd.repositories.filtered",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bnd.repositories.advancedSearch",
+          "when": "view == bnd.repositories && !bnd.repositories.searching",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bnd.repositories.clearSearch",
+          "when": "view == bnd.repositories && bnd.repositories.searching",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bnd.repositories.refresh",
+          "when": "view == bnd.repositories",
+          "group": "navigation@3"
+        },
+        {
+          "command": "bnd.repositories.goOffline",
+          "when": "view == bnd.repositories && !bnd.repositories.offline",
+          "group": "navigation@4"
+        },
+        {
+          "command": "bnd.repositories.goOnline",
+          "when": "view == bnd.repositories && bnd.repositories.offline",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bnd.explorer.newFile",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorer(Folder|Root)$/",
+          "group": "navigation@10"
+        },
+        {
+          "command": "bnd.explorer.newFolder",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorer(Folder|Root)$/",
+          "group": "navigation@11"
+        },
+        {
+          "command": "bnd.explorer.openToSide",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile",
+          "group": "navigation@20"
+        },
+        {
+          "command": "bnd.explorer.openWith",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile",
+          "group": "navigation@21"
+        },
+        {
+          "command": "bnd.jar.open",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.jar$/i",
+          "group": "navigation@22"
+        },
+        {
+          "command": "bnd.explorer.revealInOS",
+          "when": "view == bnd.explorer",
+          "group": "navigation@30"
+        },
+        {
+          "command": "bnd.explorer.openInTerminal",
+          "when": "view == bnd.explorer",
+          "group": "navigation@31"
+        },
+        {
+          "command": "bnd.explorer.reveal",
+          "when": "view == bnd.explorer",
+          "group": "navigation@32"
+        },
+        {
+          "command": "bnd.launch.run",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "1_bnd_launch@1"
+        },
+        {
+          "command": "bnd.launch.debug",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "1_bnd_launch@2"
+        },
+        {
+          "command": "bnd.launch.runTests",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "1_bnd_launch@3"
+        },
+        {
+          "command": "bnd.launch.debugTests",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "1_bnd_launch@4"
+        },
+        {
+          "command": "bnd.showEffective",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|bndrun)$/",
+          "group": "1_bnd_tools@1"
+        },
+        {
+          "command": "bnd.showEffectiveToSide",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|bndrun)$/",
+          "group": "1_bnd_tools@2"
+        },
+        {
+          "command": "bnd.resolution.add",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|jar)$/i",
+          "group": "1_bnd_tools@3"
+        },
+        {
+          "command": "bnd.explorer.selectForCompare",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && !listMultiSelection",
+          "group": "3_compare@10"
+        },
+        {
+          "command": "bnd.explorer.compareWithSelected",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && bnd.explorer.compareSelected && !listMultiSelection",
+          "group": "3_compare@20"
+        },
+        {
+          "command": "bnd.explorer.compareSelected",
+          "when": "view == bnd.explorer && viewItem == bndExplorerFile && listDoubleSelection",
+          "group": "3_compare@30"
+        },
+        {
+          "command": "bnd.explorer.findInFolder",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorer(Folder|Root)$/ && !listMultiSelection",
+          "group": "4_search@10"
+        },
+        {
+          "command": "bnd.explorer.cut",
+          "when": "view == bnd.explorer && viewItem != bndExplorerRoot",
+          "group": "5_cutcopypaste@10"
+        },
+        {
+          "command": "bnd.explorer.copy",
+          "when": "view == bnd.explorer",
+          "group": "5_cutcopypaste@20"
+        },
+        {
+          "command": "bnd.explorer.paste",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorer(Folder|Root)$/ && bnd.explorer.canPaste && !listMultiSelection",
+          "group": "5_cutcopypaste@30"
+        },
+        {
+          "command": "bnd.explorer.copyPath",
+          "when": "view == bnd.explorer",
+          "group": "6_copypath@10"
+        },
+        {
+          "command": "bnd.explorer.copyRelativePath",
+          "when": "view == bnd.explorer",
+          "group": "6_copypath@20"
+        },
+        {
+          "command": "bnd.explorer.rename",
+          "when": "view == bnd.explorer && viewItem != bndExplorerRoot && !listMultiSelection",
+          "group": "7_modification@10"
+        },
+        {
+          "command": "bnd.explorer.delete",
+          "when": "view == bnd.explorer && viewItem != bndExplorerRoot",
+          "group": "7_modification@20"
+        },
+        {
+          "command": "bnd.repositories.addFiles",
+          "when": "view == bnd.repositories && viewItem =~ /\\bwritable\\b/",
+          "group": "inline@1"
+        },
+        {
+          "command": "bnd.repositories.download",
+          "when": "view == bnd.repositories && viewItem =~ /\\bdownloadable\\b/",
+          "group": "inline@2"
+        },
+        {
+          "command": "bnd.repositories.refresh",
+          "when": "view == bnd.repositories && viewItem =~ /\\b(refreshable|workspaceRoot)\\b/",
+          "group": "inline@3"
+        },
+        {
+          "command": "bnd.repositories.addFiles",
+          "when": "view == bnd.repositories && viewItem =~ /\\bwritable\\b/",
+          "group": "1_repo@1"
+        },
+        {
+          "command": "bnd.repositories.download",
+          "when": "view == bnd.repositories && viewItem =~ /\\bdownloadable\\b/",
+          "group": "1_repo@2"
+        },
+        {
+          "command": "bnd.repositories.refresh",
+          "when": "view == bnd.repositories && viewItem =~ /\\b(refreshable|workspaceRoot)\\b/",
+          "group": "1_repo@3"
+        },
+        {
+          "command": "bnd.repositories.revealFile",
+          "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
+          "group": "2_file@1"
+        },
+        {
+          "command": "bnd.repositories.showManifest",
+          "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
+          "group": "2_file@2"
+        },
+        {
+          "command": "bnd.repositories.addToResolution",
+          "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
+          "group": "2_file@3"
+        },
+        {
+          "command": "bnd.repositories.copyBsn",
+          "when": "view == bnd.repositories && viewItem =~ /\\b(bundle|version)\\b/",
+          "group": "3_copy@1"
+        },
+        {
+          "command": "bnd.repositories.copyVersion",
+          "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
+          "group": "3_copy@2"
+        },
+        {
+          "command": "bnd.repositories.copyEntry",
+          "when": "view == bnd.repositories && viewItem =~ /\\b(bundle|version)\\b/",
+          "group": "3_copy@3"
+        },
+        {
+          "command": "bnd.repositories.actions",
+          "when": "view == bnd.repositories && viewItem =~ /\\bactionable\\b/",
+          "group": "4_actions@1"
+        }
+      ],
+      "editor/title/run": [
+        {
+          "command": "bnd.launch.run",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@1"
+        },
+        {
+          "command": "bnd.launch.debug",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@2"
+        },
+        {
+          "command": "bnd.launch.runTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@3"
+        },
+        {
+          "command": "bnd.launch.debugTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd@4"
+        }
+      ],
       "editor/title": [
         {
           "command": "bnd.showEffective",
@@ -349,6 +1113,11 @@
       ],
       "explorer/context": [
         {
+          "command": "bnd.jar.open",
+          "when": "!explorerResourceIsFolder && resourceExtname =~ /^\\.jar$/i",
+          "group": "navigation@20"
+        },
+        {
           "command": "bnd.showEffective",
           "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
           "group": "bnd"
@@ -357,9 +1126,97 @@
           "command": "bnd.showEffectiveToSide",
           "when": "resourceScheme == file && resourceExtname =~ /\\.(bnd|bndrun)$/",
           "group": "bnd"
+        },
+        {
+          "command": "bnd.launch.run",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@1"
+        },
+        {
+          "command": "bnd.launch.debug",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@2"
+        },
+        {
+          "command": "bnd.launch.runTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@3"
+        },
+        {
+          "command": "bnd.launch.debugTests",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@4"
         }
       ],
       "commandPalette": [
+        {
+          "command": "bnd.explorer.openToSide",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.openWith",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.revealInOS",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.openInTerminal",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.findInFolder",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.cut",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.copy",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.paste",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.rename",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.delete",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.selectForCompare",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.compareWithSelected",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.compareSelected",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.reveal",
+          "when": "false"
+        },
+        {
+          "command": "bnd.explorer.copyRelativePath",
+          "when": "false"
+        },
+        {
+          "command": "bnd.jar.open",
+          "when": "resourceExtname =~ /^\\.jar$/i"
+        },
         {
           "command": "bnd.cli.build"
         },
@@ -440,6 +1297,66 @@
         },
         {
           "command": "bnd.lsp.expandMacro"
+        },
+        {
+          "command": "bnd.launch.run"
+        },
+        {
+          "command": "bnd.launch.debug"
+        },
+        {
+          "command": "bnd.launch.runTests"
+        },
+        {
+          "command": "bnd.launch.debugTests"
+        },
+        {
+          "command": "bnd.repositories.download",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.addFiles",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.copyBsn",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.copyVersion",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.copyEntry",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.revealFile",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.showManifest",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.actions",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.clearFilter",
+          "when": "bnd.repositories.filtered"
+        },
+        {
+          "command": "bnd.repositories.clearSearch",
+          "when": "bnd.repositories.searching"
+        },
+        {
+          "command": "bnd.repositories.goOffline",
+          "when": "!bnd.repositories.offline"
+        },
+        {
+          "command": "bnd.repositories.goOnline",
+          "when": "bnd.repositories.offline"
         }
       ]
     },
@@ -491,8 +1408,83 @@
             "media": {
               "markdown": "walkthroughs/05-cli-reference.md"
             }
+          },
+          {
+            "id": "bnd.walkthrough.launch",
+            "title": "Run and Debug OSGi Frameworks",
+            "description": "Use the Run and Debug CodeLens on .bndrun and bnd.bnd files, or add a `bnd` launch configuration, to start and debug OSGi frameworks and tests with the Java debugger.",
+            "media": {
+              "markdown": "walkthroughs/06-launch-debug.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.repositories",
+            "title": "Browse Repositories",
+            "description": "Open the bnd view in the Activity Bar to browse workspace and plugin repositories, search for capabilities, and drag bundles into -buildpath or -runbundles.\n[Show Repositories](command:bnd.repositories.focus)",
+            "completionEvents": [
+              "onView:bnd.repositories"
+            ],
+            "media": {
+              "markdown": "walkthroughs/07-repositories.md"
+            }
           }
         ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "bnd.explorer.rename",
+        "key": "f2",
+        "mac": "enter",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.delete",
+        "key": "delete",
+        "mac": "cmd+backspace",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.cut",
+        "key": "ctrl+x",
+        "mac": "cmd+x",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.paste",
+        "key": "ctrl+v",
+        "mac": "cmd+v",
+        "when": "focusedView == bnd.explorer && !inputFocus && bnd.explorer.canPaste"
+      },
+      {
+        "command": "bnd.explorer.copyPath",
+        "key": "shift+alt+c",
+        "mac": "cmd+alt+c",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.copyRelativePath",
+        "key": "ctrl+k ctrl+shift+alt+c",
+        "mac": "cmd+shift+alt+c",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.openToSide",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "focusedView == bnd.explorer && !inputFocus"
+      },
+      {
+        "command": "bnd.explorer.revealInOS",
+        "key": "shift+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "focusedView == bnd.explorer && !inputFocus"
       }
     ]
   },
@@ -505,6 +1497,7 @@
     "compile:all": "npm run compile && npm run compile:server",
     "pretest": "npm run compile:all && npm run compile:tests",
     "test": "node ./out/test/test/runTest.js",
+    "test:jdtls": "node scripts/testJdtls.cjs",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
     "package": "vsce package --no-git-tag-version",
