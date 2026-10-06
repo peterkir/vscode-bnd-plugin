@@ -1,5 +1,69 @@
 # Changelog
 
+## 0.19.0
+
+### Added
+- The bnd Explorer offers the built-in Explorer's context menu and keys: New File/Folder, Open to the Side, Open With, Reveal in File Explorer, Open in Integrated Terminal, Find in Folder, Cut/Copy/Paste, Copy Path/Relative Path, Rename, Delete, and compare. Drag and drop moves files inside the tree and copies dropped external files.
+- Open Effective and Open Effective to Side on `.bnd`/`.bndrun` files in the bnd Explorer.
+
+### Changed
+- Selecting repository bundles or versions replaces Resolution's analyzed resources; unversioned bundles use the newest listed version. Drag-and-drop and **Analyze in Resolution View** append resources instead. Resource choices persist per workspace.
+- Document the Resolution analysis limit of 100 saved resources, first-sub-builder behavior for `bnd.bnd`, and capability matching rather than full OSGi resolution.
+- Document **Java: Reload Projects** and `java.configuration.updateBuildConfiguration` for native bnd classpath refreshes.
+
+## 0.18.3
+
+### Fixed
+- **Bnd: Run/Debug OSGi Framework** and **Run/Debug OSGi Tests** no longer require an active `.bndrun` or `bnd.bnd` editor. From any other editor they show a searchable list of the workspace's `.bndrun` and `bnd.bnd` files.
+
+### Added
+- Run and Debug actions in the context menu of `.bndrun` and `bnd.bnd` files in the bnd Explorer view.
+
+## 0.18.2
+
+### Fixed
+- Register the Resolution Panel view as a webview so its provider displays content, and label the Panel container **Resolution**.
+- Accept drag-and-drop of repository bundle versions into the Resolution view for requirement/capability analysis.
+
+## 0.18.1
+
+### Changed
+- Use the dedicated `media/bndtools-activity.svg` icon for the bnd Activity Bar container.
+
+## 0.18.0
+
+### Added
+- **Resolution** Panel view, porting the bndtools Resolution View's side-by-side OSGi requirements and capabilities analysis for selected `.bnd` files, JARs, and repository versions.
+- Wildcard/multi-term filtering, optional and unresolved requirement filters, copyable row details, and resource add/remove actions.
+- Java LSP command `bnd.resolution.analyze` returns structured resource requirements, capabilities, and matches without modifying source files.
+
+## 0.17.0
+
+### Added
+- **bnd JAR Viewer**, a port of the bndtools Eclipse JAR editor and the default editor for `.jar` files. The **Tree** page lists the archive entries, selects `feature.xml` or `META-INF/MANIFEST.MF` initially, and shows the selected entry as text or hex (Auto/Text/Binary (hex)), with a text encoding choice, size, last modified time and the 1,000,000-byte read limit. Double-click an entry to open it read-only in an editor (`bnd-jar:` scheme). The **Print** page shows the full `bnd print` report from the Java language server.
+- **Open with bnd JAR Viewer** in the Explorer and bnd Explorer context menus for `.jar` files.
+
+### Changed
+- Bundled Java language server adds `bnd.jar.printText`, which returns the bndtools JAR editor print report (all `JarPrinter` options).
+
+## 0.16.0
+
+### Added
+- Independent read-only Explorer above Repositories in the bnd Activity Bar container, with multi-root browsing, native file icons, file opening, refresh/collapse, relative-path copying, native Explorer reveal and file dragging.
+- `bnd.explorer.exclude` controls hidden file/folder names independently of the built-in Explorer. User-customized view ordering remains preserved.
+
+## 0.15.0
+
+### Added
+- **bnd** Activity Bar container with a **Repositories** view, a port of the bndtools Eclipse Repositories view. It shows one root per bnd workspace (`cnf/build.bnd`), with the Workspace repository (projects and their bundles), plugin repositories, bundles, versions, and P2 features with their included and required items.
+- View actions: filter by bundle symbolic name, advanced requirement search (package, service, or any namespace and LDAP filter), refresh, collapse all, and toggle offline mode.
+- Item actions: add JARs to writable repositories (also by dropping files on a repository), download remote content, copy the bundle symbolic name, version, or bnd entry, reveal the JAR, show the manifest, and run repository-specific `Actionable` actions.
+- Drag bundles or versions into a bnd editor to insert `bsn;version=...` entries.
+- Walkthrough step **Browse Repositories**.
+
+### Changed
+- Bundled Java language server adds `bnd.repositories.*` commands and `bnd.workspace.offline`. All of them require workspace trust.
+
 ## 0.14.0
 
 ### Added
@@ -74,13 +138,15 @@
 
 ## Validation
 
-The extension and TypeScript server compile successfully. All 14 VS Code extension tests pass, including a live Java LSP round-trip and the Effective editor/source workflow.
+Validation for 0.19.0 on 2026-10-06: the extension and TypeScript server compile successfully. All 102 VS Code extension tests pass, including CLI execution, upstream command parity, real Java LSP repository/JAR/Resolution round-trips, and the Effective editor/source workflow. No tests were skipped.
 
 Evidence from the latest run:
 
 - `npm run compile:all` completed successfully.
-- `npm test` completed with 14 passing tests.
-- The Java LSP module build and tests passed. Its JAR was built in an isolated output directory because a running development server held the default output JAR open on Windows.
+- `npm run compile:tests` completed successfully through `npm test`'s pretest step.
+- `npm test` completed with 102 passing tests and `BND_SOURCE_REPO` pointing to the upstream `fea-bnd-ls` worktree. VS Code paths were excluded from the test command's `PATH` to use an isolated downloaded test host instead of the running editor.
+- `./gradlew :biz.aQute.bnd.lsp:test :biz.aQute.bnd.lsp:jar` passed in the upstream worktree. The bundled and generated Java LSP JARs have identical SHA-256 hashes.
+- This automated run does not replace the manual view, launch/debug, and native JDT LS checks in `CHECKLIST.md` and `DEV.md`.
 
 ## Notes for Release
 

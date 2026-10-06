@@ -9,11 +9,13 @@ The extension launches `.bndrun` files and bnd projects through the VS Code **Ru
 - The [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension and Language Support for Java. The bundled adapter imports bnd projects directly into JDT LS, including source/test roots and build/test dependencies. Native import requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS, separate from the launched framework's `-runee`.
 - Valid `java.configuration.runtimes` names, such as `JavaSE-21` or `JavaSE-25`. After adding native import to an existing workspace, run **Java: Clean Java Language Server Workspace** and allow reimport.
 
+For later classpath changes, use **Java: Reload Projects** without clearing the workspace. Check `java.configuration.updateBuildConfiguration` for automatic updates or interactive approval.
+
 ## Starting a Launch
 
 - **CodeLens** — **Run OSGi** / **Debug OSGi** at the top of a `.bndrun` file or a `bnd.bnd` with `-runfw`/`-runbundles`; **Run OSGi tests** / **Debug OSGi tests** on files with `-testpath`. Disable with `bnd.launch.codeLens`.
-- **Editor title run menu** and **Explorer context menu** on `.bndrun` and `bnd.bnd` files.
-- **Command Palette** — **Bnd: Run OSGi Framework**, **Bnd: Debug OSGi Framework**, **Bnd: Run OSGi Tests (Launch)**, **Bnd: Debug OSGi Tests**.
+- **Editor title run menu** and the context menu of the **Explorer** and **bnd Explorer** on `.bndrun` and `bnd.bnd` files.
+- **Command Palette** — **Bnd: Run OSGi Framework**, **Bnd: Debug OSGi Framework**, **Bnd: Run OSGi Tests (Launch)**, **Bnd: Debug OSGi Tests**. They launch the active `.bndrun` or `bnd.bnd` editor; from any other editor they let you pick one of the workspace's launch files.
 - **F5** with a `.bndrun` or `bnd.bnd` file open and no `launch.json`.
 - **Run and Debug view** — choose **bnd OSGi** to list every `.bndrun` file and test project in the workspace.
 

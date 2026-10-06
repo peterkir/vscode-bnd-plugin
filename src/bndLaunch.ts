@@ -292,10 +292,34 @@ export class BndLaunchCodeLensProvider implements vscode.CodeLensProvider {
     }
 }
 
-async function startFromUri(uri: vscode.Uri | undefined, kind: LaunchKind, noDebug: boolean): Promise<void> {
-    const target = uri ?? vscode.window.activeTextEditor?.document.uri;
-    if (!target || target.scheme !== 'file' || !isLaunchTarget(target.fsPath)) {
-        void vscode.window.showWarningMessage('Open or select a .bndrun or bnd.bnd file to launch.');
+export async function pickLaunchTarget(kind: LaunchKind): Promise<vscode.Uri | undefined> {
+    const files = await vscode.workspace.findFiles('**/{*.bndrun,bnd.bnd}',
+        '**/{node_modules,generated,bin,bin_test,target,.git}/**', 500);
+    if (!files.length) {
+        void vscode.window.showWarningMessage('No .bndrun or bnd.bnd files found in the workspace.');
+        return undefined;
+    }
+    const items = files
+        .map(uri => ({ uri, label: path.basename(uri.fsPath), description: path.dirname(vscode.workspace.asRelativePath(uri, true)) }))
+        .sort((a, b) => `${a.description}/${a.label}`.localeCompare(`${b.description}/${b.label}`));
+    const picked = await vscode.window.showQuickPick(items, {
+        title: kind === 'test' ? 'Select the bnd project to test' : 'Select the .bndrun or bnd.bnd file to launch',
+        placeHolder: 'Type to filter by file or folder name',
+        matchOnDescription: true,
+    });
+    return picked?.uri;
+}
+
+async function startFromUri(arg: vscode.Uri | { uri?: vscode.Uri } | undefined, kind: LaunchKind,
+    noDebug: boolean): Promise<void> {
+    let target = arg instanceof vscode.Uri ? arg : arg?.uri;
+    if (!target) {
+        const active = vscode.window.activeTextEditor?.document.uri;
+        target = active?.scheme === 'file' && isLaunchTarget(active.fsPath) ? active : await pickLaunchTarget(kind);
+        if (!target) return;
+    }
+    if (target.scheme !== 'file' || !isLaunchTarget(target.fsPath)) {
+        void vscode.window.showWarningMessage('Select a .bndrun or bnd.bnd file to launch.');
         return;
     }
     const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === target.toString());
@@ -325,9 +349,9 @@ export function registerLaunchSupport(context: vscode.ExtensionContext, server: 
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('bnd.launch.codeLens')) codeLens.refresh();
         }),
-        vscode.commands.registerCommand('bnd.launch.run', (uri?: vscode.Uri) => startFromUri(uri, 'run', true)),
-        vscode.commands.registerCommand('bnd.launch.debug', (uri?: vscode.Uri) => startFromUri(uri, 'run', false)),
-        vscode.commands.registerCommand('bnd.launch.runTests', (uri?: vscode.Uri) => startFromUri(uri, 'test', true)),
-        vscode.commands.registerCommand('bnd.launch.debugTests', (uri?: vscode.Uri) => startFromUri(uri, 'test', false)),
+        vscode.commands.registerCommand('bnd.launch.run', (arg?: vscode.Uri | { uri?: vscode.Uri }) => startFromUri(arg, 'run', true)),
+        vscode.commands.registerCommand('bnd.launch.debug', (arg?: vscode.Uri | { uri?: vscode.Uri }) => startFromUri(arg, 'run', false)),
+        vscode.commands.registerCommand('bnd.launch.runTests', (arg?: vscode.Uri | { uri?: vscode.Uri }) => startFromUri(arg, 'test', true)),
+        vscode.commands.registerCommand('bnd.launch.debugTests', (arg?: vscode.Uri | { uri?: vscode.Uri }) => startFromUri(arg, 'test', false)),
     );
 }

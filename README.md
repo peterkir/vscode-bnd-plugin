@@ -57,17 +57,54 @@ This feature requires workspace trust and a Java language server advertising `bn
 
 `.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files.
 
-- **Run OSGi** / **Debug OSGi** and **Run OSGi tests** / **Debug OSGi tests** CodeLens on `.bndrun` and `bnd.bnd` files (`bnd.launch.codeLens`), the editor title run menu, the Explorer context menu, and the Command Palette.
+- **Run OSGi** / **Debug OSGi** and **Run OSGi tests** / **Debug OSGi tests** CodeLens on `.bndrun` and `bnd.bnd` files (`bnd.launch.codeLens`), the editor title run menu, the context menu in the Explorer and bnd Explorer, and the Command Palette. From the Command Palette without an active `.bndrun` or `bnd.bnd` editor, a list of the workspace's launch files is shown.
 - A `bnd` debug type for `launch.json` with `target`, `kind` (`run` or `test`), `tests`, `vmArgs`, `args`, `env`, `console`, `buildBeforeLaunch`, `javaExec`, and `shortenCommandLine`. The Run and Debug view lists every `.bndrun` file and test project dynamically.
 - The Java runtime defaults to the bnd `java` property, then a runtime matching `-runee`. `-runjdb` is ignored because the Java debugger owns the JDWP connection.
 
 Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. See [walkthroughs/06-launch-debug.md](walkthroughs/06-launch-debug.md) for details.
+
+### Repositories View
+
+The **bnd** Activity Bar container shows an independent **Explorer** above **Repositories** by default. It offers the built-in Explorer's file actions in the same context-menu groups and with the same default keys: New File/Folder, Open to the Side, Open With, Reveal in File Explorer, Open in Integrated Terminal, Find in Folder, Cut/Copy/Paste (copies get `name copy.ext`), Copy Path/Relative Path, Rename (`F2`), Delete (to the Recycle Bin/Trash), and compare. Dragging moves files within the tree; files dropped from outside are copied. bnd actions (Run/Debug, Open Effective, JAR Viewer, Resolution) appear on matching files. Configure `bnd.explorer.exclude` with exact file/folder names to hide at every level (default `.git` and `node_modules`); it does not use the normal Explorer's `files.exclude`. Context-menu entries that other extensions add to the built-in Explorer are not available here; use **Reveal in Explorer View** for them. VS Code preserves any view order you customize.
+
+The **Repositories** view is a port of the bndtools Eclipse view. It lists one root per bnd workspace (a folder with `cnf/build.bnd`). Each root shows the Workspace repository, with projects and their bundles, followed by the configured repository plugins. Expand repositories to see bundles, versions, and, for P2 repositories, features with their included and required items.
+
+- **Filter** matches bundle symbolic names (`*` and `?` wildcards; the text is matched anywhere in the name).
+- **Advanced Search** finds providers of a package (with an optional version range), a service, or any namespace and LDAP filter in repositories that implement the OSGi Repository API.
+- **Refresh**, **Collapse All**, and **Work Offline** / **Work Online** in the view title.
+- **Add Bundles to Repository...** on writable repositories, or drop JAR files from the Explorer onto them. **Download Repository Content** fetches remote repositories, bundles, or versions into the local cache.
+- **Copy Bundle Symbolic Name**, **Copy Version**, and **Copy as bnd Entry** (`bsn;version='1.2.3'`), plus **Reveal JAR File** and **Show Manifest** on versions.
+- **Repository Actions...** runs actions contributed by repository plugins (the bnd `Actionable` interface).
+- Drag bundles or versions into a bnd editor to insert `bsn;version=...` entries for `-buildpath`, `-runbundles`, and similar instructions.
+
+The view requires workspace trust and the Java language server, because repository plugins run workspace code. See [walkthroughs/07-repositories.md](walkthroughs/07-repositories.md).
+
+### Resolution View
+
+**Resolution** appears as a tab in VS Code's bottom Panel beside Terminal, Problems, and Debug Console. Add `.bnd` files, JARs, or a version from the Repositories view to compare their OSGi requirements and capabilities. Requirements are marked matched when a selected resource provides a matching capability.
+
+Selecting bundles or versions in Repositories replaces the analyzed resources with that selection; bundles use their newest available version. Dragging repository entries or local `.bnd`/`.jar` files into Resolution adds them to the existing selection. The resource list is saved per VS Code workspace.
+
+This is capability matching, not a full OSGi resolver: a matched requirement does not prove that a framework can resolve or launch. Analysis reads saved files and accepts at most 100 resources. For `bnd.bnd` projects with sub-bundles, only the first sub-builder is analyzed; select individual sub-bundle `.bnd` files or their generated JARs to compare the others. `.bndrun` files are not accepted; use **Bnd: Resolve (.bndrun)** for runbundle resolution.
+
+Filter both lists with space-separated terms and `*` / `?` wildcards. Hide optional requirements or show unresolved requirements only. Select a row to copy its attributes, directives, and source. The analysis requires a trusted workspace and an updated Java bnd Language Server; the Node fallback does not provide resource analysis.
+
+### JAR Viewer
+
+`.jar` files open in the **bnd JAR Viewer**, a port of the bndtools Eclipse JAR editor. Use **Open with bnd JAR Viewer** in the Explorer or bnd Explorer context menu, or **Reopen Editor With...** to switch between it and other editors.
+
+- **Tree** lists the archive entries and initially selects `feature.xml` or `META-INF/MANIFEST.MF`. The selected entry shows its size and last-modified time. **Show As** chooses **Auto** (hex when the content contains a zero byte, otherwise text), **Text** with a selectable encoding, or **Binary (hex)**. **Limit** reads at most 1,000,000 bytes. Double-click an entry, or press Enter, to open it read-only in a normal editor.
+- **Print** shows the full `bnd print` report (manifest, imports and exports, capabilities, components, metatype, API and uses, and the entry list). It requires the Java language server; Node fallback and older servers report that it is unavailable. Use `Ctrl+F` to search the report.
+
+The viewer reflects changes to the JAR file and closes when the file is deleted. It never modifies the JAR.
 
 ### Native Java Project Import
 
 The extension contributes a headless bnd adapter to Language Support for Java (`redhat.java`). It requires JDT LS 1.61 or later (Red Hat Java 1.56 or later), running on Java 21 or later. In a bnd workspace, it imports Java projects ahead of Gradle: source/test roots, separate output directories, `-buildpath`, `-testpath`, compiler settings and JRE containers. Changes to `.bnd` and `.mvn` configuration refresh the classpath.
 
 The adapter owns imported bnd Java project metadata; do not have Gradle/Buildship manage the same projects in the same Java language-server workspace. After upgrading, run **Java: Clean Java Language Server Workspace** and allow reimport to remove stale unmanaged source roots. Use valid names in `java.configuration.runtimes`, such as `JavaSE-21` and `JavaSE-25`, not folder names such as `JAVA21`. Source and output directories must currently be inside their project directory.
+
+To request a classpath refresh without clearing the Java workspace, run **Java: Reload Projects** (`java.projectConfiguration.update` in Red Hat Java 1.56). Automatic updates also depend on `java.configuration.updateBuildConfiguration`; use `automatic` for unattended refreshes or approve updates when it is `interactive`.
 
 ### Language Server Protocol (LSP)
 

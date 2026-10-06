@@ -152,11 +152,49 @@ cp "$BND_LSP_WORKSPACE/org.bndtools.jdtls.adapter/generated/org.bndtools.jdtls.a
 
 `npm run test:jdtls` starts an isolated JDT LS and temporary bnd workspace, checking native import, a real dependency JAR, source/test outputs and live classpath refresh. Set `JDT_LS_HOME`, `JDT_LS_JAVA` (Java executable) and `JDT_LS_JAVA_HOME` (Java 21 JDK home). `BND_JDT_LS_JAR` optionally selects a freshly built adapter. This check does not modify the running user's Java workspace. For manual verification, clean the development host's Java language-server workspace and reimport, then inspect dependencies and source roots before checking breakpoints.
 
+For a classpath refresh without clearing the workspace, run **Java: Reload Projects** (`java.projectConfiguration.update` in Red Hat Java 1.56). Check `java.configuration.updateBuildConfiguration` if saved configuration changes do not refresh automatically: `automatic` applies updates, `interactive` asks for approval, and `disabled` requires a manual reload. A clean Java workspace is still needed when replacing stale unmanaged project metadata after upgrading the adapter.
+
+### Repositories View
+
+`src/bndExplorer.ts` registers a separate `bnd.explorer` workspace file tree before `bnd.repositories`. It reads directories lazily through `workspace.fs` and has its own exact-name exclusions (`bnd.explorer.exclude`), without changing the native Explorer. The tree mirrors the built-in Explorer context menu (groups `navigation`, `3_compare`, `4_search`, `5_cutcopypaste`, `6_copypath`, `7_modification`) and its keybindings under `focusedView == bnd.explorer`. Create, rename, move and delete go through `WorkspaceEdit`, so rename/refactoring participants run and the operations can be undone; copy uses `workspace.fs.copy`. Menus that other extensions contribute to `explorer/context` cannot be reused for a custom tree. Workspace-folder, file create/delete and configuration changes refresh it. Manifest order is only the default; VS Code preserves user view customization.
+
+`src/bndRepositories.ts` contributes the `bnd.repositories` tree view in the `bnd` Activity Bar container (`media/bndtools-activity.svg`). Every request is one JSON object with a `workspace` URI (the folder containing `cnf/build.bnd`). Repositories are addressed by `repo` (index in the list response; index 0 is the Workspace repository) and `repoName`; a name mismatch is rejected, so refresh the view after configuration changes. The Java server (`BndRepositoriesService`) handles:
+
+| Command | Request | Response |
+|---|---|---|
+| `bnd.repositories.list` | `workspace` | `offline`, `repositories[]` with `index`, `name`, `kind`, `title`, `tooltip`, `location`, `status`, `writable`, `remote`, `refreshable`, `actionable`, `searchable`, `p2`, `tags` |
+| `bnd.repositories.bundles` | `repo`, `filter` | `bundles[]` (`bsn`, `title`, `tooltip`, `project` for the Workspace repository), `features[]` for P2 |
+| `bnd.repositories.versions` | `repo`, `bsn` | `versions[]`, newest first |
+| `bnd.repositories.feature` | `repo`, `id`, `version` | `plugins[]`, `includes[]`, `requires[]` |
+| `bnd.repositories.get` | `repo`, `bsn`, `version` | local `file` and `uri` |
+| `bnd.repositories.search` | `namespace`, `filter` | `results[]` from repositories implementing the OSGi Repository API |
+| `bnd.repositories.listActions` / `runAction` | `repo`, optional `bsn`, `version`, `label` | `Actionable` labels / runs one |
+| `bnd.repositories.reload` | optional `repo` | `refreshed[]` |
+| `bnd.repositories.put` | `repo`, `files[]` (URIs) | `added[]` |
+| `bnd.repositories.fetch` | `repo`, optional `bsn`, `version` | `downloaded`, `errors[]` |
+| `bnd.workspace.offline` | optional `offline` | current `offline` state |
+
+All commands require `workspaceTrusted: true`. Manual checks: browse the sample workspace, filter, run a package search, copy an entry, drag a version into `-buildpath`, drop a JAR on a writable repository, toggle offline, and verify the welcome text in Node mode.
+
+### Resolution View
+
+`src/resolutionView.ts` contributes **Resolution** to the built-in Panel alongside Terminal, Problems, and Debug Console. Add the active `.bnd`/`.jar` file, choose files, or use **Analyze in Resolution View** on a repository version. The Java LSP command `bnd.resolution.analyze` builds OSGi resources and returns their requirements, capabilities, and capability matches. The view groups rows by namespace, supports wildcard/multi-term filtering, hides optional requirements, filters unresolved requirements, and copies row details.
+
+Repository selection replaces the persisted resource list; drag-and-drop and **Analyze in Resolution View** append to it. Unversioned repository bundles are downloaded at their newest listed version. Selection and analysis revision counters prevent older asynchronous responses from replacing newer results. The request is `{ uris: string[] }` with 1-100 saved local `.bnd`/`.jar` files; the response contains `resources[]` (absolute paths), `requirements[]`, and `capabilities[]`. Rows contain `source`, `namespace`, `attributes`, and `directives`; requirement rows add `optional` and `resolved`. `bnd.bnd` uses the first project sub-builder; another `.bnd` file uses its own sub-builder. Matching only checks selected capabilities against requirement namespace/filter, not complete OSGi wiring. Missing or invalid filters remain unresolved. `.bndrun` files are not accepted.
+
+Manual checks: analyze a `.bnd` project file and a bundle JAR that imports a package, drag its provider JAR from Repositories to add it, verify the requirement changes to matched, select a repository version to replace the analysis, filter by namespace and source, toggle optional/unresolved filters, remove one source, clear all sources, reopen the view to check persisted resources, and confirm unsupported/Node mode reports the missing Java LSP capability without changing source files.
+
+### JAR Viewer
+
+`src/jarViewer.ts` registers the `bnd.jarViewer` custom read-only editor (default for `*.jar`), the `bnd.jar.open` command, and a read-only `bnd-jar:` file system (`bnd-jar:/<entry>?<jar URI>`) used to open entries in normal editors. The ZIP central directory (including ZIP64) is parsed in TypeScript, and entries are inflated with Node `zlib`. The Tree page follows the bndtools `JARTreeEntryPart` rules: Auto shows hex when the data contains a zero byte, hex output matches `aQute.lib.hex.Hex.format`, and Limit reads at most 1,000,000 bytes. The Print page sends `bnd.jar.printText` with `{ uri }`; the Java server (`BndWorkspaceService`) returns `{ text }` from `JarPrinter.doPrint(jar, -1, false, false)`, which matches the Eclipse Print page.
+
+Manual checks: open a bundle from the Explorer, navigate the tree with the keyboard, switch Show As/encoding/Limit on a class file and a large text entry, open an entry in an editor, search the Print page with `Ctrl+F`, rebuild the JAR while it is open, and verify that Print reports the missing capability in Node mode.
+
 ### Launch and Debug
 
 `src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.
 
-Manual checks: open Effective to Side, edit/add/delete current-file properties without saving, toggle raw/merged modes, follow provenance links, save an included file, and inspect generated source. Check light, dark, and high-contrast themes and narrow editor groups. The view must not write the source document, render property text as HTML, or retain values in webview state.
+Manual checks: run and debug from CodeLens and both Explorer context menus, then invoke the Command Palette with no launch file active and choose a target. Verify launch cancellation and unsaved-file prompts, test selection, breakpoints in imported workspace sources, and temporary-file cleanup after the Java session ends. Effective commands accept both a URI and a bnd Explorer node containing `uri`; verify **Open Effective to Side** on a tree selection without an active source editor.
 
 ### Automated Test Suite
 
