@@ -34,6 +34,29 @@ function log(): vscode.LogOutputChannel {
 }
 
 suite('bnd launch', () => {
+    test('offers launch files when invoked from another editor and accepts bnd Explorer nodes', async () => {
+        await vscode.extensions.getExtension('klibio.bnd')!.activate();
+        const document = await vscode.workspace.openTextDocument({ language: 'plaintext', content: 'x' });
+        await vscode.window.showTextDocument(document);
+        const window = vscode.window as unknown as Record<string, unknown>;
+        const originals = { showQuickPick: window.showQuickPick, showWarningMessage: window.showWarningMessage };
+        const picks: { label: string }[][] = [];
+        const warnings: string[] = [];
+        window.showQuickPick = async (items: { label: string }[]) => { picks.push(await items); return undefined; };
+        window.showWarningMessage = async (message: string) => { warnings.push(message); return undefined; };
+        try {
+            await vscode.commands.executeCommand('bnd.launch.debug');
+            assert.ok(picks.length === 1 || warnings.some(message => /No \.bndrun or bnd\.bnd files/.test(message)),
+                `Expected a picker or a missing-files warning, got ${JSON.stringify(warnings)}`);
+            for (const item of picks[0] ?? []) assert.ok(isLaunchTarget(item.label), item.label);
+            warnings.length = 0;
+            await vscode.commands.executeCommand('bnd.launch.run', { uri: vscode.Uri.file('/ws/p/readme.txt') });
+            assert.ok(warnings.some(message => /Select a \.bndrun or bnd\.bnd file/.test(message)), JSON.stringify(warnings));
+        } finally {
+            Object.assign(window, originals);
+            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        }
+    });
     test('maps a prepared launch to a Java debug configuration', () => {
         const config = toJavaDebugConfiguration(prepared, {
             type: 'bnd', request: 'launch', name: 'my launch', vmArgs: '-Xmx1g "-Dx=a b"', args: ['--two'],
