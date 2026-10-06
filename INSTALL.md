@@ -28,6 +28,8 @@ If you want to rebuild the extension (e.g., after updating the completion data):
 
 - [Node.js](https://nodejs.org/) 18 or later
 - [npm](https://www.npmjs.com/) (bundled with Node.js)
+- VS Code 1.140.0 or later.
+- Java 17 or later for the bundled bnd language server and bnd CLI. Native Java project import additionally requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS.
 
 ### Build Steps
 
@@ -116,6 +118,24 @@ The extension can launch the bnd server in different modes depending on your set
 - `node` runs the TypeScript LSP directly, providing completion and hover support.
 - `socket` connects to a running TCP socket server.
 - If the JAR is missing, the extension warns and falls back to the Node-based server. Resolve, build, and macro commands require the Java server or a compatible socket server.
+
+### Feature Requirements
+
+The bnd Activity Bar includes an independent **Explorer** and **Repositories**.
+The file tree uses `bnd.explorer.exclude` (exact names, default `.git` and
+`node_modules`) rather than `files.exclude`.
+
+- **Repositories**, **Effective Properties**, and **Resolution** require a trusted workspace and a Java server advertising their commands. Older custom JARs and socket servers may lack them; use the bundled JAR or update the custom server.
+- **Resolution** appears in the bottom Panel. It accepts saved `.bnd` and `.jar` files, not `.bndrun` files, and compares capabilities only among selected resources; it is not a full OSGi resolver.
+- `.jar` files open in the read-only **bnd JAR Viewer** by default. Its **Tree** page works locally; its **Print** page requires `bnd.jar.printText` from the Java server.
+- **Run/Debug OSGi** requires workspace trust, the Java server, and [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug). See [Run and Debug](walkthroughs/06-launch-debug.md) and [Browse Repositories](walkthroughs/07-repositories.md).
+
+Native bnd project import runs independently in Red Hat Java's JDT LS. After
+upgrading an existing unmanaged Java workspace, run **Java: Clean Java Language
+Server Workspace** and allow reimport. For subsequent classpath refreshes,
+use **Java: Reload Projects** and check
+`java.configuration.updateBuildConfiguration`. Use execution-environment
+names such as `JavaSE-21` in `java.configuration.runtimes`.
 
 ## Verifying the Installation
 

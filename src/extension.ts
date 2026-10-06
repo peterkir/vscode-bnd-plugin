@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     Executable,
+    ExecuteCommandRequest,
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
@@ -12,7 +13,12 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 import { registerCliCommands } from './bndCliCommands';
+import { registerExplorerView } from './bndExplorer';
+import { registerLaunchSupport } from './bndLaunch';
+import { RepositoriesProvider, registerRepositoriesView } from './bndRepositories';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
+import { JarViewerProvider, jarPrintCommand } from './jarViewer';
+import { registerResolutionView, ResolutionViewProvider } from './resolutionView';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
 
 let client: LanguageClient | undefined;
@@ -20,6 +26,8 @@ let clientReady: Promise<void> | undefined;
 let configRestartTimer: NodeJS.Timeout | undefined;
 export let outputChannel: vscode.LogOutputChannel;
 let effectiveProvider: EffectivePropertiesProvider | undefined;
+let repositoriesProvider: RepositoriesProvider | undefined;
+let resolutionProvider: ResolutionViewProvider | undefined;
 
 export interface JavaVersionInfo {
     valid: boolean;
@@ -36,6 +44,7 @@ export function resolveBndrunUri(uri: vscode.Uri): string {
 export function activate(context: vscode.ExtensionContext): void {
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
+    registerExplorerView(context);
     // Assigned synchronously (not inside startLanguageClient) so callers awaiting clientReady
     // never observe it as undefined while Java-version detection is still in progress.
     clientReady = startLanguageClient(context).catch(handleLanguageClientError);
@@ -46,7 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!activeClient?.initializeResult?.capabilities.executeCommandProvider?.commands.includes(effectiveCommand)) {
             throw new Error('Effective properties require an updated Java bnd Language Server. Node and older servers do not support this view.');
         }
-        const result = await activeClient.sendRequest('workspace/executeCommand', {
+        const result = await activeClient.sendRequest(ExecuteCommandRequest.type, {
             command: effectiveCommand,
             arguments: [{ uri: document.uri.toString(), documentVersion: document.version, ...options }],
         }, token);
@@ -54,6 +63,43 @@ export function activate(context: vscode.ExtensionContext): void {
         return parseEffectiveResult(result);
     });
     context.subscriptions.push(effectiveProvider);
+    context.subscriptions.push(new JarViewerProvider(context, async (uri, token) => {
+        if (uri.scheme !== 'file') throw new Error('Print requires a JAR file on the local file system.');
+        if (!(await supportsServerCommand(jarPrintCommand)) || !client) {
+            throw new Error('Print requires an updated Java bnd Language Server. Node and older servers do not support this page.');
+        }
+        const result = await executeServerCommand(client, jarPrintCommand, [{ uri: uri.toString() }], token) as
+            { text?: unknown; error?: unknown } | null;
+        if (typeof result?.error === 'string') throw new Error(result.error);
+        if (typeof result?.text !== 'string') throw new Error('Incompatible bnd Language Server response.');
+        return result.text;
+    }));
+    registerLaunchSupport(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error('bnd Language Server is not running.');
+            return executeServerCommand(client, command, args, token);
+        },
+    }, outputChannel);
+    repositoriesProvider = registerRepositoriesView(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error('bnd Language Server is not running.');
+            return executeServerCommand(client, command, args, token);
+        },
+    }, outputChannel, async entries => {
+        await resolutionProvider?.selectRepositoryEntries(entries);
+    });
+    resolutionProvider = registerResolutionView(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error('bnd Language Server is not running.');
+            return executeServerCommand(client, command, args, token);
+        },
+    });
     context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
         void vscode.commands.executeCommand('bnd.server.restart');
     }));
@@ -186,6 +232,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Register bnd CLI commands
     registerCliCommands(context);
+}
+
+export function executeServerCommand(activeClient: LanguageClient, command: string, args: unknown[],
+    token?: vscode.CancellationToken): Promise<unknown> {
+    return activeClient.sendRequest(ExecuteCommandRequest.type, { command, arguments: args }, token);
 }
 
 function stripQuotes(value: string): string {
@@ -460,6 +511,8 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
     });
     await clientReady;
     effectiveProvider?.refresh();
+    repositoriesProvider?.refresh();
+    resolutionProvider?.refresh();
 }
 
 async function supportsServerCommand(command: string): Promise<boolean> {

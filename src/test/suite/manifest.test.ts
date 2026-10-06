@@ -15,6 +15,21 @@ suite('Extension manifest', () => {
     const packageJsonPath = path.join(workspaceRoot, 'package.json');
     const languageConfigPath = path.join(workspaceRoot, 'language-configuration.json');
 
+    test('offers run and debug on launch files in the bnd Explorer', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const commands = pkg.contributes.menus['view/item/context']
+            .filter((item: { when: string }) => item.when.includes('view == bnd.explorer') && item.when.includes('bnd.bnd'))
+            .map((item: { command: string }) => item.command);
+        assert.deepStrictEqual(commands, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
+    });
+
+    test('uses the dedicated bnd Activity Bar icon', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const container = pkg.contributes.viewsContainers.activitybar.find((item: { id: string }) => item.id === 'bnd');
+        assert.strictEqual(container.icon, 'media/bndtools-activity.svg');
+        assert.ok(fs.existsSync(path.join(workspaceRoot, container.icon)));
+    });
+
     test('passes Windows bndrun URIs with a literal drive colon to Java resolve', () => {
         const uri = vscode.Uri.parse('file:///c%3A/workspace/my%20app/launch.bndrun');
         assert.strictEqual(resolveBndrunUri(uri), 'file:///c:/workspace/my%20app/launch.bndrun');
@@ -57,6 +72,10 @@ suite('Extension manifest', () => {
             'bnd.lsp.resolve',
             'bnd.lsp.buildProject',
             'bnd.lsp.expandMacro',
+            'bnd.launch.run',
+            'bnd.launch.debug',
+            'bnd.launch.runTests',
+            'bnd.launch.debugTests',
         ];
 
         const missing = expected.filter(name => !commands.has(name));
@@ -78,6 +97,24 @@ suite('Extension manifest', () => {
             'bnd.resolve',
             'bnd.build.project',
             'bnd.macro.expand',
+            'bnd.properties.effective',
+            'bnd.resolution.analyze',
+            'bnd.jar.print',
+            'bnd.jar.printText',
+            'bnd.launch.prepare',
+            'bnd.launch.dispose',
+            'bnd.repositories.list',
+            'bnd.repositories.bundles',
+            'bnd.repositories.versions',
+            'bnd.repositories.feature',
+            'bnd.repositories.get',
+            'bnd.repositories.search',
+            'bnd.repositories.listActions',
+            'bnd.repositories.runAction',
+            'bnd.repositories.reload',
+            'bnd.repositories.put',
+            'bnd.repositories.fetch',
+            'bnd.workspace.offline',
         ];
 
         const collisions = serverCommands.filter(command => commands.has(command));
@@ -101,11 +138,43 @@ suite('Extension manifest', () => {
         );
     });
 
+    test('contributes the bnd debugger for bnd files', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const debuggerEntry = pkg.contributes.debuggers.find((item: { type: string }) => item.type === 'bnd');
+        assert.ok(debuggerEntry, 'Expected bnd debugger contribution');
+        assert.deepStrictEqual(debuggerEntry.languages, ['bnd']);
+        const attributes = debuggerEntry.configurationAttributes.launch;
+        assert.deepStrictEqual(attributes.required, ['target']);
+        assert.deepStrictEqual(attributes.properties.kind.enum, ['run', 'test']);
+        assert.strictEqual(pkg.contributes.configuration.properties['bnd.launch.codeLens'].default, true);
+        const runMenu = pkg.contributes.menus['editor/title/run'].map((item: { command: string }) => item.command);
+        assert.deepStrictEqual(runMenu, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
+    });
+
+    test('ships the native bnd JDT LS adapter', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        assert.deepStrictEqual(pkg.contributes.javaExtensions, ['./server/jdtls/org.bndtools.jdtls.adapter.jar']);
+        for (const jar of pkg.contributes.javaExtensions) {
+            assert.ok(fs.existsSync(path.join(workspaceRoot, jar)), `Missing Java extension ${jar}`);
+        }
+    });
+
     test('Effective is optional and does not replace the default source editor', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         const editor = pkg.contributes.customEditors.find((item: { viewType: string }) => item.viewType === 'bnd.effective');
         assert.strictEqual(editor.priority, 'option');
         assert.deepStrictEqual(editor.selector.map((item: { filenamePattern: string }) => item.filenamePattern), ['*.bnd', '*.bndrun']);
         assert.ok(pkg.contributes.menus['editor/title'].some((item: { command: string }) => item.command === 'bnd.showEffective'));
+    });
+
+    test('JAR viewer is the default editor for JAR files with context menus', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const editor = pkg.contributes.customEditors.find((item: { viewType: string }) => item.viewType === 'bnd.jarViewer');
+        assert.strictEqual(editor.priority, 'default');
+        assert.deepStrictEqual(editor.selector, [{ filenamePattern: '*.jar' }]);
+        assert.ok(pkg.activationEvents.includes('onFileSystem:bnd-jar'));
+        for (const menu of ['explorer/context', 'view/item/context']) {
+            assert.ok(pkg.contributes.menus[menu].some((item: { command: string }) => item.command === 'bnd.jar.open'), menu);
+        }
     });
 });

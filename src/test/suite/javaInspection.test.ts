@@ -9,8 +9,9 @@ import {
     LanguageClientOptions,
     ServerOptions,
 } from 'vscode-languageclient/node';
-import { copyCustomServerJar, inspectJavaExecutable, normalizePath } from '../../extension';
+import { copyCustomServerJar, executeServerCommand, inspectJavaExecutable, normalizePath } from '../../extension';
 import { effectiveCommand, parseEffectiveResult } from '../../effectiveProperties';
+import { launchDisposeCommand } from '../../bndLaunch';
 
 suite('Java runtime inspection', () => {
     test('launches a custom server JAR from a copy so the build output stays writable', () => {
@@ -89,6 +90,15 @@ suite('Java runtime inspection', () => {
             assert.ok(client.initializeResult, 'Client should have initializeResult');
             assert.ok(client.initializeResult.capabilities, 'Capabilities should be present');
             assert.ok(client.initializeResult.capabilities.executeCommandProvider?.commands.includes(effectiveCommand));
+            const disposed = await executeServerCommand(client, launchDisposeCommand, ['unknown-launch']);
+            assert.deepStrictEqual(disposed, { disposed: false });
+            const cancellation = new vscode.CancellationTokenSource();
+            try {
+                const withToken = await executeServerCommand(client, launchDisposeCommand, ['unknown-launch'], cancellation.token);
+                assert.deepStrictEqual(withToken, { disposed: false });
+            } finally {
+                cancellation.dispose();
+            }
             const file = path.join(temporary, 'launch.bndrun');
             fs.writeFileSync(file, 'deleted: disk\nvalue: saved\n');
             const uri = vscode.Uri.file(file).toString();
