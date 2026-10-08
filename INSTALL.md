@@ -2,7 +2,7 @@
 
 ## Quick Install (from pre-built VSIX)
 
-Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag publishes one, and GitHub shows its SHA-256 digest.
+Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag on `main` publishes one, and GitHub shows its SHA-256 digest.
 
 ### Option A: Via VS Code UI
 
