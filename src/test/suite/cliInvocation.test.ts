@@ -12,6 +12,7 @@ const SAMPLE_JAR = path.posix.join('..', 'cnf', 'repo', 'printAndExit-1.0.0.jar'
 
 /** Palette commands that never shell out to the bnd JAR. */
 const NON_CLI_COMMANDS = new Set([
+    'bnd.cli.toggleCommands',
     'bnd.cli.configureLib',
     'bnd.cli.selectJavaRuntime',
     'bnd.cli.discoverJavaRuntimes',

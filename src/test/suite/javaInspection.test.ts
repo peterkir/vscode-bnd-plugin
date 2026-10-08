@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import {
+    DocumentSymbol as ProtocolDocumentSymbol,
     Executable,
     LanguageClient,
     LanguageClientOptions,
@@ -121,6 +122,25 @@ suite('Java runtime inspection', () => {
             });
             assert.strictEqual(stale.code, 'staleDocument');
             assert.strictEqual(fs.readFileSync(file, 'utf8'), 'deleted: disk\nvalue: saved\n');
+
+            for (const [index, newline] of ['\n', '\r\n'].entries()) {
+                const lines = ['Bundle-Version: 1', '  Bundle-Name:   ', '-buildpath: \\', '  example.long.name,\\', '  x'];
+                await client.sendNotification('textDocument/didChange', {
+                    textDocument: { uri, version: index + 3 }, contentChanges: [{ text: lines.join(newline) }],
+                });
+                const response = await client.sendRequest<ProtocolDocumentSymbol[]>('textDocument/documentSymbol', {
+                    textDocument: { uri },
+                });
+                const symbols = await client.protocol2CodeConverter.asDocumentSymbols(response);
+                assert.strictEqual(symbols.length, 3);
+                for (const symbol of symbols) {
+                    assert.ok(symbol.range.contains(symbol.selectionRange), symbol.name);
+                    assert.strictEqual(symbol.range.end.character, lines[symbol.range.end.line].length);
+                }
+                assert.strictEqual(symbols[1].selectionRange.start.character, 2);
+                assert.strictEqual(symbols[1].selectionRange.end.character, 13);
+                assert.strictEqual(symbols[2].range.end.line, 4);
+            }
         } catch (err: any) {
             console.error('client.start() threw:', err);
             assert.fail(err);

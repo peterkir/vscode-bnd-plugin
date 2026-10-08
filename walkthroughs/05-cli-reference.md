@@ -1,10 +1,10 @@
 # CLI Reference Panel
 
-The **Bnd: Show CLI Reference** command opens a searchable webview panel containing all 77 bnd CLI sub-commands with their full option lists and examples from the official documentation.
+The **bnd-cli: Show CLI Reference** command opens a searchable webview panel containing all 77 bnd CLI sub-commands with their full option lists and examples from the official documentation.
 
 ## Opening the Panel
 
-Run `Ctrl+Shift+P` → **Bnd: Show CLI Reference**.
+Run `Ctrl+Shift+P` → **bnd-cli: Show CLI Reference**.
 
 The panel opens beside your editor. It stays open until you close it; re-running the command brings it back into focus.
 

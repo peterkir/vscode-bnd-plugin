@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.20.3
+
+### Fixed
+- **Run OSGi** in a terminal no longer fails with "Specified launch file ... was not found". The debug session ends right after spawning the JVM, so the generated `launch*.properties` file is now kept until the same target is launched again or the language server shuts down.
+
+## 0.20.2
+
+### Changed
+- Hide CLI palette commands by default, including before extension activation. The visibility toggle remains available; saved choices and explicit settings are preserved.
+
+## 0.20.1
+
+### Fixed
+- Persist CLI palette visibility in extension global storage instead of editing User settings, so invalid or unwritable settings do not block the toggle. Restore visibility on activation; `bnd.cli.showCommands` remains the initial default before the first toggle.
+
+## 0.20.0
+
+### Added
+- **bnd-cli: Toggle CLI Commands in Command Palette** saves the User preference `bnd.cli.showCommands` (default `true`) to show or hide all other CLI palette entries. The toggle remains available; context menus and command execution are unchanged.
+
+### Changed
+- CLI commands use the `bnd-cli:` palette prefix; language-server and other extension actions use `bnd:`. Command IDs remain unchanged.
+
+## 0.19.5
+
+### Fixed
+- Show launch/debug actions for `.bndrun` and `bnd.bnd` files in the bnd Explorer using the selected tree item's context, not editor resource keys. Apply the same fix to Effective, Resolution, and JAR actions while preserving standard file actions.
+
+## 0.19.4
+
+### Fixed
+- Crop the bnd Activity Bar icon to its artwork and use a theme-aware, visible stroke.
+
+## 0.19.3
+
+### Fixed
+- Use the current `media/bndtools.svg` for the bnd Activity Bar container after removing the former dedicated icon.
+
+## 0.19.2
+
+### Fixed
+- Java language server document symbols use source line lengths and key offsets, fixing `selectionRange must be contained in fullRange` for short or empty header values and correcting indented header selections.
+- Add real Java LanguageClient regression coverage for symbol conversion with LF and CRLF documents and multiline headers.
+
 ## 0.19.1
 
 ### Fixed
