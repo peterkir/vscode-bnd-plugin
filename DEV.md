@@ -292,7 +292,7 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
    git push origin main --tags
    ```
 
-Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`), which packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
+Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`). The tagged commit must be on the default branch (`main`); otherwise the run fails before packaging and nothing is released or published. The workflow packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
 
 ### Step 2: Publish to Visual Studio Marketplace
 
