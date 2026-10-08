@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { resolveBndrunUri } from '../../extension';
+import { registerCliPaletteVisibility } from '../../bndCliCommands';
 
 interface PackageJsonCommand {
     command: string;
@@ -18,15 +19,94 @@ suite('Extension manifest', () => {
     test('offers run and debug on launch files in the bnd Explorer', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         const commands = pkg.contributes.menus['view/item/context']
-            .filter((item: { when: string }) => item.when.includes('view == bnd.explorer') && item.when.includes('bnd.bnd'))
+            .filter((item: { when: string }) => item.when === 'view == bnd.explorer && viewItem =~ /\\blaunch\\b/')
             .map((item: { command: string }) => item.command);
         assert.deepStrictEqual(commands, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
+    });
+
+    test('separates CLI palette commands and keeps the visibility toggle available', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const commands = pkg.contributes.commands.filter((entry: PackageJsonCommand) => entry.command.startsWith('bnd.cli.'));
+        assert.ok(commands.some((entry: PackageJsonCommand) => entry.command === 'bnd.cli.toggleCommands'));
+        for (const command of commands) {
+            assert.strictEqual(command.category, 'bnd-cli', command.command);
+            const menu = pkg.contributes.menus.commandPalette.find((entry: { command: string }) => entry.command === command.command);
+            assert.ok(menu, command.command);
+            assert.strictEqual(menu.when, command.command === 'bnd.cli.toggleCommands' ? undefined : 'bnd.cli.commandsVisible');
+        }
+        for (const command of pkg.contributes.commands.filter((entry: PackageJsonCommand) =>
+            entry.command.startsWith('bnd.lsp.') || entry.command.startsWith('bnd.server.'))) {
+            assert.strictEqual(command.category, 'bnd', command.command);
+        }
+        const setting = pkg.contributes.configuration.properties['bnd.cli.showCommands'];
+        assert.strictEqual(setting.type, 'boolean');
+        assert.strictEqual(setting.default, false);
+        assert.strictEqual(setting.scope, 'application');
+    });
+
+    test('persists CLI palette visibility without writing User settings and restores it on activation', async () => {
+        const preferences = new Map<string, unknown>();
+        const globalState: vscode.ExtensionContext['globalState'] = {
+            setKeysForSync: () => {},
+            keys: () => [...preferences.keys()],
+            get: <T>(key: string, fallback?: T) => (preferences.get(key) ?? fallback) as T,
+            update: async (key: string, value: unknown) => { preferences.set(key, value); },
+        };
+        const subscriptions: vscode.Disposable[] = [];
+        const commands = vscode.commands as unknown as Record<string, unknown>;
+        const workspace = vscode.workspace as unknown as Record<string, unknown>;
+        const originals = {
+            registerCommand: commands.registerCommand, executeCommand: commands.executeCommand,
+            getConfiguration: workspace.getConfiguration,
+        };
+        let toggle: (() => Promise<void>) | undefined;
+        let visible: unknown;
+        let configuredDefault: boolean | undefined;
+        commands.registerCommand = (command: string, handler: () => Promise<void>) => {
+            assert.strictEqual(command, 'bnd.cli.toggleCommands');
+            toggle = handler;
+            return new vscode.Disposable(() => { toggle = undefined; });
+        };
+        commands.executeCommand = async (command: string, key: string, value: unknown) => {
+            assert.strictEqual(command, 'setContext');
+            assert.strictEqual(key, 'bnd.cli.commandsVisible');
+            visible = value;
+        };
+        workspace.getConfiguration = () => ({
+            get: (_key: string, fallback: boolean) => configuredDefault ?? fallback,
+            update: () => { throw new Error('Unable to write into user settings.'); },
+        });
+        try {
+            registerCliPaletteVisibility({ globalState, subscriptions });
+            assert.strictEqual(visible, false);
+            await toggle!();
+            assert.strictEqual(preferences.get('bnd.cli.showCommands'), true);
+            assert.strictEqual(visible, true);
+            subscriptions.splice(0).forEach(subscription => subscription.dispose());
+            registerCliPaletteVisibility({ globalState, subscriptions });
+            assert.strictEqual(visible, true);
+            await toggle!();
+            assert.strictEqual(preferences.get('bnd.cli.showCommands'), false);
+            assert.strictEqual(visible, false);
+            subscriptions.splice(0).forEach(subscription => subscription.dispose());
+            preferences.clear();
+            configuredDefault = true;
+            registerCliPaletteVisibility({ globalState, subscriptions });
+            assert.strictEqual(visible, true);
+            await toggle!();
+            assert.strictEqual(preferences.get('bnd.cli.showCommands'), false);
+            assert.strictEqual(visible, false);
+        } finally {
+            subscriptions.forEach(subscription => subscription.dispose());
+            Object.assign(commands, { registerCommand: originals.registerCommand, executeCommand: originals.executeCommand });
+            workspace.getConfiguration = originals.getConfiguration;
+        }
     });
 
     test('uses the dedicated bnd Activity Bar icon', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         const container = pkg.contributes.viewsContainers.activitybar.find((item: { id: string }) => item.id === 'bnd');
-        assert.strictEqual(container.icon, 'media/bndtools-activity.svg');
+        assert.strictEqual(container.icon, 'media/bndtools.svg');
         assert.ok(fs.existsSync(path.join(workspaceRoot, container.icon)));
     });
 

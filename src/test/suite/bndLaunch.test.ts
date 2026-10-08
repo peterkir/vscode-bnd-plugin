@@ -156,6 +156,28 @@ suite('bnd launch', () => {
         }
     });
 
+    test('keeps launch properties for terminal launches without debugger until relaunch', async () => {
+        const calls: unknown[][] = [];
+        const server: LaunchServer = {
+            supports: async command => command === launchDisposeCommand,
+            execute: async (command, args) => { calls.push([command, ...args]); return { disposed: true }; },
+        };
+        const channel = log();
+        try {
+            const provider = new BndDebugConfigurationProvider(server, channel);
+            const session = (configuration: vscode.DebugConfiguration) => ({ configuration }) as unknown as vscode.DebugSession;
+            const base = { type: 'java', request: 'launch', name: 'x', noDebug: true, console: 'integratedTerminal', __bndLaunchTarget: '/ws/app.bndrun' };
+            provider.onSessionTerminated(session({ ...base, __bndLaunchId: 'id-1' }));
+            await new Promise(resolve => setTimeout(resolve, 10));
+            assert.deepStrictEqual(calls, []);
+            provider.onSessionTerminated(session({ ...base, __bndLaunchId: 'id-2' }));
+            await new Promise(resolve => setTimeout(resolve, 10));
+            assert.deepStrictEqual(calls, [[launchDisposeCommand, 'id-1']]);
+        } finally {
+            channel.dispose();
+        }
+    });
+
     test('offers run and test CodeLens actions', async () => {
         const provider = new BndLaunchCodeLensProvider();
         const bndrun = await vscode.workspace.openTextDocument({ language: 'bnd', content: '-runfw: x\n' });

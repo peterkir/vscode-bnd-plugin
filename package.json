@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.19.1",
+  "version": "0.20.3",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -68,7 +68,7 @@
         {
           "id": "bnd",
           "title": "bnd",
-          "icon": "media/bndtools-activity.svg"
+          "icon": "media/bndtools.svg"
         }
       ],
       "panel": [
@@ -152,396 +152,401 @@
       {
         "command": "bnd.explorer.refresh",
         "title": "Refresh Workspace Files",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(refresh)"
       },
       {
         "command": "bnd.explorer.reveal",
         "title": "Reveal in Explorer View",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.copyRelativePath",
         "title": "Copy Relative Path",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.newFile",
         "title": "New File...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(new-file)"
       },
       {
         "command": "bnd.explorer.newFolder",
         "title": "New Folder...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(new-folder)"
       },
       {
         "command": "bnd.explorer.openToSide",
         "title": "Open to the Side",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.openWith",
         "title": "Open With...",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.revealInOS",
         "title": "Reveal in File Explorer",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.openInTerminal",
         "title": "Open in Integrated Terminal",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.findInFolder",
         "title": "Find in Folder...",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.cut",
         "title": "Cut",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.copy",
         "title": "Copy",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.paste",
         "title": "Paste",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.copyPath",
         "title": "Copy Path",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.rename",
         "title": "Rename...",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.delete",
         "title": "Delete",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.selectForCompare",
         "title": "Select for Compare",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.compareWithSelected",
         "title": "Compare with Selected",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.explorer.compareSelected",
         "title": "Compare Selected",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.jar.open",
         "title": "Open with bnd JAR Viewer",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(file-zip)"
       },
       {
         "command": "bnd.showEffective",
         "title": "Open Effective",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(table)"
       },
       {
         "command": "bnd.showEffectiveToSide",
         "title": "Open Effective to Side",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(open-preview)"
       },
       {
         "command": "bnd.openSource",
         "title": "Open Original Source",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(go-to-file)"
       },
       {
         "command": "bnd.showEffectiveSource",
         "title": "Show Effective Source",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(file-code)"
+      },
+      {
+        "command": "bnd.cli.toggleCommands",
+        "title": "Toggle CLI Commands in Command Palette",
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.build",
         "title": "Build Project",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.run",
         "title": "Run",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.test",
         "title": "Test Project",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.runtests",
         "title": "Run OSGi Tests",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.resolve",
         "title": "Resolve (.bndrun)",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.clean",
         "title": "Clean Project",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.baseline",
         "title": "Baseline Check",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.verify",
         "title": "Verify JARs",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.print",
         "title": "Print Bundle Info",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.diff",
         "title": "Diff Bundles",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.wrap",
         "title": "Wrap JAR as OSGi Bundle",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.export",
         "title": "Export (.bndrun)",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.release",
         "title": "Release Project",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.properties",
         "title": "Show Project Properties",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.info",
         "title": "Show Project Info",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.version",
         "title": "Show bnd Version",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.macro",
         "title": "Evaluate Macro Expression",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.repo",
         "title": "Repository Commands",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.configureLib",
         "title": "Configure bnd Library...",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.selectJavaRuntime",
         "title": "Select Java Runtime for bnd CLI",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.discoverJavaRuntimes",
         "title": "Discover Java Runtimes from Folder...",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.cli.showReference",
         "title": "Show CLI Reference",
-        "category": "Bnd"
+        "category": "bnd-cli"
       },
       {
         "command": "bnd.server.restart",
         "title": "Restart Language Server",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.server.selectJar",
         "title": "Select Language Server JAR...",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.lsp.resolve",
         "title": "Resolve Runbundles (LSP)",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.lsp.buildProject",
         "title": "Build Project (LSP)",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.lsp.expandMacro",
         "title": "Evaluate Macro (LSP)",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.launch.run",
         "title": "Run OSGi Framework",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(run)"
       },
       {
         "command": "bnd.launch.debug",
         "title": "Debug OSGi Framework",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(debug-alt)"
       },
       {
         "command": "bnd.launch.runTests",
         "title": "Run OSGi Tests (Launch)",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(run-all)"
       },
       {
         "command": "bnd.launch.debugTests",
         "title": "Debug OSGi Tests",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(debug-all)"
       },
       {
         "command": "bnd.repositories.refresh",
         "title": "Refresh Repositories",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(refresh)"
       },
       {
         "command": "bnd.repositories.filter",
         "title": "Filter Repositories...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(filter)"
       },
       {
         "command": "bnd.repositories.clearFilter",
         "title": "Clear Repository Filter",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(filter-filled)"
       },
       {
         "command": "bnd.repositories.advancedSearch",
         "title": "Advanced Search...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(search)"
       },
       {
         "command": "bnd.repositories.clearSearch",
         "title": "Clear Advanced Search",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(search-stop)"
       },
       {
         "command": "bnd.repositories.goOffline",
         "title": "Work Offline",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(plug)"
       },
       {
         "command": "bnd.repositories.goOnline",
         "title": "Work Online",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "bnd.repositories.download",
         "title": "Download Repository Content",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(cloud-download)"
       },
       {
         "command": "bnd.repositories.addFiles",
         "title": "Add Bundles to Repository...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(add)"
       },
       {
         "command": "bnd.repositories.copyBsn",
         "title": "Copy Bundle Symbolic Name",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.repositories.copyVersion",
         "title": "Copy Version",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.repositories.copyEntry",
         "title": "Copy as bnd Entry",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.repositories.revealFile",
         "title": "Reveal JAR File",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.repositories.showManifest",
         "title": "Show Manifest",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.repositories.actions",
         "title": "Repository Actions...",
-        "category": "Bnd"
+        "category": "bnd"
       },
       {
         "command": "bnd.resolution.add",
         "title": "Add Resource to Resolution View...",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(add)"
       },
       {
         "command": "bnd.resolution.refresh",
         "title": "Refresh Resolution View",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(refresh)"
       },
       {
         "command": "bnd.resolution.clear",
         "title": "Clear Resolution View",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(clear-all)"
       },
       {
         "command": "bnd.repositories.addToResolution",
         "title": "Analyze in Resolution View",
-        "category": "Bnd",
+        "category": "bnd",
         "icon": "$(references)"
       }
     ],
@@ -741,7 +746,7 @@
           ],
           "default": "bundled",
           "scope": "machine",
-          "description": "Source of the bnd Language Server JAR. Downloads are cached in the extension's global storage and run in the background; until available, the bundled JAR is used. Use 'Bnd: Select Language Server JAR...' to choose."
+          "description": "Source of the bnd Language Server JAR. Downloads are cached in the extension's global storage and run in the background; until available, the bundled JAR is used. Use 'bnd: Select Language Server JAR...' to choose."
         },
         "bnd.server.jarVersion": {
           "type": "string",
@@ -779,6 +784,12 @@
           "type": "number",
           "default": 5007,
           "description": "TCP port for socket mode."
+        },
+        "bnd.cli.showCommands": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Initial visibility of bnd-cli commands in the Command Palette. The toggle stores its choice separately in extension storage and always remains available."
         },
         "bnd.cli.executable": {
           "type": "string",
@@ -888,17 +899,17 @@
         },
         {
           "command": "bnd.explorer.openToSide",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorerFile\\b/",
           "group": "navigation@20"
         },
         {
           "command": "bnd.explorer.openWith",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorerFile\\b/",
           "group": "navigation@21"
         },
         {
           "command": "bnd.jar.open",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.jar$/i",
+          "when": "view == bnd.explorer && viewItem =~ /\\bjar\\b/",
           "group": "navigation@22"
         },
         {
@@ -918,52 +929,52 @@
         },
         {
           "command": "bnd.launch.run",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "when": "view == bnd.explorer && viewItem =~ /\\blaunch\\b/",
           "group": "1_bnd_launch@1"
         },
         {
           "command": "bnd.launch.debug",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "when": "view == bnd.explorer && viewItem =~ /\\blaunch\\b/",
           "group": "1_bnd_launch@2"
         },
         {
           "command": "bnd.launch.runTests",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "when": "view == bnd.explorer && viewItem =~ /\\blaunch\\b/",
           "group": "1_bnd_launch@3"
         },
         {
           "command": "bnd.launch.debugTests",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "when": "view == bnd.explorer && viewItem =~ /\\blaunch\\b/",
           "group": "1_bnd_launch@4"
         },
         {
           "command": "bnd.showEffective",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|bndrun)$/",
+          "when": "view == bnd.explorer && viewItem =~ /\\beffective\\b/",
           "group": "1_bnd_tools@1"
         },
         {
           "command": "bnd.showEffectiveToSide",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|bndrun)$/",
+          "when": "view == bnd.explorer && viewItem =~ /\\beffective\\b/",
           "group": "1_bnd_tools@2"
         },
         {
           "command": "bnd.resolution.add",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && resourceExtname =~ /^\\.(bnd|jar)$/i",
+          "when": "view == bnd.explorer && viewItem =~ /\\bresolution\\b/",
           "group": "1_bnd_tools@3"
         },
         {
           "command": "bnd.explorer.selectForCompare",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && !listMultiSelection",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorerFile\\b/ && !listMultiSelection",
           "group": "3_compare@10"
         },
         {
           "command": "bnd.explorer.compareWithSelected",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && bnd.explorer.compareSelected && !listMultiSelection",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorerFile\\b/ && bnd.explorer.compareSelected && !listMultiSelection",
           "group": "3_compare@20"
         },
         {
           "command": "bnd.explorer.compareSelected",
-          "when": "view == bnd.explorer && viewItem == bndExplorerFile && listDoubleSelection",
+          "when": "view == bnd.explorer && viewItem =~ /^bndExplorerFile\\b/ && listDoubleSelection",
           "group": "3_compare@30"
         },
         {
@@ -1218,70 +1229,95 @@
           "when": "resourceExtname =~ /^\\.jar$/i"
         },
         {
-          "command": "bnd.cli.build"
+          "command": "bnd.cli.toggleCommands"
         },
         {
-          "command": "bnd.cli.run"
+          "command": "bnd.cli.build",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.test"
+          "command": "bnd.cli.run",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.runtests"
+          "command": "bnd.cli.test",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.resolve"
+          "command": "bnd.cli.runtests",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.clean"
+          "command": "bnd.cli.resolve",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.baseline"
+          "command": "bnd.cli.clean",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.verify"
+          "command": "bnd.cli.baseline",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.print"
+          "command": "bnd.cli.verify",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.diff"
+          "command": "bnd.cli.print",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.wrap"
+          "command": "bnd.cli.diff",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.export"
+          "command": "bnd.cli.wrap",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.release"
+          "command": "bnd.cli.export",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.properties"
+          "command": "bnd.cli.release",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.info"
+          "command": "bnd.cli.properties",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.version"
+          "command": "bnd.cli.info",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.macro"
+          "command": "bnd.cli.version",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.repo"
+          "command": "bnd.cli.macro",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.configureLib"
+          "command": "bnd.cli.repo",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.selectJavaRuntime"
+          "command": "bnd.cli.configureLib",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.discoverJavaRuntimes"
+          "command": "bnd.cli.selectJavaRuntime",
+          "when": "bnd.cli.commandsVisible"
         },
         {
-          "command": "bnd.cli.showReference"
+          "command": "bnd.cli.discoverJavaRuntimes",
+          "when": "bnd.cli.commandsVisible"
+        },
+        {
+          "command": "bnd.cli.showReference",
+          "when": "bnd.cli.commandsVisible"
         },
         {
           "command": "bnd.server.restart"
@@ -1393,7 +1429,7 @@
           {
             "id": "bnd.walkthrough.cli",
             "title": "Integrated CLI Commands",
-            "description": "All bnd CLI commands are available from the Command Palette under the `Bnd:` prefix. The extension downloads and configures the latest bnd release automatically; use Bnd: Configure bnd Library... to switch to another release, a snapshot, or your own URL.",
+            "description": "bnd CLI commands use the `bnd-cli:` prefix in the Command Palette. They are hidden by default; run bnd-cli: Toggle CLI Commands in Command Palette to show them. The extension downloads and configures the latest bnd release automatically; use bnd-cli: Configure bnd Library... to switch to another release, a snapshot, or your own URL.",
             "media": {
               "markdown": "walkthroughs/04-cli-commands.md"
             }
@@ -1401,7 +1437,7 @@
           {
             "id": "bnd.walkthrough.reference",
             "title": "CLI Reference Panel",
-            "description": "Run **Bnd: Show CLI Reference** to open a searchable panel covering all 77 bnd CLI sub-commands with options and examples.",
+            "description": "Run **bnd-cli: Show CLI Reference** to open a searchable panel covering all 77 bnd CLI sub-commands with options and examples.",
             "completionEvents": [
               "onCommand:bnd.cli.showReference"
             ],
