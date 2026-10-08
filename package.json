@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.20.3",
+  "version": "0.22.1",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -514,6 +514,12 @@
         "command": "bnd.repositories.revealFile",
         "title": "Reveal JAR File",
         "category": "bnd"
+      },
+      {
+        "command": "bnd.repositories.openJar",
+        "title": "Open in bnd JAR Viewer",
+        "category": "bnd",
+        "icon": "$(archive)"
       },
       {
         "command": "bnd.repositories.showManifest",
@@ -1053,14 +1059,19 @@
           "group": "2_file@1"
         },
         {
-          "command": "bnd.repositories.showManifest",
+          "command": "bnd.repositories.openJar",
           "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
           "group": "2_file@2"
         },
         {
-          "command": "bnd.repositories.addToResolution",
+          "command": "bnd.repositories.showManifest",
           "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
           "group": "2_file@3"
+        },
+        {
+          "command": "bnd.repositories.addToResolution",
+          "when": "view == bnd.repositories && viewItem =~ /\\bversion\\b/",
+          "group": "2_file@4"
         },
         {
           "command": "bnd.repositories.copyBsn",
@@ -1368,6 +1379,10 @@
         },
         {
           "command": "bnd.repositories.revealFile",
+          "when": "false"
+        },
+        {
+          "command": "bnd.repositories.openJar",
           "when": "false"
         },
         {

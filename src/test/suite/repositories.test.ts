@@ -100,8 +100,10 @@ suite('Repositories view', () => {
             assert.strictEqual((await provider.getChildren(projects[0])).length, 2);
             const bundles = await provider.getChildren(repos[1]);
             assert.deepStrictEqual(bundles.map(node => node.type === 'bundle' ? node.bundle.bsn : node.type), ['a', 'z', 'feature']);
+            assert.strictEqual(provider.getTreeItem(bundles[0]).command?.command, 'bnd.repositories.openJar');
             const versions = await provider.getChildren(bundles[0]);
             assert.deepStrictEqual(versions.map(node => provider.getTreeItem(node).label), ['2.0.0', '1.0.0']);
+            assert.strictEqual(provider.getTreeItem(versions[0]).command?.command, 'bnd.repositories.openJar');
 
             provider.setFilter('a');
             assert.strictEqual(provider.filter, 'a');
@@ -129,7 +131,7 @@ suite('Repositories view', () => {
         await extension.activate();
         const commands = await vscode.commands.getCommands(true);
         for (const command of ['bnd.repositories.refresh', 'bnd.repositories.filter', 'bnd.repositories.advancedSearch',
-            'bnd.repositories.goOffline', 'bnd.repositories.addFiles', 'bnd.repositories.actions']) {
+            'bnd.repositories.goOffline', 'bnd.repositories.addFiles', 'bnd.repositories.actions', 'bnd.repositories.openJar']) {
             assert.ok(commands.includes(command), `Missing ${command}`);
         }
     });

@@ -329,6 +329,7 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
                 item.tooltip = node.bundle.tooltip || node.bundle.bsn;
                 item.contextValue = ['bundle', node.repo.actionable && 'actionable', node.repo.remote && 'downloadable']
                     .filter(Boolean).join(' ');
+                item.command = { command: 'bnd.repositories.openJar', title: 'Open in bnd JAR Viewer', arguments: [node] };
                 return item;
             }
             case 'version': {
@@ -339,7 +340,7 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
                 item.tooltip = node.info.tooltip || `${node.bsn} ${node.info.version}`;
                 item.contextValue = ['version', !node.resource && node.repo.actionable && 'actionable',
                     node.repo.remote && 'downloadable'].filter(Boolean).join(' ');
-                item.command = { command: 'bnd.repositories.showManifest', title: 'Show Manifest', arguments: [node] };
+                item.command = { command: 'bnd.repositories.openJar', title: 'Open in bnd JAR Viewer', arguments: [node] };
                 return item;
             }
             case 'feature': {
@@ -483,6 +484,13 @@ export function registerRepositoriesView(context: vscode.ExtensionContext, serve
         if (typeof result.file !== 'string') throw new Error('Incompatible bnd Language Server response.');
         return result.file;
     };
+    const latestJarFor = async (node: RepoNode): Promise<string> => {
+        if (node.type !== 'bundle') return jarFor(node);
+        const listing = await provider.execute('bnd.repositories.versions', provider.repoRequest(node, { bsn: node.bundle.bsn }));
+        const [info] = array<VersionInfo>(listing.versions);
+        if (!info) throw new Error(`No versions found for ${node.bundle.bsn}.`);
+        return jarFor({ type: 'version', ws: node.ws, repo: node.repo, bsn: node.bundle.bsn, info });
+    };
     const run = (handler: (...args: any[]) => Promise<void> | void) => async (...args: any[]) => {
         try {
             await handler(...args);
@@ -586,6 +594,10 @@ export function registerRepositoriesView(context: vscode.ExtensionContext, serve
         vscode.commands.registerCommand('bnd.repositories.revealFile', run(async (node?: RepoNode) => {
             const file = await vscode.window.withProgress({ location: { viewId: repositoriesViewId } }, () => jarFor(node ?? view.selection[0]));
             await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(file));
+        })),
+        vscode.commands.registerCommand('bnd.repositories.openJar', run(async (node?: RepoNode) => {
+            const file = await vscode.window.withProgress({ location: { viewId: repositoriesViewId } }, () => latestJarFor(node ?? view.selection[0]));
+            await vscode.commands.executeCommand('bnd.jar.open', vscode.Uri.file(file));
         })),
         vscode.commands.registerCommand('bnd.repositories.addToResolution', run(async (node?: RepoNode) => {
             const file = await vscode.window.withProgress({ location: { viewId: repositoriesViewId } }, () => jarFor(node ?? view.selection[0]));
