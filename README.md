@@ -73,7 +73,7 @@ The **Repositories** view is a port of the bndtools Eclipse view. It lists one r
 - **Advanced Search** finds providers of a package (with an optional version range), a service, or any namespace and LDAP filter in repositories that implement the OSGi Repository API.
 - **Refresh**, **Collapse All**, and **Work Offline** / **Work Online** in the view title.
 - **Add Bundles to Repository...** on writable repositories, or drop JAR files from the Explorer onto them. **Download Repository Content** fetches remote repositories, bundles, or versions into the local cache.
-- **Copy Bundle Symbolic Name**, **Copy Version**, and **Copy as bnd Entry** (`bsn;version='1.2.3'`), plus **Reveal JAR File** and **Show Manifest** on versions.
+- Activating a bundle opens its newest JAR in the bnd JAR Viewer; activating a version opens that exact JAR. The version context menu also offers **Reveal JAR File** and **Show Manifest**. **Copy Bundle Symbolic Name**, **Copy Version**, and **Copy as bnd Entry** (`bsn;version='1.2.3'`) are available on bundle and version nodes.
 - **Repository Actions...** runs actions contributed by repository plugins (the bnd `Actionable` interface).
 - Drag bundles or versions into a bnd editor to insert `bsn;version=...` entries for `-buildpath`, `-runbundles`, and similar instructions.
 
