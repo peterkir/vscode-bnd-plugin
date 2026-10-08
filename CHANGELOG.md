@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.4
+
+### Fixed
+- Allow `.bndrun` files with the exact `-standalone` instruction to launch outside a bnd workspace. Workspace-bound `.bndrun` files and `bnd.bnd` projects still require one.
+
 ## 0.20.3
 
 ### Fixed
