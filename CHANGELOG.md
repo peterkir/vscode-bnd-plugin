@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.1
+
+### Added
+- Open repository artifacts in the bnd JAR Viewer by activating a bundle (newest version) or a specific version; add an **Open in bnd JAR Viewer** context action.
+
 ## 0.20.3
 
 ### Fixed
