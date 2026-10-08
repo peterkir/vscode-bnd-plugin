@@ -117,8 +117,8 @@ To test modifications in `biz.aQute.bnd.lsp`:
      "bnd.server.javaExecutable": "java"
    }
    ```
-   In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables. Alternatively, run **Bnd: Select Language Server JAR...** → **Local file...**, which writes the User setting. `bnd.server.jar` takes precedence over `bnd.server.jarSource`.
-3. Restart the language server with **Bnd: Restart Language Server**, or close and relaunch the development host. The extension launches a copy of the `bnd.server.jar` file from its global storage, so the build can overwrite the generated JAR while the server runs.
+   In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables. Alternatively, run **bnd: Select Language Server JAR...** → **Local file...**, which writes the User setting. `bnd.server.jar` takes precedence over `bnd.server.jarSource`.
+3. Restart the language server with **bnd: Restart Language Server**, or close and relaunch the development host. The extension launches a copy of the `bnd.server.jar` file from its global storage, so the build can overwrite the generated JAR while the server runs.
 
 ---
 
@@ -128,7 +128,7 @@ To test modifications in `biz.aQute.bnd.lsp`:
 
 The optional `bnd.effective` custom text editor uses `workspace/executeCommand` with `bnd.properties.effective`. The request contains `uri`, `documentVersion`, `expanded`, and `merged`. The Java server evaluates an isolated snapshot of the current document and reads dependencies from disk. Responses use schema version 1 and contain rows, provenance URIs, diagnostics, dependency URIs, and generated effective source. Initialization must include `workspaceTrusted: true` to enable evaluation.
 
-If the view reports `Effective properties require an updated Java bnd Language Server`, the running server did not advertise `bnd.properties.effective`. Usual causes: `bnd.server.mode` resolves to `node` (often through workspace settings), Java 17+ was not found and the extension fell back to Node, or `bnd.server.jar` points to an older JAR. Check **Output** → **bnd Language Server** for the startup line and Java version, fix the setting, then run **Bnd: Restart Language Server** and refresh the view.
+If the view reports `Effective properties require an updated Java bnd Language Server`, the running server did not advertise `bnd.properties.effective`. Usual causes: `bnd.server.mode` resolves to `node` (often through workspace settings), Java 17+ was not found and the extension fell back to Node, or `bnd.server.jar` points to an older JAR. Check **Output** → **bnd Language Server** for the startup line and Java version, fix the setting, then run **bnd: Restart Language Server** and refresh the view.
 
 After Java changes, rebuild and update the bundled JAR before running `npm test`. The suite checks the actual bundled JAR, unsaved text, stale-version rejection, and custom-editor/source commands, not only Java compilation.
 
@@ -156,9 +156,11 @@ For a classpath refresh without clearing the workspace, run **Java: Reload Proje
 
 ### Repositories View
 
+File-specific actions in the bnd Explorer use the selected tree item's context value rather than editor resource keys. Run/Debug and Run/Debug Tests appear for `.bndrun` and `bnd.bnd` files; Effective appears for `.bnd`/`.bndrun`, Resolution for `.bnd`/`.jar`, and the JAR viewer for `.jar`. These actions do not depend on the active editor. Other `.bnd` files are not launch targets.
+
 `src/bndExplorer.ts` registers a separate `bnd.explorer` workspace file tree before `bnd.repositories`. It reads directories lazily through `workspace.fs` and has its own exact-name exclusions (`bnd.explorer.exclude`), without changing the native Explorer. The tree mirrors the built-in Explorer context menu (groups `navigation`, `3_compare`, `4_search`, `5_cutcopypaste`, `6_copypath`, `7_modification`) and its keybindings under `focusedView == bnd.explorer`. Create, rename, move and delete go through `WorkspaceEdit`, so rename/refactoring participants run and the operations can be undone; copy uses `workspace.fs.copy`. Menus that other extensions contribute to `explorer/context` cannot be reused for a custom tree. Workspace-folder, file create/delete and configuration changes refresh it. Manifest order is only the default; VS Code preserves user view customization.
 
-`src/bndRepositories.ts` contributes the `bnd.repositories` tree view in the `bnd` Activity Bar container (`media/bndtools-activity.svg`). Every request is one JSON object with a `workspace` URI (the folder containing `cnf/build.bnd`). Repositories are addressed by `repo` (index in the list response; index 0 is the Workspace repository) and `repoName`; a name mismatch is rejected, so refresh the view after configuration changes. The Java server (`BndRepositoriesService`) handles:
+`src/bndRepositories.ts` contributes the `bnd.repositories` tree view in the `bnd` Activity Bar container (`media/bndtools.svg`). Every request is one JSON object with a `workspace` URI (the folder containing `cnf/build.bnd`). Repositories are addressed by `repo` (index in the list response; index 0 is the Workspace repository) and `repoName`; a name mismatch is rejected, so refresh the view after configuration changes. The Java server (`BndRepositoriesService`) handles:
 
 | Command | Request | Response |
 |---|---|---|
@@ -192,9 +194,9 @@ Manual checks: open a bundle from the Explorer, navigate the tree with the keybo
 
 ### Launch and Debug
 
-`src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.
+`src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Exception: a `noDebug` session with a terminal console terminates right after spawning the JVM, before it reads `launch*.properties`; the client keeps that launch per target and disposes it when the same target is prepared again. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.
 
-Manual checks: run and debug from CodeLens and both Explorer context menus, then invoke the Command Palette with no launch file active and choose a target. Verify launch cancellation and unsaved-file prompts, test selection, breakpoints in imported workspace sources, and temporary-file cleanup after the Java session ends. Effective commands accept both a URI and a bnd Explorer node containing `uri`; verify **Open Effective to Side** on a tree selection without an active source editor.
+Manual checks: run and debug from CodeLens and both Explorer context menus, then invoke the Command Palette with no launch file active and choose a target. Verify launch cancellation and unsaved-file prompts, test selection, breakpoints in imported workspace sources, and temporary-file cleanup after the Java session ends (for terminal runs without debugging: after relaunching the same target or restarting the server). Effective commands accept both a URI and a bnd Explorer node containing `uri`; verify **Open Effective to Side** on a tree selection without an active source editor.
 
 ### Automated Test Suite
 
@@ -235,15 +237,16 @@ Launch the workspace configured by `BND_SAMPLE_WORKSPACE` using the command abov
    - Hover cards showing signatures, docs, and code examples.
 3. **Language Server Modes**:
    - Test `bnd.server.mode`: `node`, `java`, `socket`.
-   - Run command: `Bnd: Restart Language Server`.
-   - Run command: `Bnd: Resolve Runbundles (LSP)`.
-   - Run command: `Bnd: Build Project (LSP)`.
-   - Run command: `Bnd: Evaluate Macro (LSP)`.
+   - Run command: `bnd: Restart Language Server`.
+   - Run command: `bnd: Resolve Runbundles (LSP)`.
+   - Run command: `bnd: Build Project (LSP)`.
+   - Run command: `bnd: Evaluate Macro (LSP)`.
 4. **CLI Commands**:
-   - Run `Bnd: Build Project`, `Bnd: Resolve (.bndrun)`, `Bnd: Run`.
-   - Run `Bnd: Download Latest bnd CLI JAR` to verify automatic JAR acquisition and path configuration.
-   - Run `Bnd: Discover Java Runtimes from Folder...`.
-   - Run `Bnd: Show CLI Reference` to check webview functionality.
+   - Run `bnd-cli: Build Project`, `bnd-cli: Resolve (.bndrun)`, `bnd-cli: Run`.
+   - Run `bnd-cli: Configure bnd Library...` to verify JAR acquisition and path configuration.
+   - Run `bnd-cli: Toggle CLI Commands in Command Palette` twice. Confirm other `bnd-cli:` entries hide and return, the toggle remains visible, and User settings are not modified. Disable the CLI entries and reload the host to verify the extension's global storage restores the choice. Before the first toggle, `bnd.cli.showCommands` supplies the initial value; afterward, the saved choice takes precedence. Commands under `bnd:` and context-menu actions must remain available.
+   - Run `bnd-cli: Discover Java Runtimes from Folder...`.
+   - Run `bnd-cli: Show CLI Reference` to check webview functionality.
 
 ---
 
@@ -289,7 +292,7 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
    git push origin main --tags
    ```
 
-Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`), which packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
+Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`). The tagged commit must be on the default branch (`main`); otherwise the run fails before packaging and nothing is released or published. The workflow packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
 
 ### Step 2: Publish to Visual Studio Marketplace
 
@@ -342,9 +345,9 @@ code --profile "Bnd-Test" --extensions-dir ~/.vscode/extensions-test
 | Activation | Open any `bnd.bnd` or `launch.bndrun` | Status bar shows bnd LSP activating; syntax highlighting applied |
 | IntelliSense | Type `-run` + `Ctrl+Space` | Completion items with bnd doc snippets appear |
 | Hover | Hover over `-buildpath:` | Hover tooltip renders with description and example |
-| LSP Commands | `Ctrl+Shift+P` → `Bnd: Restart Language Server` | Server restarts cleanly without errors |
-| CLI Download | `Ctrl+Shift+P` → `Bnd: Download Latest bnd CLI JAR` | Downloads latest CLI JAR to tool cache and updates `bnd.cli.executable` |
-| CLI Commands | `Ctrl+Shift+P` → `Bnd: Show CLI Reference` | Searchable reference webview opens with all commands |
+| LSP Commands | `Ctrl+Shift+P` → `bnd: Restart Language Server` | Server restarts cleanly without errors |
+| CLI Library | `Ctrl+Shift+P` → `bnd-cli: Configure bnd Library...` | Selects a CLI JAR and updates `bnd.cli.executable` |
+| CLI Commands | `Ctrl+Shift+P` → `bnd-cli: Show CLI Reference` | Searchable reference webview opens with all commands |
 
 ### Step 4: Uninstall / Upgrade Check
 

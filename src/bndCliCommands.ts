@@ -1384,6 +1384,7 @@ export function registerCliCommands(context: vscode.ExtensionContext): void {
     const register = (id: string, handler: (...args: any[]) => unknown) =>
         context.subscriptions.push(vscode.commands.registerCommand(id, handler));
 
+    registerCliPaletteVisibility(context);
     register('bnd.cli.build',         cmdBuild);
     register('bnd.cli.run',           cmdRun);
     register('bnd.cli.test',          cmdTest);
@@ -1406,4 +1407,22 @@ export function registerCliCommands(context: vscode.ExtensionContext): void {
     register('bnd.cli.selectJavaRuntime', cmdSelectJavaRuntime);
     register('bnd.cli.discoverJavaRuntimes', cmdDiscoverJavaRuntimes);
     register('bnd.cli.showReference', cmdShowReference);
+}
+
+export function registerCliPaletteVisibility(context: Pick<vscode.ExtensionContext, 'globalState' | 'subscriptions'>): void {
+    const preferenceKey = 'bnd.cli.showCommands';
+    const visible = () => context.globalState.get<boolean>(preferenceKey)
+        ?? vscode.workspace.getConfiguration('bnd').get<boolean>('cli.showCommands', false);
+    const publish = () => vscode.commands.executeCommand('setContext', 'bnd.cli.commandsVisible', visible());
+
+    void publish();
+    context.subscriptions.push(
+        vscode.commands.registerCommand('bnd.cli.toggleCommands', async () => {
+            await context.globalState.update(preferenceKey, !visible());
+            await publish();
+        }),
+        vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration(preferenceKey)) void publish();
+        }),
+    );
 }

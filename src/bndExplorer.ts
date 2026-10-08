@@ -83,7 +83,17 @@ export class BndExplorerProvider implements vscode.TreeDataProvider<FileNode>,
         item.tooltip = node.uri.fsPath;
         item.iconPath = node.directory ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
         item.contextValue = node.root ? 'bndExplorerRoot' : node.directory ? 'bndExplorerFolder' : 'bndExplorerFile';
-        if (!node.directory) item.command = { command: 'vscode.open', title: 'Open File', arguments: [node.uri] };
+        if (!node.directory) {
+            const filename = path.posix.basename(node.uri.path);
+            const extension = path.posix.extname(filename);
+            const contexts = ['bndExplorerFile'];
+            if (extension === '.bndrun' || filename === 'bnd.bnd') contexts.push('launch');
+            if (extension === '.bnd' || extension === '.bndrun') contexts.push('effective');
+            if (/^\.(bnd|jar)$/i.test(extension)) contexts.push('resolution');
+            if (/^\.jar$/i.test(extension)) contexts.push('jar');
+            item.contextValue = contexts.join(' ');
+            item.command = { command: 'vscode.open', title: 'Open File', arguments: [node.uri] };
+        }
         return item;
     }
 
