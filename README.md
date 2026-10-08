@@ -45,7 +45,7 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 
 ### Effective Properties
 
-Use **Bnd: Open Effective** on a `.bnd` or `.bndrun` file, or select **Bnd Effective** from **Reopen Editor With...**. **Bnd: Open Effective to Side** keeps the source editor visible beside the read-only table. The standard text editor remains the default.
+Use **bnd: Open Effective** on a `.bnd` or `.bndrun` file, or select **Bnd Effective** from **Reopen Editor With...**. **bnd: Open Effective to Side** keeps the source editor visible beside the read-only table. The standard text editor remains the default.
 
 The table shows **Key**, **Value**, **Provenance**, and evaluation **Errors**. Filter rows, resize columns, expand long values, and click provenance links to open defining files. **Expanded** evaluates macros; **Merged** combines supported instructions and headers using bnd's decorated-property semantics. Turning expansion off also disables merging.
 
@@ -55,7 +55,7 @@ This feature requires workspace trust and a Java language server advertising `bn
 
 ### Run and Debug
 
-`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files.
+`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files. A run without debugging in a terminal keeps its launcher files until the same target is launched again or the language server shuts down, because the JVM reads them after the session ends.
 
 - **Run OSGi** / **Debug OSGi** and **Run OSGi tests** / **Debug OSGi tests** CodeLens on `.bndrun` and `bnd.bnd` files (`bnd.launch.codeLens`), the editor title run menu, the context menu in the Explorer and bnd Explorer, and the Command Palette. From the Command Palette without an active `.bndrun` or `bnd.bnd` editor, a list of the workspace's launch files is shown.
 - A `bnd` debug type for `launch.json` with `target`, `kind` (`run` or `test`), `tests`, `vmArgs`, `args`, `env`, `console`, `buildBeforeLaunch`, `javaExec`, and `shortenCommandLine`. The Run and Debug view lists every `.bndrun` file and test project dynamically.
@@ -85,7 +85,7 @@ The view requires workspace trust and the Java language server, because reposito
 
 Selecting bundles or versions in Repositories replaces the analyzed resources with that selection; bundles use their newest available version. Dragging repository entries or local `.bnd`/`.jar` files into Resolution adds them to the existing selection. The resource list is saved per VS Code workspace.
 
-This is capability matching, not a full OSGi resolver: a matched requirement does not prove that a framework can resolve or launch. Analysis reads saved files and accepts at most 100 resources. For `bnd.bnd` projects with sub-bundles, only the first sub-builder is analyzed; select individual sub-bundle `.bnd` files or their generated JARs to compare the others. `.bndrun` files are not accepted; use **Bnd: Resolve (.bndrun)** for runbundle resolution.
+This is capability matching, not a full OSGi resolver: a matched requirement does not prove that a framework can resolve or launch. Analysis reads saved files and accepts at most 100 resources. For `bnd.bnd` projects with sub-bundles, only the first sub-builder is analyzed; select individual sub-bundle `.bnd` files or their generated JARs to compare the others. `.bndrun` files are not accepted; use **bnd-cli: Resolve (.bndrun)** for runbundle resolution.
 
 Filter both lists with space-separated terms and `*` / `?` wildcards. Hide optional requirements or show unresolved requirements only. Select a row to copy its attributes, directives, and source. The analysis requires a trusted workspace and an updated Java bnd Language Server; the Node fallback does not provide resource analysis.
 
@@ -121,7 +121,7 @@ This means:
 - the extension falls back cleanly if the bundled LSP JAR is missing
 - the LSP remains available for editors that can speak the protocol
 
-`Bnd: Resolve Runbundles (LSP)` resolves the active or selected `.bndrun` file through a Java language server and reports resolution errors. For Node mode, use `Bnd: Resolve (.bndrun)` instead.
+`bnd: Resolve Runbundles (LSP)` resolves the active or selected `.bndrun` file through a Java language server and reports resolution errors. For Node mode, use `bnd-cli: Resolve (.bndrun)` instead.
 
 **Architecture:**
 
@@ -135,35 +135,36 @@ src/extension.ts  ←── IPC ───►  Java JAR / Node / Socket server
 
 ## Integrated bnd CLI Commands
 
-All commands are available in the **Command Palette** (`Ctrl+Shift+P`) under the `Bnd:` prefix.
+CLI commands use the `bnd-cli:` prefix in the **Command Palette** (`Ctrl+Shift+P`). Language-server and other extension actions use `bnd:`.
+
+CLI palette entries are hidden by default. Run **bnd-cli: Toggle CLI Commands in Command Palette** to show or hide them. This command always remains visible. The preference is saved in the extension's global storage, applies across workspaces in the current VS Code profile, and survives restarts. No User settings file is modified, so settings errors do not block the toggle. Before the first toggle, User setting `bnd.cli.showCommands` supplies the initial value (default `false`); afterward, the stored toggle choice takes precedence. Existing saved choices are preserved. This affects only palette visibility, not command execution or context menus.
 
 | Command | Description |
 |---|---|
-| `Bnd: Build Project` | `bnd build` — build with mode selection (normal / test / watch) |
-| `Bnd: Run` | `bnd run` — pick a `.bndrun` file or use the current project |
-| `Bnd: Test Project` | `bnd test` |
-| `Bnd: Run OSGi Tests` | `bnd runtests` |
-| `Bnd: Resolve (.bndrun)` | `bnd resolve` — multi-select `.bndrun` files |
-| `Bnd: Clean Project` | `bnd clean` |
-| `Bnd: Baseline Check` | `bnd baseline` |
-| `Bnd: Verify JARs` | `bnd verify` — pick generated JARs |
-| `Bnd: Print Bundle Info` | `bnd print` — choose view mode and JAR |
-| `Bnd: Diff Bundles` | `bnd diff` — prompts for newer + older JAR |
-| `Bnd: Wrap JAR as OSGi Bundle` | `bnd wrap` |
-| `Bnd: Export (.bndrun)` | `bnd export` |
-| `Bnd: Release Project` | `bnd release` (with confirmation) |
-| `Bnd: Show Project Properties` | `bnd properties` |
-| `Bnd: Show Project Info` | `bnd info` |
-| `Bnd: Show bnd Version` | `bnd version` |
-| `Bnd: Evaluate Macro Expression` | `bnd macro` — enter a macro expression interactively |
-| `Bnd: Repository Commands` | `bnd repo` sub-command picker |
-| `Bnd: Download Latest bnd CLI JAR` | Downloads the latest `biz.aQute.bnd:biz.aQute.bnd` from Maven Central or a configured mirror into the extension tool folder and sets `bnd.cli.executable` automatically |
-| `Bnd: Download bnd CLI JAR Version...` | Lets you choose an older available bnd version on demand and configures `bnd.cli.executable` to use it |
-| `Bnd: Select Java Runtime for bnd CLI` | Selects one of the runtimes from `java.configuration.runtimes` and uses its `bin/java` for bnd JAR execution |
-| `Bnd: Discover Java Runtimes from Folder...` | Recursively scans a root folder for Java runtimes and adds found runtimes to `java.configuration.runtimes` |
-| `Bnd: Show CLI Reference` | Opens a searchable webview panel with all 77 bnd CLI commands |
+| `bnd-cli: Build Project` | `bnd build` — build with mode selection (normal / test / watch) |
+| `bnd-cli: Run` | `bnd run` — pick a `.bndrun` file or use the current project |
+| `bnd-cli: Test Project` | `bnd test` |
+| `bnd-cli: Run OSGi Tests` | `bnd runtests` |
+| `bnd-cli: Resolve (.bndrun)` | `bnd resolve resolve -W` — multi-select `.bndrun` files |
+| `bnd-cli: Clean Project` | `bnd clean` |
+| `bnd-cli: Baseline Check` | `bnd baseline` |
+| `bnd-cli: Verify JARs` | `bnd verify` — pick generated JARs |
+| `bnd-cli: Print Bundle Info` | `bnd print` — choose view mode and JAR |
+| `bnd-cli: Diff Bundles` | `bnd diff` — prompts for newer + older JAR |
+| `bnd-cli: Wrap JAR as OSGi Bundle` | `bnd wrap` |
+| `bnd-cli: Export (.bndrun)` | `bnd export` |
+| `bnd-cli: Release Project` | `bnd release` (with confirmation) |
+| `bnd-cli: Show Project Properties` | `bnd properties` |
+| `bnd-cli: Show Project Info` | `bnd info` |
+| `bnd-cli: Show bnd Version` | `bnd version` |
+| `bnd-cli: Evaluate Macro Expression` | `bnd macro` — enter a macro expression interactively |
+| `bnd-cli: Repository Commands` | `bnd repo` sub-command picker |
+| `bnd-cli: Configure bnd Library...` | Selects a release, snapshot, or custom https JAR and configures `bnd.cli.executable` |
+| `bnd-cli: Select Java Runtime for bnd CLI` | Selects one of the runtimes from `java.configuration.runtimes` and uses its `bin/java` for bnd JAR execution |
+| `bnd-cli: Discover Java Runtimes from Folder...` | Recursively scans a root folder for Java runtimes and adds found runtimes to `java.configuration.runtimes` |
+| `bnd-cli: Show CLI Reference` | Opens a searchable webview panel with all 77 bnd CLI commands |
 
-All commands run in VS Code's integrated terminal named **"bnd"**.
+CLI executions run in VS Code's integrated terminal named **"bnd"**. Configuration, reference, and palette visibility commands run inside the extension.
 
 ### Configuration
 
@@ -199,7 +200,7 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 
 #### Language server JAR selection
 
-Run **Bnd: Select Language Server JAR...** to choose the JAR used in `java` mode:
+Run **bnd: Select Language Server JAR...** to choose the JAR used in `java` mode:
 
 | Choice | Settings written (User) | Source |
 |---|---|---|
@@ -215,11 +216,11 @@ Run **Bnd: Select Language Server JAR...** to choose the JAR used in `java` mode
 - `jarSource`, `jarVersion`, `jarUrl`, and `jarSha256` are machine-scoped, so a workspace cannot redirect the server to a different JAR.
 - `biz.aQute.bnd.lsp` is not yet published to Maven Central or the bndtools snapshot repository; until then, use Bundled, Custom URL, or Local file.
 
-You can run **Bnd: Download Latest bnd CLI JAR** to download and configure the newest available release immediately. If you need an older version such as `7.2.3`, run **Bnd: Download bnd CLI JAR Version...** and select one of the available versions or enter one explicitly. Both commands store the JAR in the extension's `library/tool` storage folder and update `bnd.cli.executable` to `java -jar ...` automatically.
+Run **bnd-cli: Configure bnd Library...** to select a release, snapshot, or custom https JAR. Downloaded JARs are stored in the extension's `library/tool` storage folder, and `bnd.cli.executable` is updated to `java -jar ...` automatically.
 
-To choose a specific Java runtime for `java -jar`, run **Bnd: Select Java Runtime for bnd CLI**. This reads from VS Code's `java.configuration.runtimes` and updates `bnd.cli.javaExecutable`.
+To choose a specific Java runtime for `java -jar`, run **bnd-cli: Select Java Runtime for bnd CLI**. This reads from VS Code's `java.configuration.runtimes` and updates `bnd.cli.javaExecutable`.
 
-If your Java runtime is not yet listed, run **Bnd: Discover Java Runtimes from Folder...**. The selected root folder is searched recursively, and discovered runtimes are appended to `java.configuration.runtimes`.
+If your Java runtime is not yet listed, run **bnd-cli: Discover Java Runtimes from Folder...**. The selected root folder is searched recursively, and discovered runtimes are appended to `java.configuration.runtimes`.
 
 If you need to use a Central-compatible mirror instead of Maven Central, set `bnd.cli.mavenRepository` first, for example:
 
@@ -232,7 +233,7 @@ If you need to use a Central-compatible mirror instead of Maven Central, set `bn
 
 ### CLI Reference Panel
 
-Run **Bnd: Show CLI Reference** (`Ctrl+Shift+P → Bnd: Show CLI Reference`) to open a searchable panel
+Run **bnd-cli: Show CLI Reference** (`Ctrl+Shift+P → bnd-cli: Show CLI Reference`) to open a searchable panel
 showing all 77 bnd CLI sub-commands with their full option lists and examples from the official docs.
 
 ![CLI Reference panel showing searchable command list]

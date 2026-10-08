@@ -2,7 +2,7 @@
 
 ## Quick Install (from pre-built VSIX)
 
-Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag publishes one, and GitHub shows its SHA-256 digest.
+Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag on `main` publishes one, and GitHub shows its SHA-256 digest.
 
 ### Option A: Via VS Code UI
 
@@ -114,7 +114,7 @@ The extension can launch the bnd server in different modes depending on your set
 }
 ```
 
-- `java` uses `biz.aQute.bnd.lsp.jar` and provides full bndlib-backed features. By default the bundled `server/biz.aQute.bnd.lsp.jar` is used; run **Bnd: Select Language Server JAR...** to switch to a release, snapshot, custom URL, or local JAR (settings `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.jar`).
+- `java` uses `biz.aQute.bnd.lsp.jar` and provides full bndlib-backed features. By default the bundled `server/biz.aQute.bnd.lsp.jar` is used; run **bnd: Select Language Server JAR...** to switch to a release, snapshot, custom URL, or local JAR (settings `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.jar`).
 - `node` runs the TypeScript LSP directly, providing completion and hover support.
 - `socket` connects to a running TCP socket server.
 - If the JAR is missing, the extension warns and falls back to the Node-based server. Resolve, build, and macro commands require the Java server or a compatible socket server.
@@ -144,15 +144,15 @@ names such as `JavaSE-21` in `java.configuration.runtimes`.
 3. Press `Ctrl+Space` on an empty line to see instruction/header completions.
 4. Type `${` and press `Ctrl+Space` to see macro completions.
 5. Hover over any known instruction (e.g., `-buildpath`) to see documentation.
-6. Open the Command Palette and run `Bnd: Restart Language Server`.
-7. Confirm the server starts in the selected mode and that LSP-backed commands like `Bnd: Resolve Runbundles (LSP)` and `Bnd: Evaluate Macro (LSP)` work.
+6. Open the Command Palette and run `bnd: Restart Language Server`.
+7. Confirm the server starts in the selected mode and that LSP-backed commands like `bnd: Resolve Runbundles (LSP)` and `bnd: Evaluate Macro (LSP)` work.
 
 ## Troubleshooting Language Server Startup
 
 1. Open **View: Output** and select **bnd Language Server**. The first initialization exception usually appears before any process-exit message.
 2. Run **Developer: Show Running Extensions** and confirm only the intended bnd extension is active.
 3. Run **Developer: Open Logs Folder**, then inspect the current window's `exthost/exthost.log` and `exthost/output_logging_*/*bnd Language Server.log` files.
-4. Enable Java server debug logging and run **Bnd: Restart Language Server**:
+4. Enable Java server debug logging and run **bnd: Restart Language Server**:
 
 ```jsonc
 {

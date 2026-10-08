@@ -15,7 +15,7 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
 
 - **CodeLens** — **Run OSGi** / **Debug OSGi** at the top of a `.bndrun` file or a `bnd.bnd` with `-runfw`/`-runbundles`; **Run OSGi tests** / **Debug OSGi tests** on files with `-testpath`. Disable with `bnd.launch.codeLens`.
 - **Editor title run menu** and the context menu of the **Explorer** and **bnd Explorer** on `.bndrun` and `bnd.bnd` files.
-- **Command Palette** — **Bnd: Run OSGi Framework**, **Bnd: Debug OSGi Framework**, **Bnd: Run OSGi Tests (Launch)**, **Bnd: Debug OSGi Tests**. They launch the active `.bndrun` or `bnd.bnd` editor; from any other editor they let you pick one of the workspace's launch files.
+- **Command Palette** — **bnd: Run OSGi Framework**, **bnd: Debug OSGi Framework**, **bnd: Run OSGi Tests (Launch)**, **bnd: Debug OSGi Tests**. They launch the active `.bndrun` or `bnd.bnd` editor; from any other editor they let you pick one of the workspace's launch files.
 - **F5** with a `.bndrun` or `bnd.bnd` file open and no `launch.json`.
 - **Run and Debug view** — choose **bnd OSGi** to list every `.bndrun` file and test project in the workspace.
 
@@ -46,4 +46,4 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
 | `sourcePaths` | Additional debugger source roots appended to sources of launched workspace bundles. |
 | `projectName` | Optional imported Java project used by the Java debugger. |
 
-`-runjdb` is ignored because the Java debugger owns the JDWP connection. Temporary launcher files are deleted when the debug session ends.
+`-runjdb` is ignored because the Java debugger owns the JDWP connection. Temporary launcher files are deleted when the debug session ends. A **Run** (without debugging) in a terminal ends its session right after the JVM starts, so its launcher files are kept until the same target is launched again or the language server shuts down.

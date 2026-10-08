@@ -44,6 +44,50 @@ suite('bnd workspace Explorer', () => {
             ['.git', 'node_modules']);
     });
 
+    test('matches file menus against the selected tree item without editor resource keys', () => {
+        const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'));
+        const menus = manifest.contributes.menus['view/item/context']
+            .filter((item: { when: string }) => item.when.startsWith('view == bnd.explorer'));
+        const provider = new BndExplorerProvider();
+        const cases: [string, boolean, string[]][] = [
+            ['app.bndrun', false, ['launch', 'effective']],
+            ['bnd.bnd', false, ['launch', 'effective', 'resolution']],
+            ['other.bnd', false, ['effective', 'resolution']],
+            ['bundle.JAR', false, ['jar', 'resolution']],
+            ['notes.txt', false, []],
+            ['app.bndrun', true, []],
+            ['bnd.bnd', true, []],
+        ];
+        const tools: Record<string, string> = {
+            'bnd.launch.run': 'launch', 'bnd.launch.debug': 'launch',
+            'bnd.launch.runTests': 'launch', 'bnd.launch.debugTests': 'launch',
+            'bnd.showEffective': 'effective', 'bnd.showEffectiveToSide': 'effective',
+            'bnd.jar.open': 'jar', 'bnd.resolution.add': 'resolution',
+        };
+        try {
+            for (const menu of menus) assert.ok(!/resourceExtname|resourceFilename/.test(menu.when), menu.command);
+            for (const [filename, directory, expected] of cases) {
+                const item = provider.getTreeItem(node(path.join(os.tmpdir(), filename), directory));
+                for (const [command, capability] of Object.entries(tools)) {
+                    const menu = menus.find((entry: { command: string }) => entry.command === command);
+                    assert.ok(menu, command);
+                    const pattern = /^view == bnd\.explorer && viewItem =~ \/(.+)\/$/.exec(menu.when);
+                    assert.ok(pattern, menu.when);
+                    assert.strictEqual(new RegExp(pattern[1]).test(item.contextValue!), expected.includes(capability),
+                        `${filename} (${directory ? 'folder' : 'file'}): ${command}`);
+                }
+                for (const command of ['openToSide', 'openWith', 'selectForCompare', 'compareWithSelected', 'compareSelected']) {
+                    const menu = menus.find((entry: { command: string }) => entry.command === `bnd.explorer.${command}`);
+                    const pattern = /viewItem =~ \/(.+?)\//.exec(menu.when);
+                    assert.ok(pattern, menu.when);
+                    assert.strictEqual(new RegExp(pattern[1]).test(item.contextValue!), !directory, `${filename}: ${command}`);
+                }
+            }
+        } finally {
+            provider.dispose();
+        }
+    });
+
     test('names copies like the built-in Explorer', () => {
         assert.strictEqual(copyName('a.txt', 1), 'a copy.txt');
         assert.strictEqual(copyName('a.txt', 2), 'a copy 2.txt');

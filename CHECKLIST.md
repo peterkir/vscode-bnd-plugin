@@ -28,11 +28,12 @@
 - [ ] Press `Ctrl+Space` to confirm instruction completions.
 - [ ] Type `${` and confirm macro completions.
 - [ ] Hover over a known instruction and check the docs appear.
-- [ ] Run `Bnd: Restart Language Server`.
+- [ ] Run `bnd: Restart Language Server`.
 - [ ] Confirm the selected server mode starts without errors.
-- [ ] Run `Bnd: Resolve Runbundles (LSP)` on a `.bndrun` file.
-- [ ] Run `Bnd: Build Project (LSP)` on a bnd project.
-- [ ] Run `Bnd: Evaluate Macro (LSP)` and confirm the result is shown.
+- [ ] Run `bnd: Resolve Runbundles (LSP)` on a `.bndrun` file.
+- [ ] Run `bnd: Build Project (LSP)` on a bnd project.
+- [ ] Run `bnd: Evaluate Macro (LSP)` and confirm the result is shown.
+- [ ] Run `bnd-cli: Toggle CLI Commands in Command Palette`; verify other CLI entries hide and return, the toggle stays visible, User settings are unchanged, and the extension's stored choice survives reload.
 
 ## Views and launch verification
 - [ ] Verify bnd Explorer multi-root browsing, exact-name exclusions, create/rename/delete, cut/copy/paste, drag-and-drop, and compare actions.

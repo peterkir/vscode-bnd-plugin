@@ -7,6 +7,7 @@ export const launchDisposeCommand = 'bnd.launch.dispose';
 export const bndDebugType = 'bnd';
 export const javaDebugExtensionId = 'vscjava.vscode-java-debug';
 const launchIdKey = '__bndLaunchId';
+const launchTargetKey = '__bndLaunchTarget';
 
 export type LaunchKind = 'run' | 'test';
 
@@ -108,6 +109,7 @@ export function toJavaDebugConfiguration(prepared: PreparedLaunch, config: BndLa
         shortenCommandLine: config.shortenCommandLine ?? 'auto',
         [launchIdKey]: prepared.launchId,
     };
+    if (config.target) java[launchTargetKey] = config.target;
     const exec = config.javaExec || prepared.javaExecutable || javaExec;
     if (exec) java.javaExec = exec;
     if (config.projectName) java.projectName = config.projectName;
@@ -132,6 +134,9 @@ function javaExecutableFromHome(home: string): string {
 }
 
 export class BndDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+    /** Launches whose JVM may outlive the debug session, keyed by target. */
+    private readonly detached = new Map<string, string>();
+
     constructor(private readonly server: LaunchServer, private readonly log: vscode.LogOutputChannel) {}
 
     async provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined): Promise<vscode.DebugConfiguration[]> {
@@ -184,6 +189,12 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
             return;
         }
 
+        const previous = this.detached.get(target);
+        if (previous) {
+            this.detached.delete(target);
+            await this.dispose(previous);
+        }
+
         const kind: LaunchKind = config.kind === 'test' ? 'test' : 'run';
         const raw = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -225,8 +236,16 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
     }
 
     onSessionTerminated(session: vscode.DebugSession): void {
-        const id = session.configuration[launchIdKey];
-        if (typeof id === 'string') void this.dispose(id);
+        const { [launchIdKey]: id, [launchTargetKey]: target, noDebug, console } = session.configuration;
+        if (typeof id !== 'string') return;
+        // Without a debugger, a terminal session ends right after spawning the JVM, before it reads launcher.properties.
+        if (noDebug && console !== 'internalConsole' && typeof target === 'string') {
+            const previous = this.detached.get(target);
+            if (previous && previous !== id) void this.dispose(previous);
+            this.detached.set(target, id);
+            return;
+        }
+        void this.dispose(id);
     }
 }
 
