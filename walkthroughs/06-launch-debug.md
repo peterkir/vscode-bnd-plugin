@@ -6,6 +6,7 @@ The extension launches `.bndrun` files and bnd projects through the VS Code **Ru
 
 - A trusted workspace.
 - `bnd.server.mode` set to `java` (or `socket` with a server that supports `bnd.launch.prepare`). The Node fallback server cannot launch.
+- A `.bndrun` outside a bnd workspace must contain the exact `-standalone` instruction; `-standalone.extra` alone is insufficient. See the [bnd standalone documentation](https://bnd.bndtools.org/instructions/standalone.html). A `bnd.bnd` project still requires a bnd workspace.
 - The [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension and Language Support for Java. The bundled adapter imports bnd projects directly into JDT LS, including source/test roots and build/test dependencies. Native import requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS, separate from the launched framework's `-runee`.
 - Valid `java.configuration.runtimes` names, such as `JavaSE-21` or `JavaSE-25`. After adding native import to an existing workspace, run **Java: Clean Java Language Server Workspace** and allow reimport.
 

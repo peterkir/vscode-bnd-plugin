@@ -61,7 +61,7 @@ This feature requires workspace trust and a Java language server advertising `bn
 - A `bnd` debug type for `launch.json` with `target`, `kind` (`run` or `test`), `tests`, `vmArgs`, `args`, `env`, `console`, `buildBeforeLaunch`, `javaExec`, and `shortenCommandLine`. The Run and Debug view lists every `.bndrun` file and test project dynamically.
 - The Java runtime defaults to the bnd `java` property, then a runtime matching `-runee`. `-runjdb` is ignored because the Java debugger owns the JDWP connection.
 
-Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. See [walkthroughs/06-launch-debug.md](walkthroughs/06-launch-debug.md) for details.
+Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. A `.bndrun` outside a bnd workspace must declare the exact `-standalone` instruction; `-standalone.extra` alone does not make it standalone. See the [bnd `-standalone` documentation](https://bnd.bndtools.org/instructions/standalone.html) and [launch walkthrough](walkthroughs/06-launch-debug.md) for details. `bnd.bnd` projects still require a bnd workspace.
 
 ### Repositories View
 
