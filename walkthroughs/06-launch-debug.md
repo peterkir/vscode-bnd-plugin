@@ -29,8 +29,7 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
   "name": "bnd: app.bndrun",
   "target": "${workspaceFolder}/my.project/app.bndrun",
   "kind": "run",
-  "vmArgs": ["-Xmx1g"],
-  "buildBeforeLaunch": true
+  "vmArgs": ["-Xmx1g"]
 }
 ```
 
@@ -41,7 +40,7 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
 | `tests` | Test names for `kind: test`, e.g. `com.example.FooTest` or `com.example.FooTest:testBar`. Empty runs all tests. |
 | `vmArgs`, `args`, `env` | Appended to `-runvm`, `-runprogramargs`, and `-runenv`. |
 | `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. |
-| `buildBeforeLaunch` | Build the project and its workspace dependencies first. Default `true`. |
+| `buildBeforeLaunch` | `true` builds before validation; `false` skips builds. If omitted, bnd validates bundles first and asks to build only when bundle files are missing. |
 | `javaExec` | Java executable. Defaults to the bnd `java` property, then a runtime matching `-runee` from `java.configuration.runtimes`, `bnd.cli.javaExecutable`, `JAVA_HOME`, or `PATH`. |
 | `shortenCommandLine` | Passed to the Java debugger. Default `auto`. |
 | `sourcePaths` | Additional debugger source roots appended to sources of launched workspace bundles. |

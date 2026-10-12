@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.20.4",
+  "version": "0.23.4",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -104,7 +104,8 @@
     "viewsWelcome": [
       {
         "view": "bnd.explorer",
-        "contents": "No folder opened.\n[Open Folder](command:workbench.action.files.openFolder)"
+        "contents": "[Create New Workspace From Template](command:bnd.wizard.createWorkspace)\n[Add Fragment to (New) Workspace](command:bnd.wizard.addFragment)\n[Import Existing Workspace](command:bnd.wizard.importWorkspace)",
+        "when": "workspaceFolderCount == 0 || (workspaceFolderCount > 0 && bnd.explorer.hasBndWorkspace == false)"
       },
       {
         "view": "bnd.repositories",
@@ -149,6 +150,34 @@
       }
     ],
     "commands": [
+      {
+        "command": "bnd.wizard.createWorkspace",
+        "title": "Create New Workspace From Template...",
+        "category": "bnd",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "bnd.wizard.importWorkspace",
+        "title": "Import Existing Workspace...",
+        "category": "bnd",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "bnd.wizard.addFragment",
+        "title": "Add Fragment to (New) Workspace...",
+        "category": "bnd",
+        "icon": "$(add)"
+      },
+      {
+        "command": "bnd.wizard.addWorkspaceTemplateUrl",
+        "title": "Add Workspace Template URL...",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.wizard.addFragmentTemplateUrl",
+        "title": "Add Fragment Template URL...",
+        "category": "bnd"
+      },
       {
         "command": "bnd.explorer.refresh",
         "title": "Refresh Workspace Files",
@@ -631,8 +660,7 @@
               },
               "buildBeforeLaunch": {
                 "type": "boolean",
-                "default": true,
-                "description": "Build the project and the workspace projects it depends on before launching."
+                "description": "Build the project and its workspace dependencies before launching. If omitted, bnd validates first and prompts to build only when bundle files are missing."
               },
               "javaExec": {
                 "type": "string",
@@ -811,6 +839,25 @@
           "default": "java",
           "description": "Java executable used when configuring bnd as java -jar. This can point to a specific runtime (for example C:/jdk-21/bin/java.exe)."
         },
+        "bnd.wizard.templateIndexes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["https://raw.githubusercontent.com/bndtools/workspace-templates/master/index.bnd"],
+          "description": "Legacy fragment template index URLs; fallback only when the fragment catalog has not been explicitly configured.",
+          "deprecationMessage": "Use bnd.wizard.workspaceTemplateIndexes and bnd.wizard.fragmentTemplateIndexes instead."
+        },
+        "bnd.wizard.workspaceTemplateIndexes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["https://github.com/bndtools/bndtools.workspace.min"],
+          "description": "Workspace template locations for Create New Workspace From Template: GitHub repository URLs, ZIP archives, or .bnd workspace catalogs. This is separate from fragment indexes. Only configure trusted sources."
+        },
+        "bnd.wizard.fragmentTemplateIndexes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["https://raw.githubusercontent.com/bndtools/workspace-templates/master/index.bnd"],
+          "description": "HTTP(S) or file template index URLs for Add Fragment to (New) Workspace. Only configure trusted sources."
+        },
         "bnd.launch.codeLens": {
           "type": "boolean",
           "default": true,
@@ -820,6 +867,21 @@
     },
     "menus": {
       "view/title": [
+        {
+          "command": "bnd.wizard.addFragment",
+          "when": "view == bnd.explorer",
+          "group": "workspace@3"
+        },
+        {
+          "command": "bnd.wizard.createWorkspace",
+          "when": "view == bnd.explorer",
+          "group": "workspace@2"
+        },
+        {
+          "command": "bnd.wizard.importWorkspace",
+          "when": "view == bnd.explorer",
+          "group": "workspace@1"
+        },
         {
           "command": "bnd.explorer.newFile",
           "when": "view == bnd.explorer",

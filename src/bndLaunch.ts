@@ -65,6 +65,32 @@ export function parsePreparedLaunch(value: unknown): PreparedLaunch {
     return { ...result, warnings: result.warnings ?? [] } as PreparedLaunch;
 }
 
+function isMissingBundleFileError(error: unknown): boolean {
+    return error instanceof Error && /\bBundle file\b[\s\S]*\bdoes not exist\b/i.test(error.message);
+}
+
+export async function prepareLaunchWithBuildConfirmation(server: LaunchServer,
+    request: { uri: string; kind: LaunchKind; tests: string[] }, buildBeforeLaunch?: boolean,
+    token?: vscode.CancellationToken): Promise<PreparedLaunch | undefined> {
+    const prepare = (build: boolean) => vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `bnd: ${build ? 'Building and preparing' : 'Validating'} ${path.basename(vscode.Uri.parse(request.uri).fsPath)}`,
+    }, () => server.execute(launchPrepareCommand, [{ ...request, build }], token));
+    const initialBuild = buildBeforeLaunch === true;
+    const raw = await prepare(initialBuild);
+    try {
+        return parsePreparedLaunch(raw);
+    } catch (error) {
+        if (buildBeforeLaunch !== undefined || !isMissingBundleFileError(error)) throw error;
+        const build = 'Build and Launch';
+        const choice = await vscode.window.showWarningMessage(
+            'Required bundle files are missing. Build workspace projects before launching?',
+            { modal: true, detail: error instanceof Error ? error.message : String(error) }, build);
+        if (choice !== build) return undefined;
+        return parsePreparedLaunch(await prepare(true));
+    }
+}
+
 /** Splits a command line string honoring single and double quotes. */
 export function splitArguments(value: string | string[] | undefined): string[] {
     if (value === undefined) return [];
@@ -196,16 +222,12 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
         }
 
         const kind: LaunchKind = config.kind === 'test' ? 'test' : 'run';
-        const raw = await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: `bnd: Preparing ${path.basename(target)}`,
-        }, () => this.server.execute(launchPrepareCommand, [{
+        const prepared = await prepareLaunchWithBuildConfirmation(this.server, {
             uri: vscode.Uri.file(target).toString(),
             kind,
             tests: config.tests ?? [],
-            build: config.buildBeforeLaunch ?? true,
-        }], token));
-        const prepared = parsePreparedLaunch(raw);
+        }, config.buildBeforeLaunch, token);
+        if (!prepared) return;
         for (const warning of prepared.warnings) this.log.warn(`${path.basename(target)}: ${warning}`);
 
         let javaExec: string | undefined;

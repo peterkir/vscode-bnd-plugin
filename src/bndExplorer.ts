@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { findBndWorkspaces } from './bndRepositories';
 
 export const explorerViewId = 'bnd.explorer';
 const internalMime = 'application/vnd.code.tree.bnd.explorer';
@@ -44,6 +45,8 @@ export class BndExplorerProvider implements vscode.TreeDataProvider<FileNode>,
     readonly dropMimeTypes = [internalMime, 'text/uri-list'];
     private timer?: ReturnType<typeof setTimeout>;
 
+    constructor(private readonly findWorkspaces: () => Promise<vscode.Uri[]> = findBndWorkspaces) {}
+
     refresh(): void {
         this.changed.fire(undefined);
     }
@@ -55,14 +58,26 @@ export class BndExplorerProvider implements vscode.TreeDataProvider<FileNode>,
 
     async getChildren(node?: FileNode): Promise<FileNode[]> {
         if (!node) {
-            return (vscode.workspace.workspaceFolders ?? []).map(folder => ({
+            const hasBndWorkspace = (await this.findWorkspaces()).length > 0;
+            void vscode.commands.executeCommand('setContext', 'bnd.explorer.hasBndWorkspace', hasBndWorkspace);
+            if (!hasBndWorkspace) return [];
+            const folders = await Promise.all((vscode.workspace.workspaceFolders ?? []).map(async folder =>
+                await exists(folder.uri) ? folder : undefined));
+            return folders.filter((folder): folder is vscode.WorkspaceFolder => !!folder).map(folder => ({
                 uri: folder.uri, name: folder.name, directory: true, root: true,
             }));
         }
         if (!node.directory) return [];
         const excluded = new Set(vscode.workspace.getConfiguration('bnd.explorer', node.uri)
             .get<string[]>('exclude', ['.git', 'node_modules']));
-        const entries = await vscode.workspace.fs.readDirectory(node.uri);
+        let entries: [string, vscode.FileType][];
+        try {
+            entries = await vscode.workspace.fs.readDirectory(node.uri);
+        } catch (error) {
+            if (!(error instanceof vscode.FileSystemError) || error.code !== 'FileNotFound') throw error;
+            this.scheduleRefresh();
+            return [];
+        }
         const children = await Promise.all(entries.filter(([name]) => !excluded.has(name)).map(async ([name, type]) => {
             const uri = vscode.Uri.joinPath(node.uri, name);
             if (type & vscode.FileType.SymbolicLink) {
