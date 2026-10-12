@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.5
+
+### Changed
+- Integrate repository JAR Viewer activation and context actions with workspace wizards, deleted-workspace cleanup, and launch preparation updates.
+
 ## 0.23.4
 
 ### Fixed
@@ -42,6 +47,9 @@
 - Workspace and fragment wizards create directly after one trust/overwrite warning, without generated-file previews or a staged workspace directory. Unsaved-file checks, path validation, unrelated-file preservation and rollback remain enabled.
 
 ## 0.22.1
+
+### Added
+- Open repository artifacts in the bnd JAR Viewer by activating a bundle (newest version) or a specific version; add an **Open in bnd JAR Viewer** context action.
 
 ### Fixed
 - **Create New Workspace From Template** defaults to `bndtools/bndtools.workspace.min`, matching the Eclipse workspace template wizard, instead of listing workspace fragments. Workspace templates support GitHub repository and ZIP locations; fragment catalogs stay separate and legacy fragment settings no longer affect workspace creation.
