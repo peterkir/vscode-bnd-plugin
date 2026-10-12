@@ -135,6 +135,18 @@ export class ResolutionViewProvider implements vscode.WebviewViewProvider, vscod
         await this.saveAndRefresh();
     }
 
+    async removeDeleted(uri: vscode.Uri): Promise<void> {
+        ++this.selectionRevision;
+        const deleted = uri.toString();
+        const prefix = deleted.replace(/\/?$/, '/');
+        const removed = [...this.resources].filter(resource => resource === deleted || resource.startsWith(prefix));
+        if (!removed.length) return;
+        ++this.analysisRevision;
+        removed.forEach(resource => this.resources.delete(resource));
+        this.post({ type: 'data', data: { resources: [], requirements: [], capabilities: [] } satisfies ResolutionAnalysis });
+        await this.saveAndRefresh();
+    }
+
     async refresh(): Promise<void> {
         const revision = ++this.analysisRevision;
         if (!this.view) return;
@@ -384,8 +396,17 @@ vscode.postMessage({ type: 'ready' });
 
 export function registerResolutionView(context: vscode.ExtensionContext, server: ResolutionServer): ResolutionViewProvider {
     const provider = new ResolutionViewProvider(context, server);
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*', true, true, false);
     context.subscriptions.push(
-        provider,
+        provider, watcher,
+        watcher.onDidDelete(uri => {
+            void provider.removeDeleted(uri).catch(error => console.error('Resolution cleanup failed:', error));
+        }),
+        vscode.workspace.onDidChangeWorkspaceFolders(event => {
+            for (const folder of event.removed) {
+                void provider.removeDeleted(folder.uri).catch(error => console.error('Resolution cleanup failed:', error));
+            }
+        }),
         vscode.window.registerWebviewViewProvider(resolutionViewId, provider, { webviewOptions: { retainContextWhenHidden: true } }),
         vscode.commands.registerCommand('bnd.resolution.add', (resource?: vscode.Uri | { uri?: vscode.Uri }) => {
                         const uri = resource && typeof resource === 'object' && 'uri' in resource ? resource.uri : resource;

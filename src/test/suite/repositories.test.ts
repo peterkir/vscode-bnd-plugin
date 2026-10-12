@@ -83,7 +83,7 @@ suite('Repositories view', () => {
             },
         };
         const root = vscode.Uri.file(path.join(os.tmpdir(), 'bnd-ws'));
-        const provider = new RepositoriesProvider(server, async () => [root], state => states.push(state));
+        const provider = new RepositoriesProvider(server, async () => [root], state => states.push(state), async () => true);
         try {
             assert.deepStrictEqual(await provider.getChildren(), []);
             assert.ok(states.some(state => state['bnd.repositories.state'] === 'unsupported'));
@@ -114,11 +114,64 @@ suite('Repositories view', () => {
             assert.ok(calls.includes('bnd.repositories.search'));
 
             const failing = new RepositoriesProvider({ supports: async () => true, execute: async () => ({ error: 'boom' }) },
-                async () => [root]);
+                async () => [root], undefined, async () => true);
             const [failingRoot] = await failing.getChildren();
             const [message] = await failing.getChildren(failingRoot);
             assert.deepStrictEqual(message, { type: 'message', label: 'boom', error: true });
             failing.dispose();
+        } finally {
+            provider.dispose();
+        }
+    });
+
+    test('clears deleted workspaces and ignores stale cached tree nodes', async () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-deleted-workspace-'));
+        const root = vscode.Uri.file(directory);
+        fs.mkdirSync(path.join(directory, 'cnf'));
+        fs.writeFileSync(path.join(directory, 'cnf', 'build.bnd'), '');
+        const states: Record<string, unknown>[] = [];
+        let calls = 0;
+        const provider = new RepositoriesProvider({
+            supports: async () => true,
+            execute: async () => {
+                calls++;
+                return { offline: true, repositories: [repo] };
+            },
+        }, async () => fs.existsSync(path.join(directory, 'cnf', 'build.bnd')) ? [root] : [], state => states.push(state));
+        try {
+            const [workspace] = await provider.getChildren();
+            const [repository] = await provider.getChildren(workspace);
+            assert.strictEqual(provider.isOffline, true);
+            fs.rmSync(path.join(directory, 'cnf'), { recursive: true });
+            assert.deepStrictEqual(await provider.getChildren(repository), []);
+            assert.deepStrictEqual(await provider.getChildren(workspace), []);
+            assert.deepStrictEqual(await provider.getChildren(), []);
+            assert.strictEqual(calls, 1);
+            assert.strictEqual(provider.isOffline, false);
+            assert.deepStrictEqual(provider.workspaces, []);
+            assert.ok(states.some(state => state['bnd.repositories.state'] === 'empty'));
+            fs.rmSync(directory, { recursive: true });
+            assert.deepStrictEqual(await provider.getChildren(workspace), []);
+        } finally {
+            provider.dispose();
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    test('discards a repository response when its workspace is deleted during the request', async () => {
+        let available = true;
+        const root = vscode.Uri.file(path.join(os.tmpdir(), 'bnd-deleted-in-flight'));
+        const provider = new RepositoriesProvider({
+            supports: async () => true,
+            execute: async () => {
+                available = false;
+                return { error: `Not a bnd workspace: ${root}` };
+            },
+        }, async () => available ? [root] : [], undefined, async () => available);
+        try {
+            const [workspace] = await provider.getChildren();
+            assert.deepStrictEqual(await provider.getChildren(workspace), []);
+            assert.deepStrictEqual(provider.workspaces, []);
         } finally {
             provider.dispose();
         }
@@ -159,6 +212,15 @@ suite('Repositories view', () => {
             await client.start();
             const [workspace] = await provider.getChildren();
             const repos = await provider.getChildren(workspace);
+            const cache = repos.find(node => node.type === 'repo' && node.repo.name === 'bnd-cache');
+            assert.ok(cache && cache.type === 'repo', 'Expected built-in bnd-cache repository');
+            const cachedBundles = await provider.getChildren(cache);
+            assert.ok(cachedBundles.some(node => node.type === 'bundle' && node.bundle.bsn === 'biz.aQute.launcher'),
+                'Bundled server must unpack its embedded repository, not leave bnd-cache empty');
+            const cacheRoot = path.join(temporary, 'cnf', 'cache');
+            assert.ok(fs.readdirSync(cacheRoot).some(version =>
+                fs.existsSync(path.join(cacheRoot, version, 'bnd-cache', 'biz.aQute.launcher'))),
+            'Launcher bundle must be extracted into the versioned workspace cache');
             const local = repos.find(node => node.type === 'repo' && node.repo.name === 'Local');
             assert.ok(local && local.type === 'repo', 'Expected Local repository');
             assert.strictEqual(provider.getTreeItem(local).contextValue, 'repo writable refreshable actionable');

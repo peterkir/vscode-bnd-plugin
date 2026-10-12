@@ -120,11 +120,61 @@ suite('Resolution View', () => {
         }
     });
 
+    test('removes deleted workspace resources while preserving other selections', async () => {
+        const root = vscode.Uri.file(path.resolve('deleted-workspace'));
+        const other = vscode.Uri.file(path.resolve('deleted-workspace-other', 'bundle.jar')).toString();
+        let saved = [vscode.Uri.joinPath(root, 'p', 'bnd.bnd').toString(),
+            vscode.Uri.joinPath(root, 'cnf', 'cache', 'bundle.jar').toString(), other];
+        const context = { workspaceState: {
+            get: () => saved,
+            update: async (_key: string, value: string[]) => { saved = value; },
+        } } as unknown as vscode.ExtensionContext;
+        const provider = new ResolutionViewProvider(context, {
+            supports: async () => true,
+            execute: async () => { throw new Error('Deleted resources must not be analyzed.'); },
+        });
+        try {
+            await provider.removeDeleted(root);
+            assert.deepStrictEqual(saved, [other]);
+            await provider.removeDeleted(vscode.Uri.parse(other));
+            assert.deepStrictEqual(saved, []);
+        } finally {
+            provider.dispose();
+        }
+    });
+
+    test('does not restore a deleted resource from an in-flight repository selection', async () => {
+        let saved: string[] = [];
+        let complete!: (result: { file: string }) => void;
+        const pendingResult = new Promise<{ file: string }>(resolve => { complete = resolve; });
+        const context = { workspaceState: {
+            get: () => saved,
+            update: async (_key: string, value: string[]) => { saved = value; },
+        } } as unknown as vscode.ExtensionContext;
+        const provider = new ResolutionViewProvider(context, {
+            supports: async () => true,
+            execute: async () => pendingResult,
+        });
+        const root = vscode.Uri.file(path.resolve('deleted-workspace'));
+        try {
+            const pending = provider.selectRepositoryEntries([
+                { workspace: root.toString(), repo: 2, repoName: 'Local', bsn: 'bundle', version: '1.0.0' },
+            ]);
+            await provider.removeDeleted(root);
+            complete({ file: vscode.Uri.joinPath(root, 'bundle.jar').fsPath });
+            await pending;
+            assert.deepStrictEqual(saved, []);
+        } finally {
+            provider.dispose();
+        }
+    });
+
     test('version drags supply webview coordinates and URI fallback without changing editor insertions', async () => {
         const file = path.resolve('provider.jar');
         const repo = { index: 2, name: 'Local' } as RepoInfo;
         const node: RepoNode = { type: 'version', ws: 'file:///workspace', repo, bsn: 'provider', info: { version: '1.2.0' } };
-        const provider = new RepositoriesProvider({ supports: async () => true, execute: async () => ({ file }) });
+        const provider = new RepositoriesProvider({ supports: async () => true, execute: async () => ({ file }) },
+            undefined, undefined, async () => true);
         const controller = new RepositoriesDragAndDrop(provider, async () => {});
         const transfer = new vscode.DataTransfer();
         try {
