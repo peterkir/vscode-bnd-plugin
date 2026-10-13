@@ -2,6 +2,7 @@ node_modules/
 out/
 server/node_modules/
 server/out/
+test_workspace/
 .vscode-test/
 .DS_Store
 Thumbs.db

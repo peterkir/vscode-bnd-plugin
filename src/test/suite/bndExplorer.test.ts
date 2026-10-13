@@ -36,6 +36,34 @@ suite('bnd workspace Explorer', () => {
         }
     });
 
+    test('returns an empty tree for deleted directories instead of throwing', async () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-explorer-deleted-'));
+        const provider = new BndExplorerProvider();
+        try {
+            fs.writeFileSync(path.join(directory, 'bnd.bnd'), '');
+            const root = node(directory, true);
+            assert.strictEqual((await provider.getChildren(root)).length, 1);
+            fs.rmSync(directory, { recursive: true });
+            assert.deepStrictEqual(await provider.getChildren(root), []);
+        } finally {
+            provider.dispose();
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    test('replaces non-bnd workspace folders with wizard welcome content', async () => {
+        const provider = new BndExplorerProvider(async () => []);
+        try {
+            assert.deepStrictEqual(await provider.getChildren(), []);
+            const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'));
+            const welcome = manifest.contributes.viewsWelcome.find((entry: { view: string }) => entry.view === 'bnd.explorer');
+            assert.ok(welcome.when.includes('bnd.explorer.hasBndWorkspace == false'));
+            assert.strictEqual((welcome.contents.match(/command:bnd\.wizard\./g) ?? []).length, 3);
+        } finally {
+            provider.dispose();
+        }
+    });
+
     test('contributes its file tree before Repositories', () => {
         const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'));
         assert.deepStrictEqual(manifest.contributes.views.bnd.map((view: { id: string }) => view.id),

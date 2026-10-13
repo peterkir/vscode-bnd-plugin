@@ -1,9 +1,79 @@
 # Changelog
 
+## 0.23.5
+
+### Changed
+- Integrate repository JAR Viewer activation and context actions with workspace wizards, deleted-workspace cleanup, and launch preparation updates.
+
+## 0.23.4
+
+### Fixed
+- Build workspace projects referenced by a `.bndrun`'s `-runbundles` when the user confirms a build, so missing project-generated bundle JARs are available before launch retry.
+
+## 0.23.3
+
+### Changed
+- Validate launch bundles without building first. Ask before building workspace projects when required bundle files are missing; `buildBeforeLaunch` still supports explicit `true`/`false` behavior.
+
+## 0.23.2
+
+### Changed
+- Show workspace creation wizards in the bnd Explorer when a VS Code folder is open but no bnd workspace is found, instead of showing the ordinary filesystem tree.
+
+## 0.23.1
+
+### Fixed
+- Close deleted bnd workspaces without starting replacement remote-workspace servers, preventing `cnf/cache/remotews` port files from reappearing.
+
+## 0.23.0
+
+### Added
+- **Open Template** in workspace and fragment confirmation dialogs opens the selected source for inspection, then returns to the trust and overwrite confirmation. Multiple sources offer a chooser.
+
+## 0.22.4
+
+### Fixed
+- Clear deleted workspaces and stale repository nodes without reporting missing-workspace errors. The bnd Explorer also handles deleted directories without failing to load its tree.
+- Remove deleted files and folders from Resolution selections and discard pending selections that could restore deleted resources.
+
+## 0.22.3
+
+### Fixed
+- Bundle bnd's embedded repository in the Java language server so the built-in `bnd-cache` repository can populate instead of remaining empty and reporting a missing classpath resource.
+
+## 0.22.2
+
+### Changed
+- Workspace and fragment wizards create directly after one trust/overwrite warning, without generated-file previews or a staged workspace directory. Unsaved-file checks, path validation, unrelated-file preservation and rollback remain enabled.
+
 ## 0.22.1
 
 ### Added
 - Open repository artifacts in the bnd JAR Viewer by activating a bundle (newest version) or a specific version; add an **Open in bnd JAR Viewer** context action.
+
+### Fixed
+- **Create New Workspace From Template** defaults to `bndtools/bndtools.workspace.min`, matching the Eclipse workspace template wizard, instead of listing workspace fragments. Workspace templates support GitHub repository and ZIP locations; fragment catalogs stay separate and legacy fragment settings no longer affect workspace creation.
+
+## 0.22.0
+
+### Added
+- Separate **Create New Workspace From Template**, **Add Fragment to (New) Workspace**, and **Import Existing Workspace** wizards in the empty-folder bnd Activity Bar view.
+- Independent workspace/fragment catalog settings and commands to add custom template index URLs to User settings.
+- Fragment application to existing workspaces with previewed file updates, append support, changed-file checks and rollback; unrelated files are preserved.
+
+### Changed
+- Creation uses the current VS Code folder directly, or selects and opens a destination directory when no folder is open. Current templates/fragments are shown immediately, without catalog or archive-mode prompts.
+
+## 0.21.0
+
+### Added
+- **bnd: Create Workspace...** selects composable workspace fragments from upstream or custom catalogs, confirms source trust, previews generated files, and creates a new/empty workspace through the Java server. Existing-workspace updates and project templates remain unsupported.
+- **bnd: Import Workspace...** validates an existing bnd root and opens it in the current/new window or adds it to a multi-root workspace. Import preserves existing files and does not build or evaluate bnd configuration.
+
+## 0.20.4
+
+### Fixed
+- Allow `.bndrun` files with the exact `-standalone` instruction to launch outside a bnd workspace. Workspace-bound `.bndrun` files and `bnd.bnd` projects still require one.
 
 ## 0.20.3
 

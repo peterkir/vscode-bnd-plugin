@@ -6,6 +6,7 @@ The extension launches `.bndrun` files and bnd projects through the VS Code **Ru
 
 - A trusted workspace.
 - `bnd.server.mode` set to `java` (or `socket` with a server that supports `bnd.launch.prepare`). The Node fallback server cannot launch.
+- A `.bndrun` outside a bnd workspace must contain the exact `-standalone` instruction; `-standalone.extra` alone is insufficient. See the [bnd standalone documentation](https://bnd.bndtools.org/instructions/standalone.html). A `bnd.bnd` project still requires a bnd workspace.
 - The [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension and Language Support for Java. The bundled adapter imports bnd projects directly into JDT LS, including source/test roots and build/test dependencies. Native import requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS, separate from the launched framework's `-runee`.
 - Valid `java.configuration.runtimes` names, such as `JavaSE-21` or `JavaSE-25`. After adding native import to an existing workspace, run **Java: Clean Java Language Server Workspace** and allow reimport.
 
@@ -28,8 +29,7 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
   "name": "bnd: app.bndrun",
   "target": "${workspaceFolder}/my.project/app.bndrun",
   "kind": "run",
-  "vmArgs": ["-Xmx1g"],
-  "buildBeforeLaunch": true
+  "vmArgs": ["-Xmx1g"]
 }
 ```
 
@@ -40,7 +40,7 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
 | `tests` | Test names for `kind: test`, e.g. `com.example.FooTest` or `com.example.FooTest:testBar`. Empty runs all tests. |
 | `vmArgs`, `args`, `env` | Appended to `-runvm`, `-runprogramargs`, and `-runenv`. |
 | `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. |
-| `buildBeforeLaunch` | Build the project and its workspace dependencies first. Default `true`. |
+| `buildBeforeLaunch` | `true` builds before validation; `false` skips builds. If omitted, bnd validates bundles first and asks to build only when bundle files are missing. |
 | `javaExec` | Java executable. Defaults to the bnd `java` property, then a runtime matching `-runee` from `java.configuration.runtimes`, `bnd.cli.javaExecutable`, `JAVA_HOME`, or `PATH`. |
 | `shortenCommandLine` | Passed to the Java debugger. Default `auto`. |
 | `sourcePaths` | Additional debugger source roots appended to sources of launched workspace bundles. |

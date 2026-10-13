@@ -10,6 +10,7 @@ import {
     launchDisposeCommand,
     launchPrepareCommand,
     parsePreparedLaunch,
+    prepareLaunchWithBuildConfirmation,
     splitArguments,
     toJavaDebugConfiguration,
 } from '../../bndLaunch';
@@ -92,6 +93,69 @@ suite('bnd launch', () => {
         assert.throws(() => parsePreparedLaunch({ error: 'Launching requires a trusted workspace.' }), /trusted/);
         assert.throws(() => parsePreparedLaunch({ launchId: 'x' }), /incompatible/);
         assert.throws(() => parsePreparedLaunch(null), /incompatible/);
+    });
+
+    test('validates bundles before launch and asks before retrying with a build', async () => {
+        const requests: Record<string, unknown>[] = [];
+        const server: LaunchServer = {
+            supports: async () => true,
+            execute: async (_command, args) => {
+                requests.push(args[0] as Record<string, unknown>);
+                return requests.length === 1
+                    ? { error: 'Bundle file "generated/app.jar" does not exist, given error is null' }
+                    : prepared;
+            },
+        };
+        const window = vscode.window as unknown as Record<string, unknown>;
+        const originals = { withProgress: window.withProgress, showWarningMessage: window.showWarningMessage };
+        let warning: { message: string; detail: string; modal: boolean } | undefined;
+        const progress: string[] = [];
+        window.withProgress = async (options: { title: string }, task: () => Promise<unknown>) => {
+            progress.push(options.title);
+            return task();
+        };
+        window.showWarningMessage = async (message: string, options: { detail: string; modal: boolean }, button: string) => {
+            warning = { message, detail: options.detail, modal: options.modal };
+            assert.strictEqual(button, 'Build and Launch');
+            return button;
+        };
+        try {
+            const result = await prepareLaunchWithBuildConfirmation(server,
+                { uri: vscode.Uri.file('/ws/app.bndrun').toString(), kind: 'run', tests: [] });
+            assert.strictEqual(result?.launchId, prepared.launchId);
+            assert.deepStrictEqual(requests.map(request => request.build), [false, true]);
+            assert.ok(warning?.modal);
+            assert.match(warning?.message ?? '', /bundle files are missing/i);
+            assert.match(warning?.detail ?? '', /generated\/app\.jar/);
+            assert.deepStrictEqual(progress, ['bnd: Validating app.bndrun', 'bnd: Building and preparing app.bndrun']);
+        } finally {
+            Object.assign(window, originals);
+        }
+    });
+
+    test('cancels missing-bundle launch without building and does not prompt on other errors', async () => {
+        const requests: Record<string, unknown>[] = [];
+        const server: LaunchServer = {
+            supports: async () => true,
+            execute: async (_command, args) => {
+                requests.push(args[0] as Record<string, unknown>);
+                return { error: requests.length === 1 ? 'Bundle file "generated/app.jar" does not exist' : 'No -runfw set' };
+            },
+        };
+        const window = vscode.window as unknown as Record<string, unknown>;
+        const originals = { withProgress: window.withProgress, showWarningMessage: window.showWarningMessage };
+        let prompts = 0;
+        window.withProgress = async (_options: unknown, task: () => Promise<unknown>) => task();
+        window.showWarningMessage = async () => { prompts++; return undefined; };
+        try {
+            const request = { uri: vscode.Uri.file('/ws/app.bndrun').toString(), kind: 'run' as const, tests: [] };
+            assert.strictEqual(await prepareLaunchWithBuildConfirmation(server, request), undefined);
+            assert.deepStrictEqual(requests.map(item => item.build), [false]);
+            await assert.rejects(prepareLaunchWithBuildConfirmation(server, request, false), /No -runfw set/);
+            assert.strictEqual(prompts, 1);
+        } finally {
+            Object.assign(window, originals);
+        }
     });
 
     test('splits command line arguments', () => {
