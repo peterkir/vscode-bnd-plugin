@@ -146,6 +146,18 @@ export async function findBndWorkspaces(): Promise<vscode.Uri[]> {
     return [...roots.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath));
 }
 
+export class WorkspaceUnavailableError extends Error {}
+
+async function bndWorkspaceExists(workspace: string): Promise<boolean> {
+    try {
+        const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(vscode.Uri.parse(workspace), 'cnf', 'build.bnd'));
+        return !!(stat.type & vscode.FileType.File);
+    } catch (error) {
+        if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') return false;
+        throw error;
+    }
+}
+
 export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
     private readonly changed = new vscode.EventEmitter<RepoNode | undefined>();
     readonly onDidChangeTreeData = this.changed.event;
@@ -156,7 +168,8 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
 
     constructor(private readonly server: RepositoriesServer,
         private readonly findWorkspaces: () => Promise<vscode.Uri[]> = findBndWorkspaces,
-        private readonly onState: (state: Record<string, unknown>) => void = () => undefined) {}
+        private readonly onState: (state: Record<string, unknown>) => void = () => undefined,
+        private readonly workspaceExists: (workspace: string) => Promise<boolean> = bndWorkspaceExists) {}
 
     get filter(): string | undefined { return this.filterText; }
     get search(): AdvancedSearch | undefined { return this.searchQuery; }
@@ -189,8 +202,26 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
         this.changed.dispose();
     }
 
-    execute(command: string, request: Record<string, unknown>, token?: vscode.CancellationToken): Promise<Record<string, unknown>> {
-        return this.server.execute(command, [request], token).then(object);
+    async execute(command: string, request: Record<string, unknown>, token?: vscode.CancellationToken): Promise<Record<string, unknown>> {
+        const workspace = typeof request.workspace === 'string' ? request.workspace : undefined;
+        if (workspace) await this.requireWorkspace(workspace);
+        try {
+            const response = await this.server.execute(command, [request], token);
+            if (workspace) await this.requireWorkspace(workspace);
+            return object(response);
+        } catch (error) {
+            if (workspace) await this.requireWorkspace(workspace);
+            throw error;
+        }
+    }
+
+    private async requireWorkspace(workspace: string): Promise<void> {
+        if (await this.workspaceExists(workspace)) return;
+        this.roots = this.roots.filter(root => root.toString() !== workspace);
+        this.offline.delete(workspace);
+        this.onState({ 'bnd.repositories.state': this.roots.length ? 'ready' : 'empty' });
+        this.refresh();
+        throw new WorkspaceUnavailableError('The bnd workspace no longer exists.');
     }
 
     repoRequest(node: { ws: string; repo: RepoInfo }, extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -209,6 +240,7 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
         try {
             return await this.children(node);
         } catch (error) {
+            if (error instanceof WorkspaceUnavailableError) return [];
             return [{ type: 'message', label: error instanceof Error ? error.message : String(error), error: true }];
         }
     }
@@ -221,9 +253,14 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
                 return [];
             }
             this.roots = await this.findWorkspaces();
+            for (const workspace of this.offline.keys()) {
+                if (!this.roots.some(root => root.toString() === workspace)) this.offline.delete(workspace);
+            }
+            this.publish();
             this.onState({ 'bnd.repositories.state': this.roots.length ? 'ready' : 'empty' });
             return this.roots.map(root => ({ type: 'workspace', ws: root.toString(), label: path.basename(root.fsPath) }));
         }
+        if ('ws' in node) await this.requireWorkspace(node.ws);
         switch (node.type) {
             case 'workspace': {
                 const listing = await this.execute(repositoriesListCommand, { workspace: node.ws });
@@ -447,6 +484,7 @@ export function registerRepositoriesView(context: vscode.ExtensionContext, serve
     };
     const provider = new RepositoriesProvider(server, findBndWorkspaces, setContext);
     const fail = (error: unknown) => {
+        if (error instanceof WorkspaceUnavailableError) return;
         const message = error instanceof Error ? error.message : String(error);
         output?.error(`Repositories: ${message}`);
         void vscode.window.showErrorMessage(`bnd Repositories: ${message}`);
@@ -500,17 +538,20 @@ export function registerRepositoriesView(context: vscode.ExtensionContext, serve
     };
     let refreshTimer: NodeJS.Timeout | undefined;
     const watcher = vscode.workspace.createFileSystemWatcher('**/cnf/**/*.{bnd,mvn}');
+    const deletionWatcher = vscode.workspace.createFileSystemWatcher('**/*', true, true, false);
     const scheduleRefresh = () => {
         clearTimeout(refreshTimer);
         refreshTimer = setTimeout(() => provider.refresh(), 500);
     };
 
-    context.subscriptions.push(provider, view, watcher, { dispose: () => clearTimeout(refreshTimer) },
+    context.subscriptions.push(provider, view, watcher, deletionWatcher, { dispose: () => clearTimeout(refreshTimer) },
         view.onDidChangeSelection(event => {
             const entries = resolutionEntriesFor(event.selection);
             if (entries.length && onSelection) void onSelection(entries).catch(fail);
         }),
         watcher.onDidCreate(scheduleRefresh), watcher.onDidChange(scheduleRefresh), watcher.onDidDelete(scheduleRefresh),
+        deletionWatcher.onDidDelete(scheduleRefresh),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => provider.refresh()),
         vscode.workspace.onDidGrantWorkspaceTrust(() => provider.refresh()),
         vscode.languages.registerDocumentDropEditProvider({ language: 'bnd' }, new RepositoryDropProvider(), {
             providedDropEditKinds: [RepositoryDropProvider.kind], dropMimeTypes: [repositoryEntryMime],

@@ -15,6 +15,7 @@ import {
 import { registerCliCommands } from './bndCliCommands';
 import { registerExplorerView } from './bndExplorer';
 import { registerLaunchSupport } from './bndLaunch';
+import { registerWorkspaceWizards } from './bndWizards';
 import { RepositoriesProvider, registerRepositoriesView } from './bndRepositories';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
 import { JarViewerProvider, jarPrintCommand } from './jarViewer';
@@ -45,6 +46,14 @@ export function activate(context: vscode.ExtensionContext): void {
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
     registerExplorerView(context);
+    registerWorkspaceWizards(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error('bnd Language Server is not running.');
+            return executeServerCommand(client, command, args, token);
+        },
+    });
     // Assigned synchronously (not inside startLanguageClient) so callers awaiting clientReady
     // never observe it as undefined while Java-version detection is still in progress.
     clientReady = startLanguageClient(context).catch(handleLanguageClientError);
@@ -95,6 +104,9 @@ export function activate(context: vscode.ExtensionContext): void {
     resolutionProvider = registerResolutionView(context, {
         supports: supportsServerCommand,
         execute: async (command, args, token) => {
+            if (command.startsWith('bnd.repositories.') && repositoriesProvider) {
+                return repositoriesProvider.execute(command, args[0] as Record<string, unknown>, token);
+            }
             await clientReady;
             if (!client) throw new Error('bnd Language Server is not running.');
             return executeServerCommand(client, command, args, token);

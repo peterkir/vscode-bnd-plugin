@@ -59,15 +59,19 @@ This feature requires workspace trust and a Java language server advertising `bn
 
 - **Run OSGi** / **Debug OSGi** and **Run OSGi tests** / **Debug OSGi tests** CodeLens on `.bndrun` and `bnd.bnd` files (`bnd.launch.codeLens`), the editor title run menu, the context menu in the Explorer and bnd Explorer, and the Command Palette. From the Command Palette without an active `.bndrun` or `bnd.bnd` editor, a list of the workspace's launch files is shown.
 - A `bnd` debug type for `launch.json` with `target`, `kind` (`run` or `test`), `tests`, `vmArgs`, `args`, `env`, `console`, `buildBeforeLaunch`, `javaExec`, and `shortenCommandLine`. The Run and Debug view lists every `.bndrun` file and test project dynamically.
+- Launch preparation validates required bundles without building first. If bundle files are missing, VS Code asks whether to build their workspace projects and build dependencies, then retry. Set `buildBeforeLaunch` to `true` or `false` in `launch.json` to override this prompt.
 - The Java runtime defaults to the bnd `java` property, then a runtime matching `-runee`. `-runjdb` is ignored because the Java debugger owns the JDWP connection.
 
-Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. See [walkthroughs/06-launch-debug.md](walkthroughs/06-launch-debug.md) for details.
+Launching requires workspace trust, the Java language server (the Node fallback cannot launch), and Debugger for Java. A `.bndrun` outside a bnd workspace must declare the exact `-standalone` instruction; `-standalone.extra` alone does not make it standalone. See the [bnd `-standalone` documentation](https://bnd.bndtools.org/instructions/standalone.html) and [launch walkthrough](walkthroughs/06-launch-debug.md) for details. `bnd.bnd` projects still require a bnd workspace.
 
 ### Repositories View
 
 The **bnd** Activity Bar container shows an independent **Explorer** above **Repositories** by default. It offers the built-in Explorer's file actions in the same context-menu groups and with the same default keys: New File/Folder, Open to the Side, Open With, Reveal in File Explorer, Open in Integrated Terminal, Find in Folder, Cut/Copy/Paste (copies get `name copy.ext`), Copy Path/Relative Path, Rename (`F2`), Delete (to the Recycle Bin/Trash), and compare. Dragging moves files within the tree; files dropped from outside are copied. bnd actions (Run/Debug, Open Effective, JAR Viewer, Resolution) appear on matching files. Configure `bnd.explorer.exclude` with exact file/folder names to hide at every level (default `.git` and `node_modules`); it does not use the normal Explorer's `files.exclude`. Context-menu entries that other extensions add to the built-in Explorer are not available here; use **Reveal in Explorer View** for them. VS Code preserves any view order you customize.
 
 The **Repositories** view is a port of the bndtools Eclipse view. It lists one root per bnd workspace (a folder with `cnf/build.bnd`). Each root shows the Workspace repository, with projects and their bundles, followed by the configured repository plugins. Expand repositories to see bundles, versions, and, for P2 repositories, features with their included and required items.
+
+Deleting a workspace or its `cnf/build.bnd` clears its repository tree automatically, including offline state and stale nodes. Deleted folders disappear from the bnd Explorer without missing-directory errors.
+The Java language server also closes the deleted workspace's remote server, so its `cnf/cache/remotews` port registrations are not recreated.
 
 - **Filter** matches bundle symbolic names (`*` and `?` wildcards; the text is matched anywhere in the name).
 - **Advanced Search** finds providers of a package (with an optional version range), a service, or any namespace and LDAP filter in repositories that implement the OSGi Repository API.
@@ -79,11 +83,15 @@ The **Repositories** view is a port of the bndtools Eclipse view. It lists one r
 
 The view requires workspace trust and the Java language server, because repository plugins run workspace code. See [walkthroughs/07-repositories.md](walkthroughs/07-repositories.md).
 
+The built-in `bnd-cache` repository unpacks bnd's embedded bundles into `cnf/cache/<bnd-version>/bnd-cache` when accessed. The bundled Java server includes this embedded repository; custom servers must include it too. This repository is separate from HTTP/Maven download caches and does not require a workspace build to populate.
+
 ### Resolution View
 
 **Resolution** appears as a tab in VS Code's bottom Panel beside Terminal, Problems, and Debug Console. Add `.bnd` files, JARs, or a version from the Repositories view to compare their OSGi requirements and capabilities. Requirements are marked matched when a selected resource provides a matching capability.
 
 Selecting bundles or versions in Repositories replaces the analyzed resources with that selection; bundles use their newest available version. Dragging repository entries or local `.bnd`/`.jar` files into Resolution adds them to the existing selection. The resource list is saved per VS Code workspace.
+
+Deleting selected files or their containing folder removes them from Resolution and clears stale analysis. Removing a folder from the VS Code workspace also removes its selected resources; resources in other folders remain selected.
 
 This is capability matching, not a full OSGi resolver: a matched requirement does not prove that a framework can resolve or launch. Analysis reads saved files and accepts at most 100 resources. For `bnd.bnd` projects with sub-bundles, only the first sub-builder is analyzed; select individual sub-bundle `.bnd` files or their generated JARs to compare the others. `.bndrun` files are not accepted; use **bnd-cli: Resolve (.bndrun)** for runbundle resolution.
 
@@ -97,6 +105,28 @@ Filter both lists with space-separated terms and `*` / `?` wildcards. Hide optio
 - **Print** shows the full `bnd print` report (manifest, imports and exports, capabilities, components, metatype, API and uses, and the entry list). It requires the Java language server; Node fallback and older servers report that it is unavailable. Use `Ctrl+F` to search the report.
 
 The viewer reflects changes to the JAR file and closes when the file is deleted. It never modifies the JAR.
+
+### Workspace Wizards
+
+When a VS Code folder is open but no bnd workspace is found, the bnd Explorer replaces its filesystem tree with **Create New Workspace From Template**, **Add Fragment to (New) Workspace**, and **Import Existing Workspace**. The same welcome actions appear with no folder open. All three are also available in the Command Palette and bnd Explorer menu.
+
+Creation and fragment addition use the current VS Code folder directly. For multi-root workspaces, select the target workspace folder. If no folder is open, select the destination directory; it opens automatically after applying changes. There is no separate parent/name prompt or nested workspace directory: the workspace name is the destination directory name.
+
+**Create New Workspace From Template** selects one current template. **Add Fragment to (New) Workspace** selects one or more current fragments. Required dependencies are included automatically. Entries appear directly without catalog-selection or archive-mode prompts; archived entries are hidden.
+
+Configure `bnd.wizard.workspaceTemplateIndexes` and `bnd.wizard.fragmentTemplateIndexes` independently. Workspace creation defaults to the complete [bndtools/bndtools.workspace.min](https://github.com/bndtools/bndtools.workspace.min) template, matching the Eclipse workspace wizard; it does not list fragments. **bnd: Add Workspace Template URL...** accepts a GitHub workspace-template repository, a ZIP archive, or a `.bnd` catalog containing full workspace templates. GitHub repository URLs use `master` unless a `/tree/ref/path` URL or `#ref` specifies another ref.
+
+Fragment addition defaults to the upstream [fragment catalog](https://github.com/bndtools/workspace-templates). **bnd: Add Fragment Template URL...** accepts an HTTP(S)/file fragment `index.bnd` URL. Both commands append locations to the corresponding User setting without duplicating them. Deprecated `bnd.wizard.templateIndexes` is a fallback only for the fragment catalog; an explicitly saved old default fragment index in the workspace setting is migrated to the minimal workspace repository.
+
+After template selection, one warning lists the destination, selected templates and required dependencies, trust risks, and possible overwrites. Confirm **Create Workspace** or **Add Fragments** to create directly. There is no generated-file preview or staged workspace directory. Template evaluation can run bnd macros; only continue with trusted sources. Multiple fragments supplying the same file are composed in dependency order, not automatically merged. No build is started; canceling the warning makes no changes.
+
+Use **Open Template** in the warning to inspect a source in your browser (or the default application for a local file URL). If multiple sources are listed, choose which to open. The warning reappears afterward; opening a source does not approve creation or change files.
+
+Workspace creation preserves unrelated files already in the selected directory and rejects an existing `cnf/build.bnd`; use the fragment wizard for existing bnd workspaces. Fragment addition preserves untouched files and existing configuration not supplied by the fragments. Template `append` actions retain existing content; other supplied files replace their existing contents, as stated in the warning. Generation uses memory; per-file temporary writes provide atomic replacement without staging an entire workspace. Application rejects unsaved target editors and files changed while generating, blocks symbolic-link destinations, and rolls back files written if application fails.
+
+Creation requires a trusted window and an updated Java bnd language server supporting workspace wizards. Node fallback and older custom servers report unsupported operations. Template output is limited to 5000 files and 32 MiB. Delete actions and Eclipse project-template creation are not supported.
+
+Use **bnd: Import Existing Workspace...** from the Command Palette, the bnd Explorer menu, or its empty-window welcome link. Select a root containing `cnf/build.bnd`, then open it in the current/new window or add it to the current multi-root workspace. Adding a root already present does not duplicate it, including when selected through a symbolic link. Import only checks the folder structure: it does not evaluate bnd configuration, copy files, delete Eclipse metadata, or start a build. It also works without the Java bnd language server.
 
 ### Native Java Project Import
 
