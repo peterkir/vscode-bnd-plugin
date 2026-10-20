@@ -290,14 +290,17 @@ See [INSTALL.md](INSTALL.md) for full instructions including command-line instal
 
 ```bash
 cd vscode-bnd-plugin
-npm install              # install client deps
-npm install --prefix server  # install server deps
+npm ci                   # install locked client dependencies
+npm ci --prefix server   # install locked server dependencies
 npm run compile:all      # compile client + server TypeScript
 npm run compile:tests    # compile VS Code extension tests
-npm test                 # run VS Code extension tests
-npm run package          # downloads vsce on demand and builds the VSIX
+# Set BND_SOURCE_REPO and BND_CLI_JAR as described in DEV.md first.
+npm test                 # run the complete VS Code extension test suite
+npm run package          # build the VSIX using the installed vsce dependency
 # Produces bnd-<version>.vsix
 ```
+
+See [DEV.md](DEV.md) for local development and testing, and the [PR-to-Marketplace workflow](DEV.md#6-publishing) for signed-off commits, PR CI artifact testing, merge-to-main validation, tagging, and publishing `klibio.bnd`. Use [CHECKLIST.md](CHECKLIST.md) for release signoff. Merging to main runs CI; Marketplace publication happens through the separate tag-triggered Release workflow when `VSCE_PAT` is configured.
 
 ### Upstream Java Repo Parity Tests
 

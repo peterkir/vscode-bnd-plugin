@@ -6,11 +6,12 @@ Guide for developing, testing, packaging, publishing, and verifying the `vscode-
 
 ## 1. Prerequisites
 
-- **Node.js**: v18 or later
+- **Node.js**: v20 (matches GitHub Actions)
 - **npm**: v9 or later (bundled with Node.js)
 - **Java**: Java 17+ (required for bnd CLI JAR and Java-mode language server)
 - **VS Code**: 1.140.0 or higher
-- **VS Code Extension Publisher Account**: Personal Access Token (PAT) with `Marketplace (Manage)` permissions under publisher `klibio`
+- **GitHub CLI**: `gh`, authenticated with `gh auth login`, for PRs, CI artifacts, and release checks
+- **Release maintainers only**: access to publisher `klibio` and repository Actions secret `VSCE_PAT` with `Marketplace (Manage)` permissions. Never put tokens in commits, command arguments, or PR text.
 
 ---
 
@@ -23,10 +24,10 @@ git clone https://github.com/peterkir/vscode-bnd-plugin.git
 cd vscode-bnd-plugin
 
 # Install extension client dependencies
-npm install
+npm ci
 
 # Install language server dependencies
-npm install --prefix server
+npm ci --prefix server
 ```
 
 ### Local Workspace Layout
@@ -47,8 +48,8 @@ From Git Bash, install and compile the extension workspace:
 
 ```bash
 cd /c/git/github.com/peterkir/vscode-bnd-plugin
-npm install
-npm install --prefix server
+npm ci
+npm ci --prefix server
 npm run compile:all
 ```
 
@@ -57,6 +58,16 @@ npm run compile:all
 ---
 
 ## 3. Development Workflow
+
+Start each change on a feature branch from current `main` with a clean worktree:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch -c fea-describe-change
+```
+
+Make focused changes and update affected English documentation. For every code change, bump the extension version using `npm version patch --no-git-tag-version` (use `minor` for compatible features or `major` for breaking changes). This updates both `package.json` and `package-lock.json` without committing or tagging. Update `CHANGELOG.md` for user-visible changes. Documentation-only changes do not require a version bump.
 
 ### Build Scripts
 
@@ -223,7 +234,11 @@ export BND_SOURCE_REPO="/path/to/bnd"
 npm test
 ```
 
-If neither environment variable is set and `../bnd` does not exist, parity tests are cleanly skipped.
+If neither environment variable is set and `../bnd` does not exist, parity tests are skipped. A skipped parity test is not full validation: set an existing source checkout before signing off a code change. For this checkout layout, use `export BND_SOURCE_REPO="$(cd ../../bndtools/bnd.wt/fea-bnd-ls && pwd -W)"` in Git Bash; elsewhere use your own absolute path.
+
+CI also downloads bnd CLI 7.4.0 and sets `BND_CLI_JAR` for real CLI invocation tests. For equivalent local coverage, set `BND_CLI_JAR` to that JAR and inspect the test summary for unexpected skips; source parity alone does not prove CLI execution works. Native JDT LS testing is a separate `npm run test:jdtls` check, not part of the default CI workflow.
+
+If Windows reports that tests require no other running Code instance, close other instances or set `VSCODE_EXECUTABLE_PATH` to a separate test installation's executable. An update-in-progress or blocked test host is a blocker, not a passing test run.
 
 ### Manual Verification in Extension Development Host
 
@@ -262,7 +277,7 @@ npm run package
 npm run package:prerelease
 ```
 
-This generates `bnd-<version>.vsix` in root directory without modifying git tags. Tagged releases attach the same file to the GitHub Release (see [Publishing](#6-publishing)).
+This generates `bnd-<version>.vsix` in root directory without modifying git tags. Tagged releases build their own VSIX and attach it to the GitHub Release (see [Publishing](#6-publishing)). A local build is not a substitute for testing the remote CI artifact.
 
 Packaging runs `vscode:prepublish` (`compile:all`, then `bundle`). `bundle` uses esbuild to overwrite `out/extension.js` and `server/out/server.js` with self-contained, minified bundles, so `.vscodeignore` excludes `node_modules/` (except the Codicons font and CSS used by the Effective view), other `out/` files, and source maps. Run `npm run compile:all` afterwards to restore unbundled output for debugging; `npm test` does this automatically.
 
@@ -280,47 +295,112 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
 
 ## 6. Publishing
 
-### Step 1: Version Bump & Changelog
+Normal path: local development and tests, signed-off commit, PR, green PR CI and remote VSIX smoke test, merge to `main`, green main CI and remote VSIX smoke test, release tag, Marketplace verification. Use [CHECKLIST.md](CHECKLIST.md) for signoff.
 
-1. Update `"version"` in `package.json`.
-2. Document release notes and changes in `CHANGELOG.md`.
-3. Commit version changes:
-   ```bash
-   git add package.json CHANGELOG.md
-   git commit -m "chore: release v<version>"
-   git tag "v<version>"
-   git push origin main --tags
-   ```
+### Step 1: Validate, Commit, and Open a PR
 
-Pushing a `v*.*.*` tag runs the **Release** workflow (`.github/workflows/release.yml`). The tagged commit must be on the default branch (`main`); otherwise the run fails before packaging and nothing is released or published. The workflow packages the VSIX, creates the GitHub Release `bnd v<version>` with generated release notes and `bnd-<version>.vsix` attached for download (the run fails if no VSIX was produced), and publishes to the Marketplace when the `VSCE_PAT` secret is set. A manual run for a tag that already has a release updates that release and replaces the VSIX asset. To rerun it manually, use **Actions** → **Release** → **Run workflow**, enter an existing tag, and enable **Publish to VS Code Marketplace** only when the Marketplace upload is wanted.
+Run `npm test` with `BND_SOURCE_REPO` and `BND_CLI_JAR` set as described above; it compiles client, fallback server, and tests before running the complete extension suite. Perform the relevant development-host checks, run `npm run package`, and inspect `npx @vscode/vsce ls`. Resolve failures and unexpected skips before proceeding.
 
-### Step 2: Publish to Visual Studio Marketplace
-
-Ensure `VSCE_PAT` environment variable is set with Personal Access Token:
+Review and stage only files belonging to the change, including both package files when the version changes:
 
 ```bash
-# Standard production release
-npm run publish -- -p <YOUR_PERSONAL_ACCESS_TOKEN>
-
-# Or pre-release track
-npm run publish:prerelease -- -p <YOUR_PERSONAL_ACCESS_TOKEN>
+git status --short
+git diff --check
+git diff
+# Replace these example paths with the files belonging to your change.
+git add src/extension.ts package.json package-lock.json CHANGELOG.md DEV.md
+git diff --cached
+git commit -s
+# In the editor, describe summary, reason, changes, and validation results.
+git push -u origin HEAD
+gh pr create --base main --fill
 ```
 
-Alternatively, upload `.vsix` manually via [Visual Studio Marketplace Management Portal](https://marketplace.visualstudio.com/manage).
+Include test results, any blocked/skipped checks, Java JAR provenance when changed, and manual checks in the PR. Do not commit VSIX files, downloaded CLI JARs, credentials, or generated TypeScript output. Bundled Java server/adapter JAR updates are intentional source-controlled exceptions when those components change.
 
-### Step 3: Publish to Open VSX Registry (Optional)
+### Step 2: Test the Remote PR Build
 
-If publishing to [Open VSX](https://open-vsx.org/):
+`.github/workflows/ci.yml` runs for PRs and pushes to `main`/`master`; pushing a feature branch alone does not trigger it until a PR exists. On Ubuntu 24.04 it installs locked dependencies with Node 20, compiles TypeScript, sets up Java 17, checks out bnd source from `fea-bnd-ls`, verifies a downloaded bnd CLI 7.4.0 JAR against its SHA-1, runs `xvfb-run -a npm test`, then packages and uploads `bnd-<version>.vsix` with 30-day retention. It does not rebuild the bundled Java JARs or run the separate JDT LS integration check.
 
 ```bash
-npx ovsx publish bnd-<version>.vsix -p <OPEN_VSX_PAT>
+gh pr checks --watch
+gh run list --workflow ci.yml --branch "$(git branch --show-current)" --event pull_request --limit 5
+# Set this to the run ID for the current PR revision, not an older successful run.
+RUN_ID=1234567890
+gh run watch "$RUN_ID" --exit-status
+gh run view "$RUN_ID" --json headBranch,headSha,event,conclusion,url
+bash scripts/try-ci-vsix.sh "$RUN_ID" ../../klibio/example.bnd.rcp
 ```
+
+Verify the run's PR and revision in GitHub before installing. PR CI normally tests GitHub's synthetic merge ref, not only the feature branch commit. Record the run URL and smoke-test results in the PR. `try-ci-vsix.sh` downloads that run's VSIX, installs it into isolated user-data/extensions directories under `~/.vscode-bnd-ci/run-<run-id>`, and opens the sample workspace. It prints run identity and installed version. Use an explicit successful run ID to avoid accidentally testing an older artifact; the helper does not enforce success for an explicit ID.
+
+Run the smoke-test matrix below plus checks for the changed behavior. Confirm the installed extension identity/version and **Output** > **bnd Language Server** startup. Clean profiles do not include Red Hat Java or Debugger for Java: install those separately in the isolated profile when testing Java import or debugging. Check workspace settings for old `bnd.server.jar` overrides so Java tests exercise the packaged JAR. Avoid `--main-profile`, which modifies the regular installation, and `--copy-settings`, which can reintroduce local overrides. `--keep` reuses a run's profile; by default the helper recreates it, so close that test window before running it again.
+
+If CI fails, use `gh run view "$RUN_ID" --log-failed`, fix the feature branch, rerun local validation, commit and push. Repeat CI and artifact testing for the new revision. Do not merge on an older green run.
+
+### Step 3: Merge and Validate Main
+
+Merge only after required reviews, current PR checks, and artifact testing pass. Use the repository's allowed merge method; for squash merging:
+
+```bash
+gh pr merge --squash --delete-branch
+git switch main
+git pull --ff-only origin main
+gh run list --workflow ci.yml --branch main --event push --commit "$(git rev-parse HEAD)" --limit 5
+# Select the push run for this exact main commit.
+MAIN_RUN_ID=1234567891
+gh run watch "$MAIN_RUN_ID" --exit-status
+gh run view "$MAIN_RUN_ID" --json headSha,event,conclusion,url
+bash scripts/try-ci-vsix.sh "$MAIN_RUN_ID" ../../klibio/example.bnd.rcp
+```
+
+Repeat the relevant packaged smoke tests on this main artifact. Merge/squash produces a different commit from the PR head; a green PR run does not replace this gate. Pushing or merging to `main` runs CI but does **not** publish to Marketplace. If main validation fails, fix through a new PR and do not tag the failing commit.
+
+### Step 4: Tag the Validated Commit and Publish
+
+Confirm a clean worktree, the expected main commit, matching versions in both package files, and correct changelog. The version must be new on Marketplace. If another change lands on main, either repeat validation for it or tag the previously validated main commit explicitly.
+
+```bash
+git status --short
+git log -1 --oneline
+VERSION="$(node -p "require('./package.json').version")"
+node -e "const p=require('./package.json'),l=require('./package-lock.json'); if(p.version!==l.version || p.version!==l.packages[''].version) process.exit(1)"
+git tag -a "v$VERSION" -m "Release v$VERSION" HEAD
+git push origin "v$VERSION"
+gh run list --workflow release.yml --limit 5
+# Select the Release run for this tag and commit.
+RELEASE_RUN_ID=1234567892
+gh run watch "$RELEASE_RUN_ID" --exit-status
+gh release view "v$VERSION"
+```
+
+Stop if any check fails. Push only the intended tag, not `--tags`. Do not move an already published tag.
+
+`.github/workflows/release.yml` triggers on `v*.*.*` tags. It requires the tagged commit to be an ancestor of the repository's default branch (currently `main`), installs dependencies, compiles, packages a fresh VSIX, creates/updates a GitHub Release with generated notes and the VSIX asset, then publishes that package to publisher **`klibio`** (extension **`klibio.bnd`**) if Actions secret `VSCE_PAT` is nonempty. Configure that secret through GitHub repository settings, never in source files.
+
+Important limits: Release does **not** run `npm test`, require successful CI, or check that tag text matches `package.json`. These are manual gates above. Its branch check accepts any ancestor of default-branch history, not only the current tip. A green Release run can mean **GitHub-only release**: if `VSCE_PAT` is absent, Marketplace publishing is skipped. Inspect the publish step and Marketplace version before calling the release complete. Release rebuilds the VSIX; it does not promote the byte-identical CI artifact.
+
+### Step 5: Retry or Publish Manually
+
+For an existing release tag on main, **Actions** > **Release** > **Run workflow** accepts `tag` and `publish`. The default `publish: false` creates/updates the GitHub Release only. Enable publishing only when the version has not already been published:
+
+```bash
+gh workflow run release.yml --ref main -f tag="v$VERSION" -f publish=false
+# Only when Marketplace publication is still needed and VSCE_PAT is configured:
+gh workflow run release.yml --ref main -f tag="v$VERSION" -f publish=true
+```
+
+A rerun rebuilds the package and replaces the GitHub asset; it does not guarantee identical bytes. If GitHub release creation succeeds but Marketplace publishing fails, inspect that step's error and verify whether the version exists in Marketplace before retrying. An already published version cannot be overwritten; ship a new version through the normal PR process instead.
+
+Manual fallback: upload the verified release VSIX through the [Marketplace Management Portal](https://marketplace.visualstudio.com/manage) under publisher `klibio`. Alternatively, with `VSCE_PAT` securely supplied in the environment, run `npx @vscode/vsce publish --packagePath "bnd-$VERSION.vsix"`. This publishes the selected package rather than rebuilding the working tree. `npm run publish` rebuilds/publishes the current checkout; it is not the normal release path. The separate `package:prerelease`/`publish:prerelease` scripts target the Marketplace pre-release channel; current Release automation does not use that channel. Open VSX publication is separate and is not automated here.
 
 ---
 
 ## 7. Testing Published Version
 
 ### Step 1: Install from Marketplace
+
+First inspect the Release run's **Publish to VS Code Marketplace** step and confirm the expected version on the [klibio.bnd Marketplace page](https://marketplace.visualstudio.com/items?itemName=klibio.bnd). Marketplace availability can lag upload completion; do not use a cached older install as release proof.
 
 1. Open standard VS Code (clean profile recommended).
 2. Install extension via CLI:
@@ -334,9 +414,14 @@ npx ovsx publish bnd-<version>.vsix -p <OPEN_VSX_PAT>
 To test without interference from previous configuration:
 
 ```bash
-# Launch fresh isolated VS Code profile
-code --profile "Bnd-Test" --extensions-dir ~/.vscode/extensions-test
+# Use a new directory for each verification, with no development extension loaded.
+RELEASE_TEST_DIR="$(mktemp -d)"
+code --user-data-dir "$RELEASE_TEST_DIR/user-data" --extensions-dir "$RELEASE_TEST_DIR/extensions" --install-extension klibio.bnd --force
+code --user-data-dir "$RELEASE_TEST_DIR/user-data" --extensions-dir "$RELEASE_TEST_DIR/extensions" --list-extensions --show-versions
+code --user-data-dir "$RELEASE_TEST_DIR/user-data" --extensions-dir "$RELEASE_TEST_DIR/extensions" --new-window ../../klibio/example.bnd.rcp
 ```
+
+Confirm `klibio.bnd@<expected-version>` in the listing, then perform the smoke tests below. Compare the GitHub release asset version as well. Record tag, commit, CI/Release run URLs, installed Marketplace version, and smoke-test results in the PR or release notes. Close the test window before removing its temporary directory.
 
 ### Step 3: Smoke Test Matrix
 
