@@ -2,7 +2,13 @@
 
 ## Quick Install (from pre-built VSIX)
 
-Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Every `v*.*.*` tag on `main` publishes one, and GitHub shows its SHA-256 digest.
+Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Successful Release runs for `v*.*.*` tags on main history attach a VSIX, and GitHub shows its SHA-256 digest. Marketplace publication additionally requires the `VSCE_PAT` Actions secret.
+
+For the published Marketplace version, install extension **`klibio.bnd`**:
+
+```bash
+code --install-extension klibio.bnd --force
+```
 
 ### Option A: Via VS Code UI
 
@@ -26,7 +32,7 @@ If you want to rebuild the extension (e.g., after updating the completion data):
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18 or later
+- [Node.js](https://nodejs.org/) 20 (matches CI)
 - [npm](https://www.npmjs.com/) (bundled with Node.js)
 - VS Code 1.140.0 or later.
 - Java 17 or later for the bundled bnd language server and bnd CLI. Native Java project import additionally requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS.
@@ -38,10 +44,10 @@ If you want to rebuild the extension (e.g., after updating the completion data):
 cd vscode-bnd-plugin
 
 # Install client dependencies (includes vscode-languageclient)
-npm install
+npm ci
 
 # Install language server dependencies
-npm install --prefix server
+npm ci --prefix server
 
 # Compile client + server TypeScript
 npm run compile:all
@@ -50,6 +56,8 @@ npm run compile:all
 npm run compile:tests
 
 # Run VS Code extension tests
+# Set BND_SOURCE_REPO to an existing bnd source checkout first.
+# Set BND_CLI_JAR to a bnd CLI 7.4.0 JAR for invocation tests.
 npm test
 
 # Package as a .vsix file
@@ -61,35 +69,13 @@ Install it using either option above.
 
 ## Publish to the Visual Studio Marketplace
 
-Publishing requires a Marketplace publisher named `bndtools` and a Personal Access Token with Marketplace publish rights.
+Publisher is **`klibio`**, extension ID **`klibio.bnd`**. Follow the [development-to-Marketplace workflow](DEV.md#6-publishing): local tests, signed-off commit and PR, successful PR CI plus isolated remote VSIX testing, merge to main, successful main CI plus artifact testing, then push the matching release tag.
 
-```bash
-# One-time login for the current shell/session
-npx vsce login bndtools
+Merging to main does not publish. The Release workflow packages the tagged commit, attaches the VSIX to a GitHub Release, and publishes to Marketplace only when Actions secret `VSCE_PAT` is configured. Release does not run the test suite or enforce tag/package version equality, so complete the documented gates before tagging. Verify the publish step and installed Marketplace version; a successful GitHub Release alone is not proof of Marketplace publication.
 
-# Publish the current package version from package.json
-npm run publish
+For testing an unreleased PR artifact, use [remote PR build testing](DEV.md#step-2-test-the-remote-pr-build). For recovery or manual publication of a verified VSIX, use [release retries and manual publishing](DEV.md#step-5-retry-or-publish-manually). Never put access tokens in shell command arguments or committed files.
 
-# Or publish as a pre-release
-npm run publish:prerelease
-```
-
-You can also publish without storing credentials by setting `VSCE_PAT`:
-
-```bash
-VSCE_PAT=<marketplace-token> npm run publish
-```
-
-Before publishing, run:
-
-```bash
-npm run compile:all
-npm run compile:tests
-npm audit --omit=dev
-npm run package
-```
-
-### Optional: Validate Against Upstream Java Source
+### Validate Against Upstream Java Source
 
 The extension tests can validate CLI command parity against bnd Java source in `biz.aQute.bnd/src/aQute/bnd/main/bnd.java`.
 
@@ -98,7 +84,7 @@ Before `npm test`, set one of:
 - `BND_SOURCE_REPO=<path-to-bnd-repo>`
 - `BND_JAVA_REPO=<path-to-bnd-repo>`
 
-If neither is set, tests also try sibling folder `../bnd`. If no source repo is available, parity checks are skipped.
+If neither is set, tests also try sibling folder `../bnd`. If no source repo is available, parity checks are skipped; this is not full validation for a code change. See [local testing](DEV.md#4-local-testing) for source and CLI test prerequisites.
 
 ## Language Server Startup Modes
 
