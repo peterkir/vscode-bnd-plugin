@@ -20,13 +20,15 @@ async function waitForDiagnostic(uri: vscode.Uri, code: string, timeout: number)
 
 suite('Property conflict quick fixes', () => {
     test('reports duplicate merged keys from unsaved text and offers rename and removal', async function () {
-        this.timeout(60000);
+        this.timeout(120000);
         const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-quickfix-'));
         const file = path.join(temporary, 'bnd.bnd');
         fs.writeFileSync(file, '-propertyconflicts: warning\n-runvm: -Da\n');
         const extension = vscode.extensions.getExtension('klibio.bnd')!;
         try {
             await extension.activate();
+            // earlier suites may have stopped the client via deactivate(); restart to get a live Java server
+            await vscode.commands.executeCommand('bnd.server.restart');
             const uri = vscode.Uri.file(file);
             const document = await vscode.workspace.openTextDocument(uri);
             await vscode.window.showTextDocument(document, { preview: false });
@@ -34,7 +36,7 @@ suite('Property conflict quick fixes', () => {
             edit.insert(uri, document.positionAt(document.getText().length), '-runvm: -Db\n');
             await vscode.workspace.applyEdit(edit);
 
-            const diagnostic = await waitForDiagnostic(uri, 'bnd.propertyconflict', 45000);
+            const diagnostic = await waitForDiagnostic(uri, 'bnd.propertyconflict', 90000);
             assert.strictEqual(diagnostic.source, 'bnd');
             assert.strictEqual(diagnostic.range.start.line, 2, 'conflict is reported on the second definition');
             assert.strictEqual(diagnostic.range.end.character, 6, 'range covers the key only');
@@ -56,8 +58,6 @@ suite('Property conflict quick fixes', () => {
             await vscode.commands.executeCommand('workbench.action.files.revert');
             await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
         } finally {
-            const implementation: typeof import('../../extension') = require(path.join(extension.extensionPath, 'out', 'extension.js'));
-            await implementation.deactivate();
             fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
