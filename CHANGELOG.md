@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.24.0
+
+### Added
+- Property-conflict diagnostics with quick fixes in `java` server mode: duplicate definitions and `-include` shadowing of merged-property keys are reported from the unsaved editor text following the bnd `-propertyconflicts` policy. Quick fixes rename a merge-capable key to a unique `key.<suffix>` or remove the conflicting definition.
+- Quick fixes to remove an invalid `Bundle-Activator` header and to change `Bundle-Version` to the version suggested by baselining, keeping a macro qualifier.
+
+### Changed
+- Update the bundled `biz.aQute.bnd.lsp.jar` to the language server rebased on current bnd master (includes `-propertyconflicts`, `resolution:=conditional`, JUnit 6 tester, and P2 repository cache support from upstream).
+
 ## 0.23.5
 
 ### Changed

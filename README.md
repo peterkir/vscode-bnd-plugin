@@ -43,6 +43,14 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 - A documentation summary from the bnd reference docs.
 - An **example** from the official bnd documentation, shown in a `bnd` code block.
 
+### Diagnostics and Quick Fixes
+
+In `java` server mode, the bundled language server reports bnd build, run, and verification problems inline and offers quick fixes (`Ctrl+.`) for:
+
+- **Property conflicts** – keys defined more than once in a file, or merged-property keys (such as `-runvm` or `-runrequires`) shadowed by an `-include`d file. Conflicts are validated from the unsaved editor text with exact key ranges. Quick fixes rename a merge-capable key to a unique `key.<suffix>` or remove the conflicting definition including its continuation lines. Reporting follows bnd's [`-propertyconflicts`](https://bnd.bndtools.org/instructions/propertyconflicts.html) policy: set `-propertyconflicts: warning` (or `error`) in `cnf/build.bnd` or the edited file, or enable `-pedantic: true`; it is off by default.
+- **Invalid `Bundle-Activator`** – remove the header when the referenced class is missing, abstract, imported, or otherwise unusable.
+- **Baseline `Bundle-Version` mismatch** – change the version to the value suggested by baselining while preserving a macro qualifier such as `.${tstamp}`.
+
 ### Effective Properties
 
 Use **bnd: Open Effective** on a `.bnd` or `.bndrun` file, or select **Bnd Effective** from **Reopen Editor With...**. **bnd: Open Effective to Side** keeps the source editor visible beside the read-only table. The standard text editor remains the default.

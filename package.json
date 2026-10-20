@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.23.5",
+  "version": "0.24.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
