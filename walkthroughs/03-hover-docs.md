@@ -2,6 +2,8 @@
 
 Hovering over a recognised keyword opens an inline documentation panel.
 
+![Hover documentation for -buildpath](../docs/images/hover.png)
+
 ## How to Use
 
 1. Open a `.bnd` or `.bndrun` file.
