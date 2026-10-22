@@ -2,6 +2,8 @@
 
 The extension launches `.bndrun` files and bnd projects through the VS Code **Run and Debug** facility. The Java bnd Language Server computes the launch (main class, class path, `-runvm`, `-runprogramargs`, `-runenv`, working directory) with bnd's `ProjectLauncher`, and the **Debugger for Java** extension starts the JVM. Breakpoints, stepping, variables, and the Debug Console work as for any Java program.
 
+![Run OSGi and Debug OSGi CodeLens on a .bndrun file](../docs/images/launch-codelens.png)
+
 ## Requirements
 
 - A trusted workspace.

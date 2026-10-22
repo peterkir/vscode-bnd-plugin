@@ -4,11 +4,11 @@ import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
-    Executable,
     ExecuteCommandRequest,
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
+    State,
     StreamInfo,
     TransportKind,
 } from 'vscode-languageclient/node';
@@ -21,9 +21,11 @@ import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } f
 import { JarViewerProvider, jarPrintCommand } from './jarViewer';
 import { registerResolutionView, ResolutionViewProvider } from './resolutionView';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
+import { ProtocolResyncStream } from './serverStream';
 
 let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
+let javaServerStop: (() => void) | undefined;
 let configRestartTimer: NodeJS.Timeout | undefined;
 export let outputChannel: vscode.LogOutputChannel;
 let effectiveProvider: EffectivePropertiesProvider | undefined;
@@ -471,15 +473,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
                 );
 
                 const jvmArgs = config.get<string[]>('server.jvmArgs', []);
-                const executable: Executable = {
-                    command: javaInfo.executablePath,
-                    args: [...jvmArgs, '-jar', jarPath],
-                    options: { env: process.env },
-                };
-                serverOptions = {
-                    run: executable,
-                    debug: executable,
-                };
+                serverOptions = () => Promise.resolve(spawnJavaServer(javaInfo.executablePath, [...jvmArgs, '-jar', jarPath]));
             }
         }
     } else {
@@ -512,6 +506,10 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         serverOptions,
         clientOptions
     );
+    client.onDidChangeState(event => {
+        // Like the library's own child-process handling: give the server 2 s to honor `exit`.
+        if (event.newState === State.Stopped && javaServerStop) setTimeout(javaServerStop, 2000);
+    });
 
     clientReady = client.start();
     context.subscriptions.push({
@@ -530,6 +528,25 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
 async function supportsServerCommand(command: string): Promise<boolean> {
     await clientReady;
     return client?.initializeResult?.capabilities.executeCommandProvider?.commands.includes(command) ?? false;
+}
+
+// bnd workspace plugins may print to System.out, which the Java server shares with the protocol.
+// Stray output is logged and skipped instead of terminating the connection.
+function spawnJavaServer(command: string, args: string[]): StreamInfo {
+    const child = cp.spawn(command, args, { env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
+    const log = (prefix: string, data: Buffer | string) => {
+        for (const line of data.toString().split(/\r?\n/)) if (line.trim()) outputChannel.appendLine(`${prefix}${line}`);
+    };
+    child.stderr.on('data', data => log('', data));
+    const reader = child.stdout.pipe(new ProtocolResyncStream(text => log('[stdout] ', text)));
+    child.on('exit', (code, signal) => {
+        outputChannel.appendLine(`bnd Language Server process exited (${signal ?? code}).`);
+        reader.end();
+    });
+    javaServerStop = () => {
+        if (child.exitCode === null && !child.killed) child.kill();
+    };
+    return { reader, writer: child.stdin, detached: false };
 }
 
 function handleLanguageClientError(error: unknown): void {

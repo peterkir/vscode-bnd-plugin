@@ -33,6 +33,9 @@ node_modules/**
 *.vsix
 package-lock.json
 CHECKLIST.md
+examples/
+docs/**
+!docs/images/**
 
 # CI / repo metadata
 .github/

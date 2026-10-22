@@ -2,6 +2,8 @@
 
 The extension ships completion items built directly from the official bnd documentation.
 
+![Completion list for -run instructions](../docs/images/completions.png)
+
 ## Triggering Completions
 
 | Trigger | What you get |
