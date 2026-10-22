@@ -1,8 +1,10 @@
 # Release Validation Checklist
 
+Follow the [development guide](DEV.md) for local development and the [PR-to-Marketplace procedure](DEV.md#6-publishing) for commands. Complete the gates in order; neither main CI nor a GitHub Release alone proves Marketplace publication.
+
 ## Environment and setup
-- [ ] Install dependencies with `npm install`.
-- [ ] Install the server dependencies with `npm install --prefix server`.
+- [ ] Install locked dependencies with `npm ci`.
+- [ ] Install locked server dependencies with `npm ci --prefix server`.
 - [ ] Ensure the target Java runtime is available for the `java` server mode.
 - [ ] Confirm whether the bundled LSP JAR is present in `server/biz.aQute.bnd.lsp.jar`.
 
@@ -18,6 +20,7 @@
 - [ ] Run `npm test`.
 - [ ] If the test host fails with `Code is currently being updated`, wait for the update to finish and retry.
 - [ ] Set `BND_SOURCE_REPO` or `BND_JAVA_REPO` to an existing bnd source repo before running tests; upstream parity checks must not be skipped.
+- [ ] Set `BND_CLI_JAR` to a bnd CLI 7.4.0 JAR for real CLI invocation coverage, matching CI.
 - [ ] Confirm the extension host launches successfully.
 - [ ] Confirm the complete suite passes and report any failures or unexpected skips.
 - [ ] For Java LSP changes, run `./gradlew :biz.aQute.bnd.lsp:test :biz.aQute.bnd.lsp:jar` in the upstream checkout and update the bundled JAR before `npm test`.
@@ -65,3 +68,23 @@
 - [ ] Confirm the docs and walkthroughs match the actual behavior.
 - [ ] Confirm the changelog accurately reflects the shipped changes.
 - [ ] Confirm there are no open blockers from compile or runtime validation.
+- [ ] For code changes, apply the appropriate SemVer bump in both `package.json` and `package-lock.json` before committing; documentation-only changes need no bump.
+
+## PR and remote artifact
+- [ ] Review the diff, stage only intended files, commit with `git commit -s`, push a `fea-...` branch, and open a PR targeting main.
+- [ ] Include local validation results, manual checks, and any Java JAR provenance in the PR.
+- [ ] Wait for current PR CI and required reviews; do not reuse an older green run.
+- [ ] Check the CI run's PR/revision and test its downloaded VSIX with `bash scripts/try-ci-vsix.sh <run-id> <sample-folder>`.
+- [ ] Confirm the isolated installed version, packaged Java JAR selection, and changed behavior; install Java/debug dependencies separately when needed.
+- [ ] Record the CI run URL and packaged smoke-test results before merging.
+
+## Main validation and Marketplace release
+- [ ] Merge the reviewed PR using an allowed merge method, update local main, and identify the exact merged commit.
+- [ ] Wait for successful main push CI for that commit and repeat the remote VSIX smoke tests.
+- [ ] Confirm a clean worktree, changelog, matching package/lock versions, and a version not already published to Marketplace.
+- [ ] Confirm repository Actions secret `VSCE_PAT` is configured for publisher `klibio`; never expose its value.
+- [ ] Create `v<package-version>` on the validated main commit and push only that tag; do not move published tags.
+- [ ] Wait for Release and inspect the Marketplace publish step explicitly. Release skips publishing without the secret and does not run tests or validate tag/version equality.
+- [ ] Verify the GitHub Release VSIX and expected version on Marketplace (`klibio.bnd`).
+- [ ] Install from Marketplace in a fresh isolated profile, confirm the installed version, and repeat relevant smoke tests.
+- [ ] Record tag, commit, CI/Release run URLs, installed version, and verification results. If publishing failed, check whether the version already exists before retrying.
