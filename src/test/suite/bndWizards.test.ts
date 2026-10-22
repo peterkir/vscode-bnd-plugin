@@ -239,7 +239,11 @@ suite('bnd workspace creation wizard', () => {
                     assert.ok(!fs.existsSync(target), 'Warning must appear before destination is created');
                     return true;
                 },
-                created: async root => { assert.strictEqual(path.resolve(root.fsPath), path.resolve(vscode.Uri.file(target).fsPath)); opened = true; },
+                created: async root => {
+                    // The server reports the canonical path (macOS: /private/var vs /var).
+                    assert.strictEqual(path.resolve(root.fsPath), fs.realpathSync(path.resolve(vscode.Uri.file(target).fsPath)));
+                    opened = true;
+                },
             });
             assert.ok(opened);
             assert.strictEqual(fs.readFileSync(path.join(target, 'sample/bnd.bnd'), 'utf8'), 'Bundle-SymbolicName: sample\n');

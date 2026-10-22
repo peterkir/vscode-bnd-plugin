@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -1477,7 +1477,7 @@
       {
         "id": "bnd.walkthrough",
         "title": "Get Started with bnd / bndtools",
-        "description": "Learn the features of this extension: syntax highlighting, IntelliSense, hover docs, and integrated CLI commands.",
+        "description": "Learn the features of this extension: syntax highlighting, IntelliSense, hover docs, launch and debug, repositories, workspace wizards, and integrated CLI commands.",
         "steps": [
           {
             "id": "bnd.walkthrough.start",
@@ -1539,6 +1539,19 @@
             ],
             "media": {
               "markdown": "walkthroughs/07-repositories.md"
+            }
+          },
+          {
+            "id": "bnd.walkthrough.wizards",
+            "title": "Create a Workspace",
+            "description": "Open an empty folder and use the bnd Explorer to create a workspace from a template or add fragments such as the Eclipse RCP examples.\n[Create New Workspace From Template](command:bnd.wizard.createWorkspace)\n[Add Fragment to (New) Workspace](command:bnd.wizard.addFragment)",
+            "completionEvents": [
+              "onCommand:bnd.wizard.createWorkspace",
+              "onCommand:bnd.wizard.addFragment",
+              "onCommand:bnd.wizard.importWorkspace"
+            ],
+            "media": {
+              "markdown": "walkthroughs/08-workspace-wizards.md"
             }
           }
         ]
@@ -1611,6 +1624,8 @@
     "pretest": "npm run compile:all && npm run compile:tests",
     "test": "node ./out/test/test/runTest.js",
     "test:jdtls": "node scripts/testJdtls.cjs",
+    "example": "node scripts/exampleWorkspace.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
     "watch": "tsc -watch -p ./",
     "watch:server": "tsc -watch -p ./server/",
     "package": "vsce package --no-git-tag-version",

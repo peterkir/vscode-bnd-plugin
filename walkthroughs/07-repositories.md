@@ -2,6 +2,10 @@
 
 Select the **bnd** icon in the Activity Bar to open the **Repositories** view. It works like the bndtools Repositories view in Eclipse.
 
+| Filtered Maven repository | P2 feature with included bundles |
+|---|---|
+| ![Repositories view filtered to org.apache.felix.gogo*](../docs/images/repositories.png) | ![Eclipse Platform P2 feature org.eclipse.e4.rcp](../docs/images/repositories-p2.png) |
+
 ## Requirements
 
 - A trusted workspace.
@@ -23,6 +27,8 @@ Select the **bnd** icon in the Activity Bar to open the **Repositories** view. I
 | Refresh | Reloads repository indexes. |
 | Collapse All | Collapses the tree. |
 | Work Offline / Work Online | Switches the bnd workspace offline mode. |
+
+![Advanced Search result for a package in a version range](../docs/images/repositories-search.png)
 
 ## Item Actions
 
@@ -46,3 +52,11 @@ Drag bundles or versions into a `.bnd` or `.bndrun` editor to insert entries:
 An unversioned Workspace bundle inserts `version=snapshot`; an unversioned plugin bundle inserts `version=latest`. A selected version inserts its exact version.
 
 Drag bundles or versions into the **Resolution** Panel to add them without replacing its existing resources. Local `.bnd` and `.jar` files can also be dropped there. Resolution compares requirements with capabilities of the selected resources; it does not perform full OSGi resolution or change `-runbundles`. Analysis uses saved files and accepts at most 100 resources. `.bndrun` files are not supported.
+
+![Resolution panel comparing requirements and capabilities](../docs/images/resolution.png)
+
+## JAR Viewer
+
+Activating a bundle or version opens its JAR in the **bnd JAR Viewer**. The **Tree** page shows entries with the manifest selected; the **Print** page shows the `bnd print` report.
+
+![JAR Viewer tree page](../docs/images/jar-viewer.png)

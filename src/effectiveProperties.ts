@@ -300,13 +300,17 @@ function sameFile(left: vscode.Uri, right: vscode.Uri): boolean {
 }
 
 function watchDependencies(dependencies: string[], changed: () => void): vscode.Disposable {
-    const directories = new Set(dependencies.map(uri => vscode.Uri.parse(uri))
-        .filter(uri => uri.scheme === 'file').map(uri => path.dirname(uri.fsPath)));
+    const files = dependencies.map(uri => vscode.Uri.parse(uri)).filter(uri => uri.scheme === 'file');
+    const directories = new Set(files.map(uri => path.dirname(uri.fsPath)));
+    // Watchers also report other providers' documents (e.g. git: quick-diff originals); only real file changes matter.
+    const onEvent = (uri: vscode.Uri) => {
+        if (uri.scheme === 'file' && files.some(file => sameFile(file, uri))) changed();
+    };
     const watchers = [...directories].map(directory => {
         const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(directory, '*'));
-        watcher.onDidChange(changed);
-        watcher.onDidCreate(changed);
-        watcher.onDidDelete(changed);
+        watcher.onDidChange(onEvent);
+        watcher.onDidCreate(onEvent);
+        watcher.onDidDelete(onEvent);
         return watcher;
     });
     return vscode.Disposable.from(...watchers);
