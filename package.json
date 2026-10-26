@@ -1637,7 +1637,7 @@
     "@vscode/codicons": "^0.0.46-24",
     "http-proxy-agent": "^9.1.0",
     "https-proxy-agent": "^9.1.0",
-    "vscode-languageclient": "^10.1.2"
+    "vscode-languageclient": "^11.0.0"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
