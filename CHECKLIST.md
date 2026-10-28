@@ -6,7 +6,7 @@ Follow the [development guide](DEV.md) for local development and the [PR-to-Mark
 - [ ] Install locked dependencies with `npm ci`.
 - [ ] Install locked server dependencies with `npm ci --prefix server`.
 - [ ] Ensure the target Java runtime is available for the `java` server mode.
-- [ ] Confirm whether the bundled LSP JAR is present in `server/biz.aQute.bnd.lsp.jar`.
+- [ ] Confirm the bundled LSP JARs match their lock file with `npm run server:verify`.
 
 ## Compile checks
 - [ ] Run `npm run compile`.
@@ -23,7 +23,7 @@ Follow the [development guide](DEV.md) for local development and the [PR-to-Mark
 - [ ] Set `BND_CLI_JAR` to a bnd CLI 7.4.0 JAR for real CLI invocation coverage, matching CI.
 - [ ] Confirm the extension host launches successfully.
 - [ ] Confirm the complete suite passes and report any failures or unexpected skips.
-- [ ] For Java LSP changes, run `./gradlew :biz.aQute.bnd.lsp:test :biz.aQute.bnd.lsp:jar` in the upstream checkout and update the bundled JAR before `npm test`.
+- [ ] For Java LSP changes, run `./gradlew :biz.aQute.bnd.lsp:test :biz.aQute.bnd.lsp:jar` in the upstream checkout and run `npm run server:update` to copy the JARs and rewrite `server/bundled-jars.json` before `npm test`.
 
 ## Manual editor verification
 - [ ] Open a `.bnd` or `.bndrun` file in VS Code.
@@ -80,11 +80,11 @@ Follow the [development guide](DEV.md) for local development and the [PR-to-Mark
 
 ## Main validation and Marketplace release
 - [ ] Merge the reviewed PR using an allowed merge method, update local main, and identify the exact merged commit.
-- [ ] Wait for successful main push CI for that commit and repeat the remote VSIX smoke tests.
-- [ ] Confirm a clean worktree, changelog, matching package/lock versions, and a version not already published to Marketplace.
+- [ ] Wait for successful main push CI for that commit and repeat the remote VSIX smoke tests; confirm the `Publish pre-release` job published `major.(minor+1).<run>` (or reported a missing `VSCE_PAT`).
+- [ ] Confirm a clean worktree, a `## <version>` changelog section, matching package/lock versions, and a version not already published to Marketplace.
 - [ ] Confirm repository Actions secret `VSCE_PAT` is configured for publisher `klibio`; never expose its value.
-- [ ] Create `v<package-version>` on the validated main commit and push only that tag; do not move published tags.
-- [ ] Wait for Release and inspect the Marketplace publish step explicitly. Release skips publishing without the secret and does not run tests or validate tag/version equality.
+- [ ] Create annotated tag `v<package-version>` on the validated main commit, run `npm run release:check -- v<package-version>`, and push only that tag; do not move published tags.
+- [ ] Wait for Release (validate, CI, publish jobs) and inspect the Marketplace publish step explicitly. Release skips publishing without the secret.
 - [ ] Verify the GitHub Release VSIX and expected version on Marketplace (`klibio.bnd`).
 - [ ] Install from Marketplace in a fresh isolated profile, confirm the installed version, and repeat relevant smoke tests.
 - [ ] Record tag, commit, CI/Release run URLs, installed version, and verification results. If publishing failed, check whether the version already exists before retrying.

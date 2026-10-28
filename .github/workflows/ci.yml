@@ -4,6 +4,18 @@ on:
   push:
     branches: ["main", "master"]
   pull_request:
+  # Reused by release.yml so a release ships the artifact of a full, tested build.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build; defaults to the ref of the calling event"
+        required: false
+        type: string
+        default: ""
+    outputs:
+      vsix-name:
+        description: "Name of the uploaded VSIX artifact"
+        value: ${{ jobs.build.outputs.vsix_name }}
 
 jobs:
   build:
@@ -11,8 +23,12 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+    outputs:
+      vsix_name: ${{ steps.vsix_name.outputs.name }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -25,6 +41,9 @@ jobs:
 
       - name: Install server dependencies
         run: npm ci --prefix server
+
+      - name: Verify bundled language server JARs
+        run: npm run server:verify
 
       - name: Compile (client + server)
         run: npm run compile:all
@@ -77,3 +96,64 @@ jobs:
           name: ${{ steps.vsix_name.outputs.name }}
           path: "*.vsix"
           retention-days: 30
+
+  # Every tested push to the default branch becomes a Marketplace pre-release
+  # versioned major.(minor+1).<run number>, so it always sorts above the release it is based on.
+  prerelease:
+    name: Publish pre-release
+    needs: build
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    concurrency:
+      group: prerelease-marketplace
+      cancel-in-progress: false
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Compute pre-release version
+        id: version
+        run: echo "version=$(node scripts/release.mjs prerelease-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp pre-release version
+        run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version
+
+      - name: Package pre-release
+        run: npm run package:prerelease
+
+      - name: Upload pre-release VSIX artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bnd-${{ steps.version.outputs.version }}-prerelease.vsix
+          path: bnd-${{ steps.version.outputs.version }}.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish pre-release to VS Code Marketplace
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "::notice::VSCE_PAT is not configured; pre-release $VERSION was packaged but not published."
+            exit 0
+          fi
+          if node scripts/release.mjs published "$VERSION"; then
+            echo "::notice::Pre-release $VERSION is already on the Marketplace; nothing to publish."
+            exit 0
+          fi
+          npx @vscode/vsce publish --pre-release --packagePath "bnd-$VERSION.vsix"
