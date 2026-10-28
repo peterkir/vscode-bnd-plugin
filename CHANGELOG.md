@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.26.0
+
+### Added
+- Marketplace pre-release channel: every successful CI build of the default branch is published as a pre-release versioned `major.(minor+1).<run number>` (for example `0.27.123` while `package.json` says `0.26.0`), so VS Code users who opt into pre-releases follow `main`. Install with **Switch to Pre-Release Version** on the extension page.
+- Tag-driven release gates (`npm run release:check -- vX.Y.Z`): strict `vX.Y.Z` annotated tag on the default branch, tag equal to the `package.json`/`package-lock.json` version, a `## X.Y.Z` section in this changelog, a version above the previous release tag and the latest Marketplace release, and no version reuse on the Marketplace.
+- `server/bundled-jars.json` records the provenance of the bundled language server JARs (source repository, branch, build commit, `Bundle-Version`, SHA-256). `npm run server:update` refreshes the JARs from a bnd checkout, `npm run server:verify` (run by CI and the test suite) rejects JARs that do not match the lock file, and the GitHub Release notes list the provenance.
+
+### Changed
+- The Release workflow now runs the complete CI build and test suite for the tagged commit and publishes that identical VSIX to the GitHub Release and the Marketplace; it fails instead of silently skipping when a release gate is not met.
+- Update the bundled `biz.aQute.bnd.lsp.jar` and `org.bndtools.jdtls.adapter.jar` to the language server rebased on bnd `7.5.0.RC1` (`fea-bnd-ls`, build `7.5.0.202610271339`); see `server/bundled-jars.json` for the exact provenance.
+
 ## 0.25.0
 
 ### Added

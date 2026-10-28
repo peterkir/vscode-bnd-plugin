@@ -112,6 +112,10 @@ Guardrails:
   - `npm install --prefix server`
 - Build all TypeScript targets:
   - `npm run compile:all`
+- Verify the bundled language server JARs against `server/bundled-jars.json` (also part of CI and `npm test`):
+  - `npm run server:verify`
+- After rebuilding the Java language server, copy the JARs and rewrite the lock file:
+  - `npm run server:update`
 - Build extension tests:
   - `npm run compile:tests`
 - Run VS Code extension tests:
@@ -119,6 +123,8 @@ Guardrails:
 - For code changes, run `npm run compile:all`, `npm run compile:tests`, and the complete `npm test` suite with `BND_SOURCE_REPO` (or `BND_JAVA_REPO`) set to an existing bnd source repository. Do not rely on a skipped upstream test or a partial test run.
 - Package VSIX:
   - `npm run package`
+- Release gates for an annotated tag (run by the Release workflow; usable locally before pushing a tag):
+  - `npm run release:check -- vX.Y.Z`
 
 ### Upstream Java Repo-Based Tests
 
