@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.26.1
+
+### Changed
+- Finalize the 0.26.1 release build for the VS Code extension and validate the packaged extension assets before publishing.
+
 ## 0.26.0
 
 ### Added
