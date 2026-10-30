@@ -15,7 +15,7 @@ Select the **bnd** icon in the Activity Bar to open the **Repositories** view. I
 ## Browsing
 
 - The **Workspace** repository lists projects and the bundles they build.
-- Repository plugins list bundles, then versions (newest first). P2 repositories also list features with their included features, included bundles, and requirements.
+- Repository plugins list bundles, then versions (newest first). P2 and OSGi indexed repositories also list Eclipse features with their included features, included bundles, and requirements. Feature hierarchy comes from index metadata; no feature JAR download is needed. Member tooltips include the original requirement filter and optional status.
 - Hover a repository to see its location and status. Repositories reporting a problem show a warning icon.
 
 ## View Actions
@@ -29,6 +29,8 @@ Select the **bnd** icon in the Activity Bar to open the **Repositories** view. I
 | Work Offline / Work Online | Switches the bnd workspace offline mode. |
 
 ![Advanced Search result for a package in a version range](../docs/images/repositories-search.png)
+
+To find Eclipse features, use namespace `osgi.identity` and filter `(type=org.eclipse.update.feature)`. Matching features remain expandable in the search results.
 
 ## Item Actions
 

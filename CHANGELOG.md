@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.2
+
+### Fixed
+- Show Eclipse features and their included bundles, included features, and requirements in OSGi indexed repositories as well as P2 repositories. The bundled Java server reads feature metadata directly from the index without downloading feature JARs, and hides feature-only bundle placeholders without hiding real bundles with the same identity.
+- Advanced Search keeps Eclipse feature results expandable instead of treating them as bundle JARs. Feature member tooltips preserve the original requirement filter and optional status.
+
+### Changed
+- Rebuild the bundled Java language server and JDT-LS adapter from `fea-bnd-ls` commit `007598d18` as `7.6.0.202610301056`; source provenance and checksums are recorded in `server/bundled-jars.json`.
+
 ## 0.27.1
 
 ### Changed
