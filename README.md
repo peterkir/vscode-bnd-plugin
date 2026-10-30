@@ -230,6 +230,8 @@ This means:
 
 `bnd: Resolve Runbundles (LSP)` resolves the active or selected `.bndrun` file through a Java language server and reports resolution errors. For Node mode, use `bnd-cli: Resolve (.bndrun)` instead.
 
+The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources rebased onto upstream master. See [server/bundled-jars.json](server/bundled-jars.json) for the exact source commit, bundle versions, and checksums.
+
 `bnd: Build Project (LSP)`, `bnd: Clean Project (LSP)` and `bnd: Baseline Project (LSP)` act on the project of the active or selected bnd file without the bnd CLI. Clean on a workspace file (for example `cnf/build.bnd`) cleans every project. Baseline compares each bundle of the project with its `-baseline` repository and prints the per-package report to the **bnd Language Server** output channel.
 
 **Architecture:**
