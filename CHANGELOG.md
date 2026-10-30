@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.1
+
+### Changed
+- Rebase the bundled Java language server and JDT-LS adapter onto bnd remote master `3b32420170`, including the upstream P2 feature-visibility changes.
+- Rebuild both bundled JARs from `fea-bnd-ls` commit `84bda2cf9` as `7.6.0.202610301013`; the LSP and JDT-LS bundle versions now follow the workspace `base.version`. Exact provenance and checksums are recorded in `server/bundled-jars.json`.
+
 ## 0.27.0
 
 ### Added
