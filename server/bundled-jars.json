@@ -4,20 +4,20 @@
   "updated": "2026-10-30",
   "jars": {
     "biz.aQute.bnd.lsp.jar": {
-      "sha256": "24cb400e4d7a6875bab687f6368f2cf72d3320c89d33f47fcfb2e40c24ed8100",
-      "size": 13083127,
+      "sha256": "436b6c84b9ec482ab072360f41ddaa3d9d3bd38550fe05f7df9c974a6caec526",
+      "size": 13086532,
       "Bundle-SymbolicName": "biz.aQute.bnd.lsp",
-      "Bundle-Version": "7.6.0.202610301013",
-      "Git-SHA": "84bda2cf9e14e6cd5b451f022e87dcfbb6b54c35",
-      "Git-Descriptor": "7.6.0.DEV-32-g84bda2cf9"
+      "Bundle-Version": "7.6.0.202610301056",
+      "Git-SHA": "007598d18ae9c696e2a68b918b96324aaaa90fa2",
+      "Git-Descriptor": "7.6.0.DEV-33-g007598d18"
     },
     "jdtls/org.bndtools.jdtls.adapter.jar": {
-      "sha256": "2d7bafc9ad4ca523682a4cbd75b6434d559c7fcc7b997767cb86890942169787",
-      "size": 4583407,
+      "sha256": "1f4eca0ccd4f5c9082e96b7de0c5db0737438c9129fab1729be5966df16a6b25",
+      "size": 4583405,
       "Bundle-SymbolicName": "org.bndtools.jdtls.adapter;singleton:=true",
-      "Bundle-Version": "7.6.0.202610301013",
-      "Git-SHA": "84bda2cf9e14e6cd5b451f022e87dcfbb6b54c35",
-      "Git-Descriptor": "7.6.0.DEV-32-g84bda2cf9"
+      "Bundle-Version": "7.6.0.202610301056",
+      "Git-SHA": "007598d18ae9c696e2a68b918b96324aaaa90fa2",
+      "Git-Descriptor": "7.6.0.DEV-33-g007598d18"
     }
   }
 }

@@ -50,7 +50,14 @@ export interface RepoInfo {
 interface BundleInfo { bsn: string; title?: string | null; tooltip?: string | null; project?: string }
 interface VersionInfo { version: string; title?: string | null; tooltip?: string | null }
 interface FeatureInfo { id: string; version: string; label?: string | null; provider?: string | null }
-interface FeatureItem { id: string; version?: string | null; type?: string; match?: string | null }
+interface FeatureItem {
+    id: string;
+    version?: string | null;
+    type?: string;
+    match?: string | null;
+    filter?: string | null;
+    optional?: boolean;
+}
 interface SearchResult { repo: number; repoName: string; bsn?: string | null; version?: string | null; type?: string | null }
 
 export interface RepositoryEntry { bsn: string; version?: string; workspace?: boolean }
@@ -278,10 +285,12 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
             }
             case 'repo': {
                 if (node.results) {
-                    return node.results.filter(result => result.bsn).map(result => ({
-                        type: 'version', ws: node.ws, repo: node.repo, bsn: result.bsn!, resource: true,
-                        info: { version: result.version ?? '0.0.0' },
-                    }));
+                    return node.results.filter(result => result.bsn).map(result =>
+                        result.type === 'org.eclipse.update.feature'
+                            ? { type: 'feature', ws: node.ws, repo: node.repo,
+                                feature: { id: result.bsn!, version: result.version ?? '0.0.0' } }
+                            : { type: 'version', ws: node.ws, repo: node.repo, bsn: result.bsn!, resource: true,
+                                info: { version: result.version ?? '0.0.0' } });
                 }
                 const listing = await this.execute('bnd.repositories.bundles', this.repoRequest(node, { filter: this.filterText }));
                 const bundles = array<BundleInfo>(listing.bundles);
@@ -397,6 +406,8 @@ export class RepositoriesProvider implements vscode.TreeDataProvider<RepoNode> {
                 const item = new vscode.TreeItem(node.item.id, vscode.TreeItemCollapsibleState.None);
                 item.iconPath = new vscode.ThemeIcon(node.item.type === 'feature' ? 'extensions' : 'package');
                 item.description = [node.item.version, node.item.match].filter(Boolean).join(' ');
+                item.tooltip = [node.item.id, node.item.version, node.item.optional ? 'Optional' : undefined,
+                    node.item.filter].filter(Boolean).join('\n');
                 item.contextValue = node.item.type === 'feature' ? 'featureItem' : 'featureItem bundle';
                 return item;
             }
