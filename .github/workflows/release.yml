@@ -88,7 +88,7 @@ jobs:
           ref: refs/tags/${{ inputs.tag || github.ref_name }}
 
       - name: Download VSIX built by CI
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.vsix-name }}
 
