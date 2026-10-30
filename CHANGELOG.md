@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.27.0
+
+### Added
+- `bnd: Clean Project (LSP)` cleans the project of the active or selected bnd file, or every project when run on a workspace file, through the bundled Java language server (`bnd.build.clean`).
+- `bnd: Baseline Project (LSP)` baselines every bundle of a project against its `-baseline` repository (`bnd.baseline`) and writes the per-bundle and per-package report to the **bnd Language Server** output channel.
+
+### Changed
+- Bundled Java language server updated to `fea-bnd-ls` `131d8cb2ec` (7.5.0.202610300711): `bnd.build.clean` and `bnd.baseline` are implemented instead of returning `null`, and `bnd.resolve` accepts an optional `writeChanges` argument (default `true`) and reports `changed` and `written`.
+- New `docs/FEATURE-MATRIX.md` compares bnd CLI, Bndtools, this extension, the language server, the MCP server, and the Gradle and Maven plugins.
+
 ## 0.26.1
 
 ### Changed

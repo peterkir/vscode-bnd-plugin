@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.26.1",
+  "version": "0.27.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -439,6 +439,16 @@
       {
         "command": "bnd.lsp.buildProject",
         "title": "Build Project (LSP)",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.lsp.cleanProject",
+        "title": "Clean Project (LSP)",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.lsp.baseline",
+        "title": "Baseline Project (LSP)",
         "category": "bnd"
       },
       {
@@ -1403,6 +1413,12 @@
         },
         {
           "command": "bnd.lsp.buildProject"
+        },
+        {
+          "command": "bnd.lsp.cleanProject"
+        },
+        {
+          "command": "bnd.lsp.baseline"
         },
         {
           "command": "bnd.lsp.expandMacro"
