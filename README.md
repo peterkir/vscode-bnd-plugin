@@ -369,7 +369,7 @@ npm run package          # build the VSIX using the installed vsce dependency
 # Produces bnd-<version>.vsix
 ```
 
-See [DEV.md](DEV.md) for local development and testing, and the [PR-to-Marketplace workflow](DEV.md#6-publishing) for signed-off commits, PR CI artifact testing, merge-to-main validation, tagging, and publishing `klibio.bnd`. Use [CHECKLIST.md](CHECKLIST.md) for release signoff. Merging to main runs CI; Marketplace publication happens through the separate tag-triggered Release workflow when `VSCE_PAT` is configured.
+See [DEV.md](DEV.md) for local development and testing, and the [PR-to-Marketplace workflow](DEV.md#6-publishing) for signed-off commits, PR CI artifact testing, merge-to-main validation, tagging, and publishing `klibio.bnd`. Use [CHECKLIST.md](CHECKLIST.md) for release signoff. Every successful CI build of main publishes a Marketplace pre-release (`major.(minor+1).<build>`); pushing an annotated `vX.Y.Z` tag on main runs the validated Release workflow, which tests, packages, and publishes that exact build when `VSCE_PAT` is configured. The bundled language server JARs are tracked by `server/bundled-jars.json` (see [Bundled language server JARs](DEV.md#bundled-language-server-jars)).
 
 ### Upstream Java Repo Parity Tests
 

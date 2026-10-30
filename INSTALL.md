@@ -2,12 +2,18 @@
 
 ## Quick Install (from pre-built VSIX)
 
-Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Successful Release runs for `v*.*.*` tags on main history attach a VSIX, and GitHub shows its SHA-256 digest. Marketplace publication additionally requires the `VSCE_PAT` Actions secret.
+Download `bnd-<version>.vsix` from the assets of the matching [GitHub Release](https://github.com/peterkir/vscode-bnd-plugin/releases). Successful Release runs for `vX.Y.Z` tags on main history attach the VSIX produced by the validated CI build together with its SHA-256; the release notes list the provenance of the bundled language server JARs. Marketplace publication additionally requires the `VSCE_PAT` Actions secret.
 
 For the published Marketplace version, install extension **`klibio.bnd`**:
 
 ```bash
 code --install-extension klibio.bnd --force
+```
+
+Every successful CI build of `main` is also published as a Marketplace **pre-release** (version `major.(minor+1).<build>`, for example `0.27.123`). To follow it, use **Switch to Pre-Release Version** on the extension page or:
+
+```bash
+code --install-extension klibio.bnd --pre-release --force
 ```
 
 ### Option A: Via VS Code UI
@@ -71,7 +77,7 @@ Install it using either option above.
 
 Publisher is **`klibio`**, extension ID **`klibio.bnd`**. Follow the [development-to-Marketplace workflow](DEV.md#6-publishing): local tests, signed-off commit and PR, successful PR CI plus isolated remote VSIX testing, merge to main, successful main CI plus artifact testing, then push the matching release tag.
 
-Merging to main does not publish. The Release workflow packages the tagged commit, attaches the VSIX to a GitHub Release, and publishes to Marketplace only when Actions secret `VSCE_PAT` is configured. Release does not run the test suite or enforce tag/package version equality, so complete the documented gates before tagging. Verify the publish step and installed Marketplace version; a successful GitHub Release alone is not proof of Marketplace publication.
+Merging to main publishes a Marketplace pre-release, not a release. Pushing an annotated `vX.Y.Z` tag on main starts the Release workflow: it validates the tag (`npm run release:check -- vX.Y.Z`: strict version format, tag equal to the package version, changelog section, version above the previous release tag and the latest Marketplace release, bundled JARs matching `server/bundled-jars.json`), runs the complete CI build and test suite for that commit, attaches that VSIX to a GitHub Release, and publishes the same file to Marketplace only when Actions secret `VSCE_PAT` is configured. Verify the publish step and installed Marketplace version; a successful GitHub Release alone is not proof of Marketplace publication.
 
 For testing an unreleased PR artifact, use [remote PR build testing](DEV.md#step-2-test-the-remote-pr-build). For recovery or manual publication of a verified VSIX, use [release retries and manual publishing](DEV.md#step-5-retry-or-publish-manually). Never put access tokens in shell command arguments or committed files.
 

@@ -1,13 +1,16 @@
 name: Release
 
+# Pushing an annotated tag vX.Y.Z on the default branch releases that version:
+# validate the tag, run the complete CI build (tests included), then publish the
+# identical VSIX to a GitHub Release and to the VS Code Marketplace.
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag on the default branch to build (e.g. v0.11.0)"
+        description: "Existing release tag on the default branch to build (e.g. v0.26.0)"
         required: true
         type: string
       publish:
@@ -16,28 +19,34 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  release:
-    name: Release to GitHub and VS Code Marketplace
+  validate:
+    name: Validate release tag
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
     env:
-      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
+          fetch-tags: true
 
       # Tag triggers cannot filter by branch; only release tags on the default branch.
       - name: Require tag on default branch
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
           git fetch --no-tags origin "$DEFAULT_BRANCH"
           if ! git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"; then
-            echo "::error::Tag ${{ inputs.tag || github.ref_name }} is not on $DEFAULT_BRANCH; push the release commit to $DEFAULT_BRANCH first."
+            echo "::error::Tag $TAG is not on $DEFAULT_BRANCH; push the release commit to $DEFAULT_BRANCH first."
             exit 1
           fi
 
@@ -50,26 +59,72 @@ jobs:
       - name: Install client dependencies
         run: npm ci
 
-      - name: Install server dependencies
-        run: npm ci --prefix server
+      # Strict vX.Y.Z, annotated tag, tag == package versions, CHANGELOG section,
+      # above the previous release tag and the latest Marketplace release, bundled JARs match their lock file.
+      - name: Check release gates
+        run: node scripts/release.mjs check "$TAG"
 
-      - name: Compile (client + server)
-        run: npm run compile:all
+  build:
+    name: CI
+    needs: validate
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: refs/tags/${{ inputs.tag || github.ref_name }}
 
-      - name: Package extension
-        run: npm run package
+  publish:
+    name: Publish to GitHub and VS Code Marketplace
+    needs: [validate, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+
+      - name: Download VSIX built by CI
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build.outputs.vsix-name }}
+
+      - name: Verify VSIX matches tag
+        run: |
+          vsix="bnd-${TAG#v}.vsix"
+          if [ ! -f "$vsix" ]; then
+            echo "::error::Expected $vsix from the CI build; found: $(ls *.vsix 2>/dev/null || echo none)"
+            exit 1
+          fi
+          sha256sum "$vsix" | tee vsix.sha256
+
+      - name: Write bundled language server provenance
+        run: node scripts/bundledJars.mjs notes > release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
-          name: bnd ${{ inputs.tag || github.ref_name }}
-          files: "*.vsix"
-          fail_on_unmatched_files: true
+          tag_name: ${{ env.TAG }}
+          name: bnd ${{ env.TAG }}
+          body_path: release-notes.md
           generate_release_notes: true
+          files: |
+            bnd-*.vsix
+            vsix.sha256
+          fail_on_unmatched_files: true
+
+      - name: Set up Node.js
+        if: ${{ env.VSCE_PAT != '' && (github.event_name == 'push' || inputs.publish) }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
 
       - name: Publish to VS Code Marketplace
         if: ${{ env.VSCE_PAT != '' && (github.event_name == 'push' || inputs.publish) }}
-        run: npx @vscode/vsce publish --packagePath *.vsix
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          npm ci
+          npx @vscode/vsce publish --packagePath "bnd-${TAG#v}.vsix"

@@ -130,6 +130,7 @@ To test modifications in `biz.aQute.bnd.lsp`:
    ```
    In Git Bash, get the absolute Windows path to paste into that setting with `cygpath -w "$BND_LSP_WORKSPACE/biz.aQute.bnd.lsp/generated/biz.aQute.bnd.lsp.jar"`. VS Code settings do not expand arbitrary shell environment variables. Alternatively, run **bnd: Select Language Server JAR...** → **Local file...**, which writes the User setting. `bnd.server.jar` takes precedence over `bnd.server.jarSource`.
 3. Restart the language server with **bnd: Restart Language Server**, or close and relaunch the development host. The extension launches a copy of the `bnd.server.jar` file from its global storage, so the build can overwrite the generated JAR while the server runs.
+4. To ship the change, run `npm run server:update` to copy the JARs into `server/` and rewrite `server/bundled-jars.json`, then run `npm test` (see [Bundled language server JARs](#bundled-language-server-jars)).
 
 ---
 
@@ -220,7 +221,7 @@ npm test
 
 `npm test` automatically runs `npm run pretest` (`compile:all` + `compile:tests`), then launches VS Code Extension Test Host.
 
-The automated test host is separate from the sample workspace launch above. It opens the extension test suite, not `example.bnd.rcp`. Tests that start the Java LSP use the bundled `server/biz.aQute.bnd.lsp.jar`; rebuild/update that JAR before testing Java LSP changes. `npm test` uses a locally discoverable VS Code executable when available, otherwise the VS Code test runner may download one.
+The automated test host is separate from the sample workspace launch above. It opens the extension test suite, not `example.bnd.rcp`. Tests that start the Java LSP use the bundled `server/biz.aQute.bnd.lsp.jar`; update that JAR with `npm run server:update` before testing Java LSP changes, because the suite fails when the JARs do not match `server/bundled-jars.json`. `npm test` uses a locally discoverable VS Code executable when available, otherwise the VS Code test runner may download one.
 
 #### Upstream CLI Parity Tests
 
@@ -353,7 +354,7 @@ Ensure no test fixtures, uncompiled sources, or extraneous artifacts are bundled
 
 ## 6. Publishing
 
-Normal path: local development and tests, signed-off commit, PR, green PR CI and remote VSIX smoke test, merge to `main`, green main CI and remote VSIX smoke test, release tag, Marketplace verification. Use [CHECKLIST.md](CHECKLIST.md) for signoff.
+Normal path: local development and tests, signed-off commit, PR, green PR CI and remote VSIX smoke test, merge to `main` (publishes a Marketplace pre-release), green main CI and remote VSIX smoke test, release tag, Marketplace verification. Use [CHECKLIST.md](CHECKLIST.md) for signoff.
 
 ### Step 1: Validate, Commit, and Open a PR
 
@@ -374,11 +375,11 @@ git push -u origin HEAD
 gh pr create --base main --fill
 ```
 
-Include test results, any blocked/skipped checks, Java JAR provenance when changed, and manual checks in the PR. Do not commit VSIX files, downloaded CLI JARs, credentials, or generated TypeScript output. Bundled Java server/adapter JAR updates are intentional source-controlled exceptions when those components change.
+Include test results, any blocked/skipped checks, Java JAR provenance when changed, and manual checks in the PR. Do not commit VSIX files, downloaded CLI JARs, credentials, or generated TypeScript output. Bundled Java server/adapter JAR updates are intentional source-controlled exceptions when those components change; refresh them with `npm run server:update` (see [Bundled language server JARs](#bundled-language-server-jars)).
 
 ### Step 2: Test the Remote PR Build
 
-`.github/workflows/ci.yml` runs for PRs and pushes to `main`/`master`; pushing a feature branch alone does not trigger it until a PR exists. On Ubuntu 24.04 it installs locked dependencies with Node 20, compiles TypeScript, sets up Java 17, checks out bnd source from `fea-bnd-ls`, verifies a downloaded bnd CLI 7.4.0 JAR against its SHA-1, runs `xvfb-run -a npm test`, then packages and uploads `bnd-<version>.vsix` with 30-day retention. It does not rebuild the bundled Java JARs or run the separate JDT LS integration check.
+`.github/workflows/ci.yml` runs for PRs and pushes to `main`/`master`; pushing a feature branch alone does not trigger it until a PR exists. On Ubuntu 24.04 it installs locked dependencies with Node 20, verifies the bundled JARs against `server/bundled-jars.json`, compiles TypeScript, sets up Java 17, checks out bnd source from `fea-bnd-ls`, verifies a downloaded bnd CLI 7.4.0 JAR against its SHA-1, runs `xvfb-run -a npm test`, then packages and uploads `bnd-<version>.vsix` with 30-day retention. It does not rebuild the bundled Java JARs or run the separate JDT LS integration check.
 
 ```bash
 gh pr checks --watch
@@ -412,18 +413,24 @@ gh run view "$MAIN_RUN_ID" --json headSha,event,conclusion,url
 bash scripts/try-ci-vsix.sh "$MAIN_RUN_ID" ../../klibio/example.bnd.rcp
 ```
 
-Repeat the relevant packaged smoke tests on this main artifact. Merge/squash produces a different commit from the PR head; a green PR run does not replace this gate. Pushing or merging to `main` runs CI but does **not** publish to Marketplace. If main validation fails, fix through a new PR and do not tag the failing commit.
+Repeat the relevant packaged smoke tests on this main artifact. Merge/squash produces a different commit from the PR head; a green PR run does not replace this gate. Pushing or merging to `main` runs CI and, when it succeeds, publishes a Marketplace **pre-release** (see [Pre-release channel](#pre-release-channel)); it does **not** publish a release. If main validation fails, fix through a new PR and do not tag the failing commit.
+
+### Pre-release channel
+
+The `prerelease` job of `ci.yml` runs after a successful `build` job for every push to the default branch. It stamps the version `major.(minor+1).<run number>` derived from `package.json` (`0.26.0` on `main` yields pre-releases `0.27.<n>`), packages with `vsce package --pre-release`, uploads `bnd-<version>-prerelease.vsix` as a workflow artifact, and publishes it with `vsce publish --pre-release` when `VSCE_PAT` is configured. Without the secret the job prints a notice and succeeds; a re-run of a job whose version is already on the Marketplace skips publishing. The Marketplace accepts only numeric `major.minor.patch` versions and VS Code updates users to the highest version, so the pre-release always sorts above the release it is based on; the next minor release (`0.27.0`) stays below existing `0.27.<n>` pre-releases, which keeps pre-release users on the pre-release channel. Pre-release builds are not tagged and get no GitHub Release. The run number is per workflow file; renaming `ci.yml` resets it.
+
+Users opt in with **Switch to Pre-Release Version** on the extension page or `code --install-extension klibio.bnd --pre-release`.
 
 ### Step 4: Tag the Validated Commit and Publish
 
-Confirm a clean worktree, the expected main commit, matching versions in both package files, and correct changelog. The version must be new on Marketplace. If another change lands on main, either repeat validation for it or tag the previously validated main commit explicitly.
+Confirm a clean worktree, the expected main commit, matching versions in both package files, and a changelog section for the version. If another change lands on main, either repeat validation for it or tag the previously validated main commit explicitly. Create an **annotated** tag `v<package-version>` and run the release gates locally before pushing it:
 
 ```bash
 git status --short
 git log -1 --oneline
 VERSION="$(node -p "require('./package.json').version")"
-node -e "const p=require('./package.json'),l=require('./package-lock.json'); if(p.version!==l.version || p.version!==l.packages[''].version) process.exit(1)"
 git tag -a "v$VERSION" -m "Release v$VERSION" HEAD
+npm run release:check -- "v$VERSION"
 git push origin "v$VERSION"
 gh run list --workflow release.yml --limit 5
 # Select the Release run for this tag and commit.
@@ -434,9 +441,13 @@ gh release view "v$VERSION"
 
 Stop if any check fails. Push only the intended tag, not `--tags`. Do not move an already published tag.
 
-`.github/workflows/release.yml` triggers on `v*.*.*` tags. It requires the tagged commit to be an ancestor of the repository's default branch (currently `main`), installs dependencies, compiles, packages a fresh VSIX, creates/updates a GitHub Release with generated notes and the VSIX asset, then publishes that package to publisher **`klibio`** (extension **`klibio.bnd`**) if Actions secret `VSCE_PAT` is nonempty. Configure that secret through GitHub repository settings, never in source files.
+`.github/workflows/release.yml` triggers on every `v*` tag and runs three jobs:
 
-Important limits: Release does **not** run `npm test`, require successful CI, or check that tag text matches `package.json`. These are manual gates above. Its branch check accepts any ancestor of default-branch history, not only the current tip. A green Release run can mean **GitHub-only release**: if `VSCE_PAT` is absent, Marketplace publishing is skipped. Inspect the publish step and Marketplace version before calling the release complete. Release rebuilds the VSIX; it does not promote the byte-identical CI artifact.
+1. **Validate release tag** — requires the tagged commit to be an ancestor of the repository's default branch (currently `main`), then runs `node scripts/release.mjs check <tag>`: strict `vX.Y.Z` (no pre-release suffix), an annotated tag object, `package.json` and `package-lock.json` at `X.Y.Z`, a `## X.Y.Z` section in `CHANGELOG.md`, `X.Y.Z` above every other `v*` tag, the bundled JARs matching `server/bundled-jars.json`, and on the Marketplace: above the latest published release and not equal to any published version (pre-releases included, because the Marketplace never accepts a reused version number).
+2. **CI** — the reusable `ci.yml` builds, tests, and packages the tagged commit exactly like a main build.
+3. **Publish** — downloads the VSIX artifact of that CI run, checks that it is `bnd-X.Y.Z.vsix`, creates/updates the GitHub Release with the generated notes prefixed by the bundled language server provenance (`node scripts/bundledJars.mjs notes`), attaches the VSIX and its SHA-256, then publishes the same file to publisher **`klibio`** (extension **`klibio.bnd`**) if Actions secret `VSCE_PAT` is nonempty. Configure that secret through GitHub repository settings, never in source files.
+
+Remaining limits: the branch check accepts any ancestor of default-branch history, not only the current tip. A green Release run can still mean **GitHub-only release**: if `VSCE_PAT` is absent, Marketplace publishing is skipped. Inspect the publish step and Marketplace version before calling the release complete.
 
 ### Step 5: Retry or Publish Manually
 
@@ -448,9 +459,23 @@ gh workflow run release.yml --ref main -f tag="v$VERSION" -f publish=false
 gh workflow run release.yml --ref main -f tag="v$VERSION" -f publish=true
 ```
 
-A rerun rebuilds the package and replaces the GitHub asset; it does not guarantee identical bytes. If GitHub release creation succeeds but Marketplace publishing fails, inspect that step's error and verify whether the version exists in Marketplace before retrying. An already published version cannot be overwritten; ship a new version through the normal PR process instead.
+A rerun repeats validation, the full CI build, and the GitHub Release step, replacing the GitHub asset; it does not guarantee identical bytes. If GitHub release creation succeeds but Marketplace publishing fails, inspect that step's error and verify whether the version exists in Marketplace before retrying. An already published version cannot be overwritten; ship a new version through the normal PR process instead.
 
-Manual fallback: upload the verified release VSIX through the [Marketplace Management Portal](https://marketplace.visualstudio.com/manage) under publisher `klibio`. Alternatively, with `VSCE_PAT` securely supplied in the environment, run `npx @vscode/vsce publish --packagePath "bnd-$VERSION.vsix"`. This publishes the selected package rather than rebuilding the working tree. `npm run publish` rebuilds/publishes the current checkout; it is not the normal release path. The separate `package:prerelease`/`publish:prerelease` scripts target the Marketplace pre-release channel; current Release automation does not use that channel. Open VSX publication is separate and is not automated here.
+Manual fallback: upload the verified release VSIX through the [Marketplace Management Portal](https://marketplace.visualstudio.com/manage) under publisher `klibio`. Alternatively, with `VSCE_PAT` securely supplied in the environment, run `npx @vscode/vsce publish --packagePath "bnd-$VERSION.vsix"`. This publishes the selected package rather than rebuilding the working tree. `npm run publish` rebuilds/publishes the current checkout; it is not the normal release path. `package:prerelease`/`publish:prerelease` target the Marketplace pre-release channel, which the `prerelease` job of `ci.yml` automates for the default branch. Open VSX publication is separate and is not automated here.
+
+### Bundled language server JARs
+
+`server/biz.aQute.bnd.lsp.jar` and `server/jdtls/org.bndtools.jdtls.adapter.jar` are committed binaries built from the bnd source checkout (`fea-bnd-ls`); they are not published to a Maven repository. `server/bundled-jars.json` records for each JAR the source repository and branch, the `Bundle-Version`, `Git-SHA`, and `Git-Descriptor` from its manifest, and its SHA-256 and size.
+
+```bash
+# After ./gradlew :biz.aQute.bnd.lsp:jar :org.bndtools.jdtls.adapter:jar in the bnd checkout:
+npm run server:update            # copy both JARs from ../../bndtools/bnd.wt/fea-bnd-ls and rewrite the lock
+npm run server:update -- --workspace /path/to/bnd   # other checkout (or set BND_LSP_WORKSPACE)
+npm run server:lock              # rewrite the lock for the JARs already in server/
+npm run server:verify            # what CI, the Release gates, and npm test run
+```
+
+`server:verify` fails when a JAR's SHA-256 or manifest headers differ from the lock, so a JAR cannot change silently. Commit the JARs and the lock together and mention the provenance in the PR; the GitHub Release notes list it automatically. The lock file is excluded from the VSIX.
 
 ---
 

@@ -40,5 +40,6 @@ docs/**
 # CI / repo metadata
 .github/
 scripts/
+server/bundled-jars.json
 AGENTS.md
 copilot-instructions.md
