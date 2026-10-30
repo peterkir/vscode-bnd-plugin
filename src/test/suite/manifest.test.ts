@@ -151,6 +151,8 @@ suite('Extension manifest', () => {
             'bnd.cli.repo',
             'bnd.lsp.resolve',
             'bnd.lsp.buildProject',
+            'bnd.lsp.cleanProject',
+            'bnd.lsp.baseline',
             'bnd.lsp.expandMacro',
             'bnd.launch.run',
             'bnd.launch.debug',
@@ -176,6 +178,8 @@ suite('Extension manifest', () => {
         const serverCommands = [
             'bnd.resolve',
             'bnd.build.project',
+            'bnd.build.clean',
+            'bnd.baseline',
             'bnd.macro.expand',
             'bnd.properties.effective',
             'bnd.resolution.analyze',

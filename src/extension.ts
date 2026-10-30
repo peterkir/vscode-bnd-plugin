@@ -213,6 +213,104 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('bnd.lsp.cleanProject', async (uri?: vscode.Uri) => {
+            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!targetUri) {
+                vscode.window.showWarningMessage('Please open a bnd file in a project or workspace.');
+                return;
+            }
+            if (!client) {
+                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                return;
+            }
+            try {
+                if (!(await supportsServerCommand('bnd.build.clean'))) {
+                    vscode.window.showWarningMessage('The selected bnd Language Server does not support clean.');
+                    return;
+                }
+                const res: any = await client.sendRequest('workspace/executeCommand', {
+                    command: 'bnd.build.clean',
+                    arguments: [targetUri.toString()],
+                });
+                if (res && typeof res === 'object' && 'error' in res) {
+                    throw new Error(String(res.error));
+                }
+                const cleaned: string[] = Array.isArray(res?.cleanedProjects) ? res.cleanedProjects : [];
+                const errors: string[] = Array.isArray(res?.errors) ? res.errors : [];
+                if (errors.length) {
+                    vscode.window.showWarningMessage(`bnd clean finished with errors: ${errors.join('; ')}`);
+                } else {
+                    vscode.window.showInformationMessage(`bnd cleaned ${cleaned.length} project(s): ${cleaned.join(', ')}`);
+                }
+            } catch (err: any) {
+                vscode.window.showErrorMessage(`Clean failed: ${err?.message ?? err}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('bnd.lsp.baseline', async (uri?: vscode.Uri) => {
+            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!targetUri) {
+                vscode.window.showWarningMessage('Please open a bnd file in a project.');
+                return;
+            }
+            if (!client) {
+                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                return;
+            }
+            try {
+                if (!(await supportsServerCommand('bnd.baseline'))) {
+                    vscode.window.showWarningMessage('The selected bnd Language Server does not support baselining.');
+                    return;
+                }
+                const res: any = await client.sendRequest('workspace/executeCommand', {
+                    command: 'bnd.baseline',
+                    arguments: [targetUri.toString()],
+                });
+                if (res && typeof res === 'object' && 'error' in res) {
+                    throw new Error(String(res.error));
+                }
+                const bundles: any[] = Array.isArray(res?.bundles) ? res.bundles : [];
+                const errors: string[] = Array.isArray(res?.errors) ? res.errors : [];
+                outputChannel.appendLine(`bnd baseline ${targetUri.fsPath}`);
+                for (const bundle of bundles) {
+                    if (bundle.baselined === false) {
+                        outputChannel.appendLine(`  ${bundle.bsn}: not baselined (${bundle.reason ?? 'no baseline jar'})`);
+                        continue;
+                    }
+                    const marker = bundle.mismatch ? '*' : ' ';
+                    const suggest = bundle.mismatch && bundle.suggestedVersion ? ` suggests ${bundle.suggestedVersion}` : '';
+                    outputChannel.appendLine(`${marker} ${bundle.bsn} ${bundle.newerVersion}-${bundle.olderVersion}${suggest}`);
+                    for (const pkg of Array.isArray(bundle.packages) ? bundle.packages : []) {
+                        if (pkg.delta === 'UNCHANGED' && !pkg.mismatch) {
+                            continue;
+                        }
+                        outputChannel.appendLine(`${pkg.mismatch ? '*' : ' '}   ${pkg.name} ${pkg.delta} ${pkg.newerVersion} ${pkg.olderVersion ?? '-'} suggest ${pkg.suggestedVersion ?? 'ok'}`);
+                    }
+                }
+                for (const error of errors) {
+                    outputChannel.appendLine(`  error: ${error}`);
+                }
+                const mismatched = bundles.filter(b => b.mismatch).map(b => `${b.bsn} -> ${b.suggestedVersion ?? '?'}`);
+                if (errors.length) {
+                    outputChannel.show(true);
+                    vscode.window.showErrorMessage(`bnd baseline reported errors: ${errors.join('; ')}`);
+                } else if (mismatched.length) {
+                    outputChannel.show(true);
+                    vscode.window.showWarningMessage(`bnd baseline mismatch: ${mismatched.join(', ')}`);
+                } else if (bundles.every(b => b.baselined === false)) {
+                    vscode.window.showWarningMessage(`bnd baseline: ${bundles.map(b => b.reason).filter(Boolean).join('; ') || 'no baseline JAR available'}`);
+                } else {
+                    vscode.window.showInformationMessage(`bnd baseline OK for ${bundles.map(b => b.bsn).join(', ')}`);
+                }
+            } catch (err: any) {
+                vscode.window.showErrorMessage(`Baseline failed: ${err?.message ?? err}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('bnd.lsp.expandMacro', async () => {
             const editor = vscode.window.activeTextEditor;
             const expr = await vscode.window.showInputBox({
