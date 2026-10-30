@@ -5,9 +5,9 @@ Comparison of bnd capabilities across the bnd CLI, Bndtools (Eclipse), this VS C
 Sources reviewed:
 
 - bnd master `7603bcd58` (2026-10-28, `base.version` 7.6.0): `biz.aQute.bnd/src/aQute/bnd/main/*`, `bndtools.*`, `org.bndtools.*`, `gradle-plugins/`, `maven-plugins/`
-- bnd Language Server `biz.aQute.bnd.lsp` + `org.bndtools.jdtls.adapter`: branch `fea-bnd-ls` `d70e4f75e` (2026-10-20) plus uncommitted clean/baseline/resolve dry-run changes (2026-10-30)
+- bnd Language Server `biz.aQute.bnd.lsp` + `org.bndtools.jdtls.adapter`: branch `fea-bnd-ls` `84bda2cf9` (2026-10-30), rebased onto remote master `3b32420170`; includes clean/baseline/resolve dry-run commands
 - bnd MCP server `biz.aQute.bnd.mcp`: branch `fea-mcp` `cc78a7b9c` (2026-10-16) plus uncommitted readiness-mode change (2026-10-30)
-- VS Code extension `0.26.1` with bundled language server 7.5.0.RC1
+- VS Code extension `0.27.1` with bundled language server `7.6.0.202610301013`
 
 Column meaning:
 
