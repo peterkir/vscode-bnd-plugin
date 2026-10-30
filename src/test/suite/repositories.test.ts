@@ -76,7 +76,12 @@ suite('Repositories view', () => {
                     case 'bnd.repositories.versions':
                         return { versions: [{ version: '2.0.0' }, { version: '1.0.0' }] };
                     case 'bnd.repositories.search':
-                        return { results: [{ repo: 1, repoName: 'Local', bsn: 'a', version: '1.0.0' }] };
+                        return { results: [{ repo: 1, repoName: 'Local', bsn: 'a', version: '1.0.0' },
+                            { repo: 1, repoName: 'Local', bsn: 'f', version: '1.0.0', type: 'org.eclipse.update.feature' }] };
+                    case 'bnd.repositories.feature':
+                        return { includes: [{ id: 'nested', version: '2.0.0', optional: true }],
+                            plugins: [{ id: 'plugin', version: '1.0.0' }],
+                            requires: [{ id: 'required', type: 'feature', filter: '(osgi.identity=required)' }] };
                     default:
                         return { error: `unexpected ${command}` };
                 }
@@ -113,6 +118,15 @@ suite('Repositories view', () => {
             assert.strictEqual(searched.length, 1);
             const hits = await provider.getChildren(searched[0]);
             assert.strictEqual(provider.getTreeItem(hits[0]).label, 'a');
+            assert.strictEqual(hits[1].type, 'feature');
+            assert.strictEqual(provider.getTreeItem(hits[1]).command, undefined);
+            const groups = await provider.getChildren(hits[1]);
+            assert.deepStrictEqual(groups.map(group => provider.getTreeItem(group).label),
+                ['Included Features', 'Included Bundles', 'Required']);
+            const [included] = await provider.getChildren(groups[0]);
+            assert.match(String(provider.getTreeItem(included).tooltip), /Optional/);
+            const [required] = await provider.getChildren(groups[2]);
+            assert.match(String(provider.getTreeItem(required).tooltip), /\(osgi.identity=required\)/);
             assert.ok(calls.includes('bnd.repositories.search'));
 
             const failing = new RepositoriesProvider({ supports: async () => true, execute: async () => ({ error: 'boom' }) },
@@ -195,7 +209,29 @@ suite('Repositories view', () => {
         const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-repositories-'));
         fs.mkdirSync(path.join(temporary, 'cnf', 'local'), { recursive: true });
         fs.writeFileSync(path.join(temporary, 'cnf', 'build.bnd'),
-            '-plugin.local: aQute.lib.deployer.FileRepo;name=Local;location=${build}/local\n');
+                        '-plugin.local: aQute.lib.deployer.FileRepo;name=Local;location=${build}/local\n' +
+                        '-plugin.indexed: aQute.bnd.repository.osgi.OSGiRepository;name=Indexed;locations="' +
+                        vscode.Uri.file(path.join(temporary, 'cnf', 'features.xml')).toString() + '"\n');
+                fs.writeFileSync(path.join(temporary, 'cnf', 'features.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<repository xmlns="http://www.osgi.org/xmlns/repository/v1.0.0" name="Features">
+    <resource>
+        <capability namespace="osgi.identity">
+            <attribute name="osgi.identity" value="test.feature"/>
+            <attribute name="version" type="Version" value="1.2.3"/>
+            <attribute name="type" value="org.eclipse.update.feature"/>
+            <attribute name="label" value="Indexed Feature"/>
+        </capability>
+        <requirement namespace="osgi.identity">
+            <attribute name="bnd.relation" value="plugin"/>
+            <directive name="filter" value="(osgi.identity=test.bundle)"/>
+        </requirement>
+        <requirement namespace="osgi.identity">
+            <attribute name="bnd.relation" value="include"/>
+            <directive name="filter" value="(&amp;(osgi.identity=test.included)(type=org.eclipse.update.feature))"/>
+            <directive name="resolution" value="optional"/>
+        </requirement>
+    </resource>
+</repository>`);
         fs.mkdirSync(path.join(temporary, 'p'));
         fs.writeFileSync(path.join(temporary, 'p', 'bnd.bnd'), 'Bundle-Version: 1.0.0\n');
         const executable: Executable = { command: 'java', args: ['-jar', jar], options: { env: process.env } };
@@ -225,6 +261,28 @@ suite('Repositories view', () => {
             'Launcher bundle must be extracted into the versioned workspace cache');
             const local = repos.find(node => node.type === 'repo' && node.repo.name === 'Local');
             assert.ok(local && local.type === 'repo', 'Expected Local repository');
+            const indexed = repos.find(node => node.type === 'repo' && node.repo.name === 'Indexed');
+            assert.ok(indexed && indexed.type === 'repo', 'Expected OSGi indexed repository');
+            assert.strictEqual(indexed.repo.p2, false);
+            const indexedEntries = await provider.getChildren(indexed);
+            const feature = indexedEntries.find(node => node.type === 'feature' && node.feature.id === 'test.feature');
+            assert.ok(feature && feature.type === 'feature', `Expected indexed feature, got ${JSON.stringify(indexedEntries)}`);
+            assert.strictEqual(feature.feature.version, '1.2.3');
+            assert.ok(!indexedEntries.some(node => node.type === 'bundle' && node.bundle.bsn === 'test.feature'));
+            const featureGroups = await provider.getChildren(feature);
+            const plugins = featureGroups.find(group => group.type === 'featureGroup' && group.label === 'Included Bundles')!;
+            const [plugin] = await provider.getChildren(plugins);
+            assert.strictEqual(provider.getTreeItem(plugin).label, 'test.bundle');
+            const includes = featureGroups.find(group => group.type === 'featureGroup' && group.label === 'Included Features')!;
+            const [included] = await provider.getChildren(includes);
+            assert.strictEqual(provider.getTreeItem(included).label, 'test.included');
+            assert.match(String(provider.getTreeItem(included).tooltip), /Optional/);
+            provider.setSearch({ namespace: 'osgi.identity', filter: '(type=org.eclipse.update.feature)', label: 'Features' });
+            const searchRepos = await provider.getChildren(workspace);
+            const [featureHit] = await provider.getChildren(searchRepos.find(node => node.type === 'repo' && node.repo.name === 'Indexed')!);
+            assert.strictEqual(featureHit.type, 'feature');
+            assert.strictEqual((await provider.getChildren(featureHit)).length, 2);
+            provider.setSearch(undefined);
             assert.strictEqual(provider.getTreeItem(local).contextValue, 'repo writable refreshable actionable');
             const projectRepo = repos.find(node => node.type === 'repo' && node.repo.kind === 'workspace')!;
             const [project] = await provider.getChildren(projectRepo);

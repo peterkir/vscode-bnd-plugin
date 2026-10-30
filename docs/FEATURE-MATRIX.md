@@ -5,9 +5,9 @@ Comparison of bnd capabilities across the bnd CLI, Bndtools (Eclipse), this VS C
 Sources reviewed:
 
 - bnd master `7603bcd58` (2026-10-28, `base.version` 7.6.0): `biz.aQute.bnd/src/aQute/bnd/main/*`, `bndtools.*`, `org.bndtools.*`, `gradle-plugins/`, `maven-plugins/`
-- bnd Language Server `biz.aQute.bnd.lsp` + `org.bndtools.jdtls.adapter`: branch `fea-bnd-ls` `84bda2cf9` (2026-10-30), rebased onto remote master `3b32420170`; includes clean/baseline/resolve dry-run commands
+- bnd Language Server `biz.aQute.bnd.lsp` + `org.bndtools.jdtls.adapter`: branch `fea-bnd-ls` `007598d18` (2026-10-30), based on remote master `3b32420170`; includes indexed-Eclipse-feature browsing and clean/baseline/resolve dry-run commands
 - bnd MCP server `biz.aQute.bnd.mcp`: branch `fea-mcp` `cc78a7b9c` (2026-10-16) plus uncommitted readiness-mode change (2026-10-30)
-- VS Code extension `0.27.1` with bundled language server `7.6.0.202610301013`
+- VS Code extension `0.27.2`; bundled server version and source provenance are recorded in `server/bundled-jars.json`
 
 Column meaning:
 
@@ -59,7 +59,7 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 | Feature | CLI | Bndtools | VS Code | LSP | MCP | Gradle | Maven |
 |---|---|---|---|---|---|---|---|
 | List repositories / bundles / versions | ✓ `repo repos`, `repo list`, `repo versions` | ✓ Repositories view | ✓ Repositories view (filter, wildcards) | ✓ `bnd.repositories.list`, `.bundles`, `.versions`, `bnd.repo.list` | ◐ repository names only (`bnd_workspace_describe`) | ✗ | ✗ |
-| P2 feature detail | ✓ (P2Repository) | ✓ | ✓ features with included/required | ✓ `bnd.repositories.feature` | ✗ | ✗ | ✗ |
+| Eclipse feature detail (P2 / OSGi indexes) | ✓ (P2Repository) | ✓ | ✓ included/required hierarchy, expandable search results, requirement filter tooltips | ✓ `bnd.repositories.feature` reads indexed identities and requirements without feature JAR downloads | ✗ | ✗ | ✗ |
 | Capability / package / service search | ✓ `resolve find`, `select` | ✓ Repositories search | ✓ Advanced Search (package, service, LDAP) | ✓ `bnd.repositories.search` | ✗ | ✗ | ✗ |
 | Get / put / copy artifacts | ✓ `repo get`, `repo put`, `repo copy` | ✓ add, drag-drop, remove resource | ◐ Add Bundles, Download; no remove | ✓ `bnd.repositories.get`, `.fetch`, `.put` | ✗ | ✗ | ✗ |
 | Repository plugin actions (`Actionable`) | ✗ | ✓ context menu | ✓ Repository Actions | ✓ `bnd.repositories.actions`, `.runAction` | ✗ | ✗ | ✗ |
