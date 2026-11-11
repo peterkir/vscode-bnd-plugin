@@ -150,6 +150,8 @@ On Windows, a running development server may lock its generated JAR. Stop that d
 
 `contributes.javaExtensions` loads `server/jdtls/org.bndtools.jdtls.adapter.jar` into Red Hat Java's JDT LS. Its importer runs ahead of Gradle and creates source/test entries, separate outputs, compiler settings, JRE mapping and a bnd dependency container. Build support refreshes project models after `.bnd` or `.mvn` changes; a configuration project tracks `cnf`. Imported bnd metadata is managed by this adapter, not Buildship. Source/output directories outside the project are currently rejected.
 
+A project whose `.project` names the Bndtools nature belongs to Eclipse: the adapter leaves `.project`, `.classpath` and `.settings` alone, sets the classpath in memory only, and applies it again when `.classpath` changes. The adapter reports the bnd driver `vscode` (override with the system property `bnd.driver`), and a file added to or removed from `cnf` reloads the workspace instead of refreshing it.
+
 Build with Java 21 or later and the installed JDT LS core API JAR:
 
 ```bash
@@ -162,7 +164,7 @@ BND_LSP_WORKSPACE="${BND_LSP_WORKSPACE:-../../bndtools/bnd.wt/fea-bnd-ls}"
 cp "$BND_LSP_WORKSPACE/org.bndtools.jdtls.adapter/generated/org.bndtools.jdtls.adapter.jar" server/jdtls/
 ```
 
-`npm run test:jdtls` starts an isolated JDT LS and temporary bnd workspace, checking native import, a real dependency JAR, source/test outputs and live classpath refresh. Set `JDT_LS_HOME`, `JDT_LS_JAVA` (Java executable) and `JDT_LS_JAVA_HOME` (Java 21 JDK home). `BND_JDT_LS_JAR` optionally selects a freshly built adapter. This check does not modify the running user's Java workspace. For manual verification, clean the development host's Java language-server workspace and reimport, then inspect dependencies and source roots before checking breakpoints.
+`npm run test:jdtls` starts an isolated JDT LS and temporary bnd workspace, checking native import, a real dependency JAR, source/test outputs and live classpath refresh. It also imports a project with Eclipse Bndtools metadata and checks that `.project`, `.classpath` and `.settings` stay byte-identical, that the `vscode` driver routes compiler output to `bin.vscode` once `cnf/ext/vscode-outputs.bnd` exists, and that this survives a rewrite of `.classpath`. Set `JDT_LS_HOME`, `JDT_LS_JAVA` (Java executable that runs JDT LS; it must satisfy that JDT LS version, Java 25 for the JDT LS 1.63 of Red Hat Java 1.58) and `JDT_LS_JAVA_HOME` (Java 21 JDK home, used to compile the fixture and as the `JavaSE-21` runtime). `BND_JDT_LS_JAR` optionally selects a freshly built adapter. On a timeout the script names the stage it was in; a timeout during `initialize` usually means JDT LS did not resolve on the given Java. This check does not modify the running user's Java workspace. For manual verification, clean the development host's Java language-server workspace and reimport, then inspect dependencies and source roots before checking breakpoints.
 
 For a classpath refresh without clearing the workspace, run **Java: Reload Projects** (`java.projectConfiguration.update` in Red Hat Java 1.56). Check `java.configuration.updateBuildConfiguration` if saved configuration changes do not refresh automatically: `automatic` applies updates, `interactive` asks for approval, and `disabled` requires a manual reload. A clean Java workspace is still needed when replacing stale unmanaged project metadata after upgrading the adapter.
 
@@ -253,6 +255,9 @@ Launch the workspace configured by `BND_SAMPLE_WORKSPACE` using the command abov
    - Hover cards showing signatures, docs, and code examples.
 3. **Language Server Modes**:
    - Test `bnd.server.mode`: `node`, `java`, `socket`.
+   - Run command: `bnd: Enable/Disable Language Server`; check that the **bnd LS** status bar item follows the state, that no server process remains while disabled, and that enabling starts the configured mode again.
+   - Parallel use with Eclipse: start Eclipse with the sample workspace root as its workspace location (or write a `.metadata/.lock_info` with `process-id=<pid of a running process>` into the root); check that the **Eclipse** status bar item and the warning appear, and that the item disappears after the process exits or `bnd.eclipse.detect` is set to `false`.
+   - Run command: `bnd: Configure Parallel Use with Eclipse...`; check the confirmation, the generated `cnf/ext/vscode-outputs.bnd`, the follow-up hints in the **bnd Language Server** output channel, the refusal when `cnf/build.bnd` defines `bin`, `testbin`, or `target-dir`, and the removal on a second run. Run command: `bnd: Eclipse Parallel Use...` and check each entry.
    - Run command: `bnd: Restart Language Server`.
    - Run command: `bnd: Resolve Runbundles (LSP)`.
    - Run command: `bnd: Build Project (LSP)`.

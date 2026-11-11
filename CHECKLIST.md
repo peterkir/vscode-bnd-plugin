@@ -56,6 +56,12 @@ Follow the [development guide](DEV.md) for local development and the [PR-to-Mark
 - [ ] Set `bnd.server.mode` to `java` with a valid Java runtime.
 - [ ] Set `bnd.server.mode` to `node` and confirm the Node server starts.
 - [ ] Set `bnd.server.mode` to `socket` and connect to a running LSP socket.
+- [ ] Set `bnd.server.enabled` to `false`; confirm the **bnd LS** status bar item shows the disabled state, no server process runs, and `bnd: Restart Language Server` does not start one. Re-enable from the status bar menu.
+- [ ] Open a bnd workspace whose root is also the Eclipse workspace location while Eclipse runs; confirm the **Eclipse** status bar item appears with a warning background next to **bnd LS** and the warning notification is shown once. Close Eclipse and confirm the item disappears within 30 seconds although `.metadata/.lock_info` remains.
+- [ ] Run `bnd: Configure Parallel Use with Eclipse...`; confirm `cnf/ext/vscode-outputs.bnd` is created only after confirmation, the **Eclipse** item switches to the link icon without background, and the **bnd Language Server** output channel lists the `.gitignore` entries, project overrides, and launches with shared storage. Run it again and remove the file.
+- [ ] With Language Support for Java installed, confirm the same command sets `java.project.resourceFilters` to `[]` in the workspace settings and removes `org.bndtools.jdtls.BND_CONTAINER` from the `.classpath` of an Eclipse Bndtools project, and that the confirmation dialog names both.
+- [ ] With Eclipse and VS Code on the same workspace, compare `.project`, `.classpath`, and `.settings` of an Eclipse Bndtools project before and after the Java import, **Java: Reload Projects**, and a `bnd.bnd` edit; they must be unchanged. After configuring separate output, confirm class files appear in `bin.vscode` and `${driver}` evaluates to `vscode` with **bnd: Evaluate Macro (LSP)**.
+- [ ] Define `bin` in `cnf/build.bnd`; confirm the command reports the file and line and writes nothing. Set `bnd.eclipse.detect` to `false`; confirm the item hides and the command still works.
 - [ ] Remove or move the bundled JAR temporarily and confirm the extension reports a warning and falls back.
 - [ ] Confirm Node/older servers show unsupported states for Repositories, Effective, Resolution, and JAR Print while JAR Tree remains usable.
 - [ ] Confirm untrusted workspaces block repository commands, Effective evaluation, Resolution analysis, and launches.

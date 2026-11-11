@@ -211,6 +211,8 @@ The extension contributes a headless bnd adapter to Language Support for Java (`
 
 The adapter owns imported bnd Java project metadata; do not have Gradle/Buildship manage the same projects in the same Java language-server workspace. After upgrading, run **Java: Clean Java Language Server Workspace** and allow reimport to remove stale unmanaged source roots. Use valid names in `java.configuration.runtimes`, such as `JavaSE-21` and `JavaSE-25`, not folder names such as `JAVA21`. Source and output directories must currently be inside their project directory.
 
+A project that Eclipse Bndtools manages is the exception: when its `.project` names the Bndtools nature, the adapter does not change `.project`, `.classpath`, or `.settings`. It keeps the classpath of such a project in memory, applies it again when Eclipse rewrites `.classpath`, and resolves the Bndtools classpath container `aQute.bnd.classpath.container`. Compiler settings come from the Eclipse project. The Java language server itself still adds a resource filter to `.project` unless `java.project.resourceFilters` is empty; see [Parallel use with Eclipse Bndtools](#parallel-use-with-eclipse-bndtools).
+
 To request a classpath refresh without clearing the Java workspace, run **Java: Reload Projects** (`java.projectConfiguration.update` in Red Hat Java 1.56). Automatic updates also depend on `java.configuration.updateBuildConfiguration`; use `automatic` for unattended refreshes or approve updates when it is `interactive`.
 
 ### Language Server Protocol (LSP)
@@ -234,6 +236,14 @@ The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources reb
 
 `bnd: Build Project (LSP)`, `bnd: Clean Project (LSP)` and `bnd: Baseline Project (LSP)` act on the project of the active or selected bnd file without the bnd CLI. Clean on a workspace file (for example `cnf/build.bnd`) cleans every project. Baseline compares each bundle of the project with its `-baseline` repository and prints the per-package report to the **bnd Language Server** output channel.
 
+#### Status and disabling the language server
+
+The **bnd LS** item at the right of the status bar shows the server state: starting, running (with the actual mode `java`, `node`, or `socket`), stopped, failed, or disabled. Click it, or run **bnd: Language Server Status...**, to enable or disable the server, restart it, or open its output channel.
+
+Set `bnd.server.enabled` to `false`, or run **bnd: Enable/Disable Language Server**, to run the extension without a language server process. The command writes the setting to the workspace when a folder is open, otherwise to the User settings. While disabled, completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, the LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and the bnd CLI commands keep working.
+
+Disabling the bnd language server does not disable the [native Java project import](#native-java-project-import), which runs inside the Java language server. See [Sharing a workspace directory with Eclipse Bndtools](docs/shared-workspace-conflicts.md) for the current limits of using one directory from both IDEs.
+
 **Architecture:**
 
 ```
@@ -243,6 +253,54 @@ src/extension.ts  ←── IPC ───►  Java JAR / Node / Socket server
   (starts and restarts the server,      (completion, hover,
    registers LSP commands)              diagnostics and command handlers)
 ```
+
+#### Parallel use with Eclipse Bndtools
+
+When Eclipse Bndtools and VS Code have the same bnd workspace directory open, both write the same compiler output (`bin`, `bin_test`) and bundle output (`generated`). The extension detects this situation and can give VS Code its own output directories. Background and the remaining conflicts are described in [Sharing a workspace directory with Eclipse Bndtools](docs/shared-workspace-conflicts.md) (design "A. Twin").
+
+**Detection.** For each open workspace folder that is a bnd workspace root (it contains `cnf/build.bnd`), the extension reads `.metadata/.lock_info`. Eclipse writes this file when it opens a workspace and records its host name and process id in it. An Eclipse instance is reported when the recorded process is running and the recorded host is this machine. The extension activates when a workspace folder contains `cnf/build.bnd`, so the check runs without opening a bnd file first. It runs again when the file or the workspace folders change, and every 30 seconds. Limits:
+
+- The Eclipse workspace location must be the bnd workspace root, so that `.metadata` lies next to `cnf`. An Eclipse workspace in another directory that only imports the bnd projects is not detected.
+- The Eclipse version must write `.lock_info`. Older versions do not; nothing is detected then.
+- Eclipse does not delete `.lock_info` when it exits. If the operating system has given the recorded process id to another process, an Eclipse instance is reported although none is running.
+
+**Status bar.** While an Eclipse instance is detected, an **Eclipse** item appears next to **bnd LS**. It has a warning background while VS Code and Eclipse write the same build output, and shows a link icon without background once the separate output directories are configured. Click it, or run **bnd: Eclipse Parallel Use...**, to configure or remove the separate output, enable or disable the bnd language server, open the documentation, or open the output channel.
+
+**Notification.** The first time in a session that Eclipse is detected on a bnd workspace without separate output directories, a warning offers **Use Separate Output**, **Details**, and **Don't Show Again**. The last choice is stored per bnd workspace in the VS Code workspace state.
+
+**Separate output.** **bnd: Configure Parallel Use with Eclipse...** asks for the bnd workspace if several are open and, after confirmation, does the following. The command works whether or not an Eclipse instance is detected.
+
+1. It creates `cnf/ext/vscode-outputs.bnd` (below).
+2. With Language Support for Java installed, it sets `java.project.resourceFilters` to `[]` in the workspace settings, so that the Java language server stops adding a resource filter to the Eclipse `.project` files and removes the one it added.
+3. It removes the classpath container `org.bndtools.jdtls.BND_CONTAINER` from the `.classpath` of Eclipse Bndtools projects. Extension versions before 0.28.0 wrote that entry; Eclipse cannot resolve it.
+
+```properties
+# Generated by the bnd VS Code extension (bnd: Configure Parallel Use with Eclipse).
+# Gives VS Code its own compiler and bundle output next to the Eclipse output.
+# The bnd language server and the Java project import report the driver 'vscode';
+# Eclipse Bndtools, the bnd CLI and Gradle keep bin, bin_test and generated.
+vscode.outputs: ${if;${driver;vscode};.vscode}
+bin: bin${vscode.outputs}
+testbin: bin_test${vscode.outputs}
+target-dir: generated${vscode.outputs}
+```
+
+| Tool | `bin` | `testbin` | `target-dir` |
+|---|---|---|---|
+| VS Code (bnd language server, Java project import) | `bin.vscode` | `bin_test.vscode` | `generated.vscode` |
+| Eclipse Bndtools, bnd CLI, Gradle | `bin` | `bin_test` | `generated` |
+
+- Eclipse builds are unchanged: the macro is empty for every driver except `vscode`. Apart from step 3, the extension writes no Eclipse file.
+- The directories are routed by the bnd driver name. The extension passes the driver `vscode` to the bundled bnd language server, and the bundled Java project import reports it as well. A server from another source that ignores the driver keeps `bin`, `bin_test`, and `generated`. To see the driver, evaluate `${driver}` with **bnd: Evaluate Macro (LSP)** while a file of the workspace is open.
+- Add `bin.vscode/`, `bin_test.vscode/`, and `generated.vscode/` to `.gitignore`.
+- The language server and the Java project import pick up the new file without a restart. If Java output still goes to `bin`, run **Java: Clean Java Language Server Workspace** once.
+- Files in `cnf/ext` are read before `cnf/build.bnd`. When `bin`, `testbin`, or `target-dir` is already defined in `cnf/build.bnd` or in another `cnf/ext/*.bnd` file, the command reports the file and line and writes nothing.
+- A project that defines these keys in its `bnd.bnd` keeps its own directories in both IDEs. The command lists such projects in the **bnd Language Server** output channel.
+- Launch storage is separated only when the storage directory of a launch follows the target directory (for example `-runstorage: ${target-dir}/fw`) or uses `${driver}`. The command lists `.bndrun` files that set `-runstorage` or `launch.storage.dir` without `${driver}` or `${target-dir}`; these launches still share runtime storage between the IDEs.
+- Repository indexes and `cnf/cache` stay shared. The bundled bnd language server takes part in the cross-process locks proposed for bnd (index, project output, launch storage); Eclipse does so once its Bndtools version contains them. See the linked document.
+- Running the command on a workspace that already has the file offers to remove it. The `*.vscode` directories are not deleted and `java.project.resourceFilters` is not changed back.
+
+Set `bnd.eclipse.detect` to `false` to turn off the detection, the status bar item, and the notification. **bnd: Configure Parallel Use with Eclipse...** keeps working.
 
 ## Integrated bnd CLI Commands
 
@@ -296,6 +354,7 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 
 ```jsonc
 {
+  "bnd.server.enabled": true,
   "bnd.server.mode": "java",
   "bnd.server.jar": "",
   "bnd.server.javaExecutable": "",
@@ -304,6 +363,7 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 }
 ```
 
+- `bnd.server.enabled: false` starts no language server; see [Status and disabling the language server](#status-and-disabling-the-language-server).
 - `java` starts `biz.aQute.bnd.lsp.jar` with the configured Java runtime.
 - `node` starts the TypeScript language server directly.
 - `socket` connects to an already running LSP on `127.0.0.1:5007`.

@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.27.2",
+  "version": "0.28.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -32,7 +32,8 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onFileSystem:bnd-jar"
+    "onFileSystem:bnd-jar",
+    "workspaceContains:cnf/build.bnd"
   ],
   "contributes": {
     "javaExtensions": [
@@ -114,7 +115,7 @@
       },
       {
         "view": "bnd.repositories",
-        "contents": "Repositories require the Java bnd Language Server. Set bnd.server.mode to java and make Java 17 or later available.\n[Open Settings](command:workbench.action.openSettings?%22bnd.server.mode%22)\n[Restart Language Server](command:bnd.server.restart)",
+        "contents": "Repositories require the Java bnd Language Server. Enable bnd.server.enabled, set bnd.server.mode to java and make Java 17 or later available.\n[Open Settings](command:workbench.action.openSettings?%22bnd.server%22)\n[Restart Language Server](command:bnd.server.restart)",
         "when": "isWorkspaceTrusted && bnd.repositories.state == unsupported"
       },
       {
@@ -424,6 +425,26 @@
       {
         "command": "bnd.server.restart",
         "title": "Restart Language Server",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.server.toggle",
+        "title": "Enable/Disable Language Server",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.server.menu",
+        "title": "Language Server Status...",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.eclipse.configureTwin",
+        "title": "Configure Parallel Use with Eclipse...",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.eclipse.menu",
+        "title": "Eclipse Parallel Use...",
         "category": "bnd"
       },
       {
@@ -758,6 +779,16 @@
           ],
           "scope": "resource",
           "description": "File and folder names hidden at every level of the bnd Explorer. Exact names, not glob patterns. Independent of files.exclude and the built-in Explorer."
+        },
+        "bnd.server.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start the bnd Language Server. When disabled, no server process runs: completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and bnd CLI commands keep working. Does not affect the bnd project import that this extension contributes to the Java language server."
+        },
+        "bnd.eclipse.detect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect an Eclipse instance that has the bnd workspace open and show it in the status bar. Detection reads .metadata/.lock_info in the bnd workspace root and checks that the recorded process is running. bnd: Configure Parallel Use with Eclipse... works independently of this setting."
         },
         "bnd.server.mode": {
           "type": "string",
@@ -1404,6 +1435,18 @@
         },
         {
           "command": "bnd.server.restart"
+        },
+        {
+          "command": "bnd.server.toggle"
+        },
+        {
+          "command": "bnd.server.menu"
+        },
+        {
+          "command": "bnd.eclipse.configureTwin"
+        },
+        {
+          "command": "bnd.eclipse.menu"
         },
         {
           "command": "bnd.server.selectJar"
