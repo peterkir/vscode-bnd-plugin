@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.28.0
+
+### Added
+- `bnd.server.enabled` setting and **bnd: Enable/Disable Language Server** command to run the extension without a language server process. Syntax highlighting, the bnd Explorer, the JAR tree, and the bnd CLI commands keep working; server-backed features report that the server is disabled. The native Java project import in the Java language server is not affected.
+- **bnd LS** status bar item (right side) showing the server state (starting, running with the actual mode, stopped, failed, disabled). Clicking it, or **bnd: Language Server Status...**, offers enable/disable, restart, and the output channel.
+- Detection of an Eclipse instance that has the bnd workspace open, based on `.metadata/.lock_info` in the bnd workspace root and a check that the recorded process runs on this machine. An **Eclipse** status bar item next to **bnd LS** and a one-time warning per workspace report it; **bnd: Eclipse Parallel Use...** offers the related actions. `bnd.eclipse.detect` turns the detection off. The extension now activates when a workspace folder contains `cnf/build.bnd`, so the detection does not wait for a bnd file to be opened.
+- **bnd: Configure Parallel Use with Eclipse...** creates, after confirmation, `cnf/ext/vscode-outputs.bnd`, which routes `bin`, `testbin`, and `target-dir` to `bin.vscode`, `bin_test.vscode`, and `generated.vscode` for the bnd driver `vscode`. Eclipse Bndtools, the bnd CLI, and Gradle keep their directories. The command also sets `java.project.resourceFilters` to `[]` for the workspace and removes the classpath container of earlier extension versions from the `.classpath` of Eclipse Bndtools projects. It refuses when the workspace configuration already defines the output keys, reports project overrides and launches with shared storage, and removes the file again on request.
+- The extension passes the bnd driver name `vscode` to the language server, so workspaces can route tool-specific directories with `${driver}`.
+- Extension API `getParallelEclipse()` returning the detected Eclipse instances.
+- `docs/shared-workspace-conflicts.md`: how to use one workspace directory from Eclipse Bndtools and VS Code, what is separated or locked, and the remaining limits.
+
+### Changed
+- The native Java project import no longer changes `.project`, `.classpath`, or `.settings` of a project that Eclipse Bndtools manages. It keeps the classpath of such a project in memory, applies it again when Eclipse rewrites `.classpath`, and resolves the Bndtools classpath container. Before, it replaced natures and builders and wrote its own container into the file Eclipse reads.
+- Rebuild the bundled Java language server and JDT-LS adapter from `fea-bnd-ls` commit `b4d9ecfc9` as `7.6.0.202611111429`, rebased onto bnd master `bb687ef7e`. They contain the cross-process locks proposed in [bndtools/bnd#7533](https://github.com/bndtools/bnd/pull/7533): P2 index validation, project build and clean, and launch storage are coordinated with other bnd processes that have the locks, and two P2 repositories that share one index file are reported as an error. Source provenance and checksums are recorded in `server/bundled-jars.json`.
+- `npm run test:jdtls` additionally imports an Eclipse Bndtools project and checks that its metadata stays unchanged and that compiler output follows the `vscode` driver.
+
+### Fixed
+- Changing a `bnd.server.*` setting or restarting while the language server is still starting, or after a failed start, no longer leaves the previous client in place.
+- A file added to or removed from the workspace configuration, for example in `cnf/ext`, takes effect in the language server and the Java project import without a restart.
+- A launch whose framework could not be created no longer hangs in the launcher; it ends with an error.
+
 ## 0.27.2
 
 ### Fixed

@@ -35,6 +35,30 @@ async function main() {
     fs.mkdirSync(path.join(workspace, 'sample/test/sample'), { recursive: true });
     fs.writeFileSync(path.join(workspace, 'sample/test/sample/AppTest.java'), 'package sample; public class AppTest {}');
     fs.writeFileSync(source, 'package sample; import dependency.Greeting; public class App { Greeting greeting; public static void main(String[] args) {} }\n');
+    // A project managed by Eclipse Bndtools in the same directory: its metadata must stay untouched.
+    const shared = path.join(workspace, 'shared');
+    fs.mkdirSync(path.join(shared, 'src/shared'), { recursive: true });
+    fs.mkdirSync(path.join(shared, '.settings'));
+    fs.writeFileSync(path.join(shared, 'bnd.bnd'), 'Bundle-SymbolicName: shared\n-buildpath: ../api.jar;version=file\n');
+    fs.writeFileSync(path.join(shared, 'src/shared/Shared.java'), 'package shared; import dependency.Greeting; public class Shared { Greeting greeting; }\n');
+    const eclipseMetadata = new Map([
+        ['.project', '<?xml version="1.0" encoding="UTF-8"?>\n<projectDescription>\n\t<name>shared</name>\n\t<comment></comment>\n\t<projects>\n\t</projects>\n'
+            + '\t<buildSpec>\n\t\t<buildCommand>\n\t\t\t<name>org.eclipse.jdt.core.javabuilder</name>\n\t\t\t<arguments>\n\t\t\t</arguments>\n\t\t</buildCommand>\n'
+            + '\t\t<buildCommand>\n\t\t\t<name>bndtools.core.bndbuilder</name>\n\t\t\t<arguments>\n\t\t\t</arguments>\n\t\t</buildCommand>\n\t</buildSpec>\n'
+            + '\t<natures>\n\t\t<nature>org.eclipse.jdt.core.javanature</nature>\n\t\t<nature>bndtools.core.bndnature</nature>\n\t</natures>\n</projectDescription>\n'],
+        ['.classpath', '<?xml version="1.0" encoding="UTF-8"?>\n<classpath>\n\t<classpathentry kind="con" path="aQute.bnd.classpath.container"/>\n'
+            + '\t<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-21"/>\n'
+            + '\t<classpathentry kind="src" output="bin" path="src"/>\n\t<classpathentry kind="output" path="bin"/>\n</classpath>\n'],
+        ['.settings/org.eclipse.jdt.core.prefs', 'eclipse.preferences.version=1\norg.eclipse.jdt.core.compiler.codegen.targetPlatform=21\n'
+            + 'org.eclipse.jdt.core.compiler.compliance=21\norg.eclipse.jdt.core.compiler.source=21\n'],
+    ]);
+    for (const [name, text] of eclipseMetadata) fs.writeFileSync(path.join(shared, name), text);
+    const assertEclipseMetadataUntouched = when => {
+        for (const [name, text] of eclipseMetadata) {
+            assert.equal(fs.readFileSync(path.join(shared, name), 'utf8'), text, `${name} of the Eclipse project changed ${when}.`);
+        }
+        assert.deepEqual(fs.readdirSync(path.join(shared, '.settings')), ['org.eclipse.jdt.core.prefs'], `.settings changed ${when}.`);
+    };
     const platform = process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux';
     const configuration = path.join(temporary, 'configuration');
     fs.cpSync(path.join(server, `config_${platform}`), configuration, { recursive: true });
@@ -69,8 +93,9 @@ async function main() {
         if (sourcePublished) sourcePublished(params);
     });
     connection.listen();
+    let stage = 'initialize';
     const timeout = setTimeout(() => {
-        console.error('JDT LS integration test timed out.', stderr);
+        console.error(`JDT LS integration test timed out during: ${stage}.`, stderr);
         processHandle.kill();
         process.exitCode = 1;
     }, 180000);
@@ -85,10 +110,13 @@ async function main() {
                 settings: { java: {
                     import: { gradle: { enabled: false }, maven: { enabled: false } },
                     configuration: { runtimes: [{ name: 'JavaSE-21', path: javaHome }] },
+                    // As set by "bnd: Configure Parallel Use with Eclipse": no resource filter in .project files.
+                    project: { resourceFilters: [] },
                 } },
             },
         });
         connection.sendNotification('initialized', {});
+        stage = 'project settings and classpaths of the imported project';
         const projectUri = pathToFileURL(path.join(workspace, 'sample')).href;
         const settings = await connection.sendRequest('workspace/executeCommand', {
             command: 'java.project.getSettings',
@@ -108,6 +136,7 @@ async function main() {
         });
         assert.ok(testClasspath.classpaths.some(entry => entry.replaceAll('\\', '/').endsWith('/sample/bin_test')), JSON.stringify(testClasspath));
         assert.ok(testClasspath.classpaths.some(entry => path.resolve(entry) === path.resolve(testJar)), JSON.stringify(testClasspath));
+        stage = 'Java source diagnostics';
         const sourceUri = pathToFileURL(source).href;
         let diagnosticsTimer;
         const published = new Promise((resolve, reject) => {
@@ -133,6 +162,7 @@ async function main() {
         }
         const errors = sourceDiagnostics.filter(item => item.severity === 1);
         assert.deepEqual(errors, []);
+        stage = 'classpath refresh after bnd changes';
         const bndFile = path.join(workspace, 'sample/bnd.bnd');
         fs.writeFileSync(bndFile, 'Bundle-SymbolicName: sample\n');
         connection.sendNotification('workspace/didChangeWatchedFiles', {
@@ -162,9 +192,61 @@ async function main() {
             await new Promise(resolve => setTimeout(resolve, 100));
         } while (Date.now() < workspaceDeadline);
         assert.ok(refreshed.classpaths.some(entry => path.resolve(entry) === path.resolve(jar)), 'Workspace buildpath did not refresh.');
+        const classpathsOf = async (project, scope = 'runtime') => (await connection.sendRequest('workspace/executeCommand', {
+            command: 'java.project.getClasspaths', arguments: [pathToFileURL(project).href, JSON.stringify({ scope })],
+        })).classpaths.map(entry => entry.replaceAll('\\', '/'));
+        const eventually = async (what, probe, limit = 30000) => {
+            const end = Date.now() + limit;
+            let last;
+            do {
+                last = await probe();
+                if (last.ok) return last;
+                await new Promise(resolve => setTimeout(resolve, 200));
+            } while (Date.now() < end);
+            assert.fail(`${what}: ${JSON.stringify(last.detail)}`);
+        };
+        stage = 'import of the Eclipse project';
+        let sharedClasspaths = await classpathsOf(shared);
+        assert.ok(sharedClasspaths.some(entry => entry.endsWith('/shared/bin')), JSON.stringify(sharedClasspaths));
+        assert.ok(sharedClasspaths.some(entry => path.resolve(entry) === path.resolve(jar)), JSON.stringify(sharedClasspaths));
+        assertEclipseMetadataUntouched('by the import');
+        stage = 'separate output directories';
+        // What "bnd: Configure Parallel Use with Eclipse" writes; the adapter reports the driver 'vscode'.
+        const twin = path.join(workspace, 'cnf/ext/vscode-outputs.bnd');
+        fs.mkdirSync(path.dirname(twin));
+        fs.writeFileSync(twin, 'vscode.outputs: ${if;${driver;vscode};.vscode}\nbin: bin${vscode.outputs}\n'
+            + 'testbin: bin_test${vscode.outputs}\ntarget-dir: generated${vscode.outputs}\n');
+        connection.sendNotification('workspace/didChangeWatchedFiles', { changes: [{ uri: pathToFileURL(twin).href, type: 1 }] });
+        const separated = async () => {
+            const [sharedPaths, samplePaths, sampleTestPaths] = [await classpathsOf(shared), await classpathsOf(path.join(workspace, 'sample')),
+                await classpathsOf(path.join(workspace, 'sample'), 'test')];
+            return {
+                ok: sharedPaths.some(entry => entry.endsWith('/shared/bin.vscode')) && !sharedPaths.some(entry => entry.endsWith('/shared/bin'))
+                    && samplePaths.some(entry => entry.endsWith('/sample/bin.vscode'))
+                    && sampleTestPaths.some(entry => entry.endsWith('/sample/bin_test.vscode')),
+                detail: { sharedPaths, samplePaths, sampleTestPaths },
+            };
+        };
+        await eventually('Output directories did not follow the driver', separated);
+        const compiled = path.join(shared, 'bin.vscode/shared/Shared.class');
+        await eventually('The Eclipse project was not compiled into its VS Code output', async () => ({ ok: fs.existsSync(compiled), detail: compiled }), 60000);
+        assertEclipseMetadataUntouched('by separate output directories');
+        stage = 'Eclipse changing .classpath';
+        // Eclipse rewriting its .classpath discards the classpath JDT holds in memory; the adapter must apply it again.
+        const classpathFile = path.join(shared, '.classpath');
+        const rewritten = eclipseMetadata.get('.classpath').replace('</classpath>', '\t<classpathentry kind="src" output="bin" path="src-gen"/>\n</classpath>');
+        fs.mkdirSync(path.join(shared, 'src-gen'));
+        eclipseMetadata.set('.classpath', rewritten);
+        fs.writeFileSync(classpathFile, rewritten);
+        connection.sendNotification('workspace/didChangeWatchedFiles', { changes: [{ uri: pathToFileURL(classpathFile).href, type: 2 }] });
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        await eventually('Output directories were lost after Eclipse changed .classpath', separated);
+        assertEclipseMetadataUntouched('after Eclipse changed .classpath');
         console.log('PASS: native bnd import, compiler settings, dependency JAR, test output and Java source model.');
         console.log('PASS: bnd buildpath changes refresh the JDT classpath.');
         console.log('PASS: workspace cnf changes refresh project dependencies; test dependencies stay separate.');
+        console.log('PASS: an Eclipse Bndtools project is imported without changing .project, .classpath or .settings.');
+        console.log('PASS: the vscode driver routes compiler output to separate directories, also after Eclipse rewrites .classpath.');
         await connection.sendRequest('shutdown');
         connection.sendNotification('exit');
     } catch (error) {

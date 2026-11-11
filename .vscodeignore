@@ -36,6 +36,7 @@ CHECKLIST.md
 examples/
 docs/**
 !docs/images/**
+!docs/shared-workspace-conflicts.md
 
 # CI / repo metadata
 .github/

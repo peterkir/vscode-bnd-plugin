@@ -17,14 +17,19 @@ import { registerExplorerView } from './bndExplorer';
 import { registerLaunchSupport } from './bndLaunch';
 import { registerWorkspaceWizards } from './bndWizards';
 import { RepositoriesProvider, registerRepositoriesView } from './bndRepositories';
+import { EclipseInstance } from './eclipseCoexistence';
+import { registerEclipseCoexistence } from './eclipseCoexistenceUi';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
 import { JarViewerProvider, jarPrintCommand } from './jarViewer';
 import { registerResolutionView, ResolutionViewProvider } from './resolutionView';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
+import { presentServerStatus, ServerKind, ServerStatus } from './serverStatus';
 import { ProtocolResyncStream } from './serverStream';
 
 let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
+let serverStatus: ServerStatus = { state: 'stopped' };
+let serverStatusItem: vscode.StatusBarItem | undefined;
 let javaServerStop: (() => void) | undefined;
 let configRestartTimer: NodeJS.Timeout | undefined;
 export let outputChannel: vscode.LogOutputChannel;
@@ -44,15 +49,46 @@ export function resolveBndrunUri(uri: vscode.Uri): string {
     return uri.toString().replace(/^file:\/\/\/([a-z])%3A/i, 'file:///$1:');
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export interface BndExtensionApi {
+    getServerStatus(): ServerStatus;
+    getParallelEclipse(): EclipseInstance[];
+}
+
+function setServerStatus(status: ServerStatus): void {
+    serverStatus = status;
+    if (!serverStatusItem) return;
+    const view = presentServerStatus(status);
+    serverStatusItem.text = view.text;
+    serverStatusItem.tooltip = view.tooltip;
+    serverStatusItem.backgroundColor = view.error ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
+}
+
+function isServerEnabled(): boolean {
+    return vscode.workspace.getConfiguration('bnd').get<boolean>('server.enabled', true);
+}
+
+function serverUnavailableMessage(): string {
+    return serverStatus.state === 'disabled'
+        ? 'bnd Language Server is disabled. Enable it with the bnd.server.enabled setting.'
+        : 'bnd Language Server is not running.';
+}
+
+export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
+    serverStatusItem = vscode.window.createStatusBarItem('bnd.server.status', vscode.StatusBarAlignment.Right, 100);
+    serverStatusItem.name = 'bnd Language Server';
+    serverStatusItem.command = 'bnd.server.menu';
+    setServerStatus(serverStatus);
+    serverStatusItem.show();
+    context.subscriptions.push(serverStatusItem);
+    const eclipse = registerEclipseCoexistence(context, outputChannel);
     registerExplorerView(context);
     registerWorkspaceWizards(context, {
         supports: supportsServerCommand,
         execute: async (command, args, token) => {
             await clientReady;
-            if (!client) throw new Error('bnd Language Server is not running.');
+            if (!client) throw new Error(serverUnavailableMessage());
             return executeServerCommand(client, command, args, token);
         },
     });
@@ -89,7 +125,7 @@ export function activate(context: vscode.ExtensionContext): void {
         supports: supportsServerCommand,
         execute: async (command, args, token) => {
             await clientReady;
-            if (!client) throw new Error('bnd Language Server is not running.');
+            if (!client) throw new Error(serverUnavailableMessage());
             return executeServerCommand(client, command, args, token);
         },
     }, outputChannel);
@@ -97,7 +133,7 @@ export function activate(context: vscode.ExtensionContext): void {
         supports: supportsServerCommand,
         execute: async (command, args, token) => {
             await clientReady;
-            if (!client) throw new Error('bnd Language Server is not running.');
+            if (!client) throw new Error(serverUnavailableMessage());
             return executeServerCommand(client, command, args, token);
         },
     }, outputChannel, async entries => {
@@ -110,7 +146,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return repositoriesProvider.execute(command, args[0] as Record<string, unknown>, token);
             }
             await clientReady;
-            if (!client) throw new Error('bnd Language Server is not running.');
+            if (!client) throw new Error(serverUnavailableMessage());
             return executeServerCommand(client, command, args, token);
         },
     });
@@ -125,11 +161,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 clearTimeout(configRestartTimer);
                 configRestartTimer = setTimeout(async () => {
                     outputChannel.appendLine('Configuration changed for bnd language server. Restarting...');
-                    if (client) {
-                        await client.stop();
-                        client = undefined;
-                        clientReady = undefined;
-                    }
+                    await stopLanguageClient();
                     clientReady = startLanguageClient(context).catch(handleLanguageClientError);
                 }, 300);
             }
@@ -144,13 +176,32 @@ export function activate(context: vscode.ExtensionContext): void {
     // Command to restart language server
     context.subscriptions.push(
         vscode.commands.registerCommand('bnd.server.restart', async () => {
-            if (client) {
-                await client.stop();
-                client = undefined;
-                clientReady = undefined;
-            }
+            await stopLanguageClient();
             await startLanguageClient(context);
-            vscode.window.showInformationMessage('bnd Language Server restarted.');
+            vscode.window.showInformationMessage(isServerEnabled() ? 'bnd Language Server restarted.' : serverUnavailableMessage());
+        })
+    );
+
+    // The setting change restarts or stops the server through the configuration listener above.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('bnd.server.toggle', () => vscode.workspace.getConfiguration('bnd').update(
+            'server.enabled', !isServerEnabled(),
+            vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global)),
+        vscode.commands.registerCommand('bnd.server.menu', async () => {
+            const enabled = isServerEnabled();
+            const actions = [
+                {
+                    label: enabled ? '$(circle-slash) Disable Language Server' : '$(play) Enable Language Server',
+                    run: () => vscode.commands.executeCommand('bnd.server.toggle'),
+                },
+                ...(enabled ? [{
+                    label: '$(debug-restart) Restart Language Server',
+                    run: () => vscode.commands.executeCommand('bnd.server.restart'),
+                }] : []),
+                { label: '$(output) Show Output', run: () => outputChannel.show() },
+            ];
+            const choice = await vscode.window.showQuickPick(actions, { title: presentServerStatus(serverStatus).tooltip });
+            await choice?.run();
         })
     );
 
@@ -163,7 +214,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             if (!client) {
-                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                vscode.window.showErrorMessage(serverUnavailableMessage());
                 return;
             }
             try {
@@ -193,7 +244,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             if (!client) {
-                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                vscode.window.showErrorMessage(serverUnavailableMessage());
                 return;
             }
             try {
@@ -220,7 +271,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             if (!client) {
-                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                vscode.window.showErrorMessage(serverUnavailableMessage());
                 return;
             }
             try {
@@ -256,7 +307,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             if (!client) {
-                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                vscode.window.showErrorMessage(serverUnavailableMessage());
                 return;
             }
             try {
@@ -321,7 +372,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             if (!client) {
-                vscode.window.showErrorMessage('bnd Language Server is not running.');
+                vscode.window.showErrorMessage(serverUnavailableMessage());
                 return;
             }
             try {
@@ -344,6 +395,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Register bnd CLI commands
     registerCliCommands(context);
+    return { getServerStatus: () => serverStatus, getParallelEclipse: () => eclipse.getDetected() };
 }
 
 export function executeServerCommand(activeClient: LanguageClient, command: string, args: unknown[],
@@ -505,7 +557,17 @@ export function copyCustomServerJar(context: vscode.ExtensionContext, jarPath: s
 
 async function startLanguageClient(context: vscode.ExtensionContext): Promise<void> {
     const config = vscode.workspace.getConfiguration('bnd');
+    if (!config.get<boolean>('server.enabled', true)) {
+        outputChannel.appendLine('bnd Language Server is disabled by bnd.server.enabled.');
+        setServerStatus({ state: 'disabled' });
+        effectiveProvider?.refresh();
+        repositoriesProvider?.refresh();
+        resolutionProvider?.refresh();
+        return;
+    }
     const mode = config.get<string>('server.mode', 'java');
+    let kind: ServerKind = mode === 'java' || mode === 'socket' ? mode : 'node';
+    setServerStatus({ state: 'starting', kind });
 
     let serverOptions: ServerOptions;
     let launchedJar: ReturnType<typeof resolveServerJar> | undefined;
@@ -534,6 +596,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
             vscode.window.showWarningMessage(
                 `bnd Language Server JAR not found at ${jarPath}. Falling back to Node.js server.`
             );
+            kind = 'node';
             serverOptions = createNodeServerOptions(context);
         } else {
             // Verify Java runtime availability and version (Java 17+)
@@ -564,6 +627,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
                     }
                 });
 
+                kind = 'node';
                 serverOptions = createNodeServerOptions(context);
             } else {
                 outputChannel.appendLine(
@@ -585,7 +649,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
 
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'bnd' }],
-        initializationOptions: { workspaceTrusted: vscode.workspace.isTrusted },
+        initializationOptions: { workspaceTrusted: vscode.workspace.isTrusted, driver: 'vscode' },
         outputChannel,
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{bnd,bndrun,mvn,packageinfo}'),
@@ -598,15 +662,19 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         },
     };
 
-    client = new LanguageClient(
+    const started = new LanguageClient(
         'bndLanguageServer',
         'bnd Language Server',
         serverOptions,
         clientOptions
     );
+    client = started;
     client.onDidChangeState(event => {
         // Like the library's own child-process handling: give the server 2 s to honor `exit`.
         if (event.newState === State.Stopped && javaServerStop) setTimeout(javaServerStop, 2000);
+        if (client !== started) return;
+        if (event.newState === State.Stopped) setServerStatus({ state: 'stopped' });
+        else setServerStatus({ state: event.newState === State.Running ? 'running' : 'starting', kind });
     });
 
     clientReady = client.start();
@@ -626,6 +694,21 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
 async function supportsServerCommand(command: string): Promise<boolean> {
     await clientReady;
     return client?.initializeResult?.capabilities.executeCommandProvider?.commands.includes(command) ?? false;
+}
+
+// LanguageClient.stop() rejects while the client is starting and after a failed start.
+async function stopLanguageClient(): Promise<void> {
+    const active = client;
+    if (!active) return;
+    await clientReady?.then(undefined, () => undefined);
+    client = undefined;
+    clientReady = undefined;
+    try {
+        await active.stop();
+    } catch (err) {
+        outputChannel.appendLine(`bnd Language Server did not stop cleanly: ${err}`);
+        javaServerStop?.();
+    }
 }
 
 // bnd workspace plugins may print to System.out, which the Java server shares with the protocol.
@@ -651,6 +734,7 @@ function handleLanguageClientError(error: unknown): void {
     const message = error instanceof Error ? (error.stack || error.message) : String(error);
     outputChannel.appendLine(`Language Server startup failed:\n${message}`);
     outputChannel.show(true);
+    setServerStatus({ state: 'failed', message: error instanceof Error ? error.message : String(error) });
     vscode.window.showErrorMessage(`bnd Language Server failed to start: ${error instanceof Error ? error.message : error}`);
 }
 
