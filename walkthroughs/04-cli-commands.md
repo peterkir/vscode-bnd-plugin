@@ -25,7 +25,11 @@ The extension can start its language server in three modes:
 | `node` | Run the TypeScript language server directly |
 | `socket` | Connect to an existing TCP LSP server |
 
-The relevant settings are `bnd.server.mode`, `bnd.server.jar`, `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.javaExecutable`, `bnd.server.jvmArgs`, and `bnd.server.socketPort`.
+The relevant settings are `bnd.server.enabled`, `bnd.server.mode`, `bnd.server.jar`, `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.javaExecutable`, `bnd.server.jvmArgs`, and `bnd.server.socketPort`.
+
+The **bnd LS** status bar item shows whether the server is starting, running, stopped, failed, or disabled. Click it to enable, disable, or restart the server. With `bnd.server.enabled` set to `false`, no language server starts and the bnd CLI commands keep working.
+
+When Eclipse Bndtools has the same bnd workspace open, an **Eclipse** status bar item appears next to **bnd LS** (setting `bnd.eclipse.detect`). Click it, or run **bnd: Eclipse Parallel Use...**. **bnd: Configure Parallel Use with Eclipse...** creates `cnf/ext/vscode-outputs.bnd`, which gives VS Code its own output directories `bin.vscode`, `bin_test.vscode`, and `generated.vscode`.
 
 Run **bnd: Select Language Server JAR...** to switch between the bundled JAR, a release, a snapshot, a custom https URL, or a local file.
 
