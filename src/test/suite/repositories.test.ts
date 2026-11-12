@@ -9,6 +9,7 @@ import {
     RepositoriesProvider,
     RepositoriesServer,
     entryFor,
+    findBndWorkspaces,
     formatDropText,
     formatEntry,
     packageFilter,
@@ -25,6 +26,26 @@ const repo = {
 };
 
 suite('Repositories view', () => {
+    test('finds bnd workspaces only at workspace folder roots, like bndtools', async () => {
+        const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-workspaces-'));
+        try {
+            const root = path.join(temp, 'root');
+            const plain = path.join(temp, 'plain');
+            fs.mkdirSync(path.join(root, 'cnf'), { recursive: true });
+            fs.writeFileSync(path.join(root, 'cnf', 'build.bnd'), '');
+            fs.mkdirSync(path.join(root, 'examples', 'nested', 'cnf'), { recursive: true });
+            fs.writeFileSync(path.join(root, 'examples', 'nested', 'cnf', 'build.bnd'), '');
+            fs.mkdirSync(path.join(plain, 'sub', 'cnf'), { recursive: true });
+            fs.writeFileSync(path.join(plain, 'sub', 'cnf', 'build.bnd'), '');
+
+            const found = await findBndWorkspaces([vscode.Uri.file(root), vscode.Uri.file(plain)]);
+
+            assert.deepStrictEqual(found.map(uri => uri.fsPath), [vscode.Uri.file(root).fsPath]);
+        } finally {
+            fs.rmSync(temp, { recursive: true, force: true });
+        }
+    });
+
     test('builds requirement filters like the bndtools advanced search', () => {
         assert.strictEqual(packageFilter('org.example'), '(osgi.wiring.package=org.example)');
         assert.strictEqual(packageFilter('org.example', '[1.0,2.0)'),

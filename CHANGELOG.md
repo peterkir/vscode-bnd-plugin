@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.1
+
+### Fixed
+- The Repositories view, the bnd Explorer, and the Eclipse parallel-use detection identify a bnd workspace only when a VS Code workspace folder itself contains `cnf/build.bnd`, as Eclipse Bndtools does. Before, every `cnf/build.bnd` below a workspace folder (for example in an `examples` directory) was listed as a separate workspace.
+
 ## 0.28.0
 
 ### Added
