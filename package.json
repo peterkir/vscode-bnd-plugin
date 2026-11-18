@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -438,6 +438,26 @@
         "category": "bnd"
       },
       {
+        "command": "bnd.build.auto.toggle",
+        "title": "Toggle Automatic Build",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.build.auto.enable",
+        "title": "Enable Automatic Build",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.build.auto.disable",
+        "title": "Disable Automatic Build",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.build.auto.showOutput",
+        "title": "Show Build Output",
+        "category": "bnd"
+      },
+      {
         "command": "bnd.eclipse.configureTwin",
         "title": "Configure Parallel Use with Eclipse...",
         "category": "bnd"
@@ -784,6 +804,12 @@
           "type": "boolean",
           "default": true,
           "description": "Start the bnd Language Server. When disabled, no server process runs: completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and bnd CLI commands keep working. Does not affect the bnd project import that this extension contributes to the Java language server."
+        },
+        "bnd.build.auto": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Build bnd projects automatically and incrementally. The bnd Language Server builds the affected projects when a `.bnd` file is saved or a compiled class file changes, and reports the result in the **bnd** auto-build status bar item and the **bnd Build** output channel. Requires a trusted workspace: in an untrusted workspace the switch stays on but nothing is built. Requires a bnd Language Server with automatic build support; older servers ignore the setting."
         },
         "bnd.eclipse.detect": {
           "type": "boolean",
@@ -1441,6 +1467,21 @@
         },
         {
           "command": "bnd.server.menu"
+        },
+        {
+          "command": "bnd.build.auto.toggle",
+          "when": "bnd.build.autoSupported"
+        },
+        {
+          "command": "bnd.build.auto.enable",
+          "when": "bnd.build.autoSupported"
+        },
+        {
+          "command": "bnd.build.auto.disable",
+          "when": "bnd.build.autoSupported"
+        },
+        {
+          "command": "bnd.build.auto.showOutput"
         },
         {
           "command": "bnd.eclipse.configureTwin"

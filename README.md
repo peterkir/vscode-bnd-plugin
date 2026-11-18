@@ -244,6 +244,22 @@ Set `bnd.server.enabled` to `false`, or run **bnd: Enable/Disable Language Serve
 
 Disabling the bnd language server does not disable the [native Java project import](#native-java-project-import), which runs inside the Java language server. See [Sharing a workspace directory with Eclipse Bndtools](docs/shared-workspace-conflicts.md) for the current limits of using one directory from both IDEs.
 
+#### Automatic build
+
+With the Java language server, bnd projects build incrementally. The server builds the affected projects when a `.bnd` file is saved or when compiled classes change below `bin` (or `bin.vscode`); the Java language server compiles the sources, bnd packages the result. Set `bnd.build.auto` to `false` to turn this off (default `true`). The setting needs a trusted workspace: in an untrusted workspace the switch stays on, but the server builds nothing.
+
+The **bnd: auto-build** item at the right of the status bar is the switch and shows the state. Click it, or run **bnd: Toggle Automatic Build**, to turn the build on or off. **bnd: Enable Automatic Build** and **bnd: Disable Automatic Build** set the state explicitly. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it; editing the setting yourself has the same effect.
+
+| Item text | Meaning |
+|---|---|
+| `$(check) bnd: auto-build` | On and idle |
+| `$(sync~spin) bnd: building <project>` | A build is running |
+| `$(error) bnd: build failed (N)` | The last build reported errors; N is the number of errors. Error background until the next build finishes |
+| `$(circle-slash) bnd: auto-build off` | Switched off |
+| `$(shield) bnd: auto-build (untrusted)` | Switched on, but paused because the workspace is not trusted |
+
+The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds, with their errors and warnings per project, are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the language server is stopped, disabled, or too old to support automatic build; older servers ignore `bnd.build.auto`.
+
 **Architecture:**
 
 ```
@@ -364,6 +380,7 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 ```
 
 - `bnd.server.enabled: false` starts no language server; see [Status and disabling the language server](#status-and-disabling-the-language-server).
+- `bnd.build.auto` (default `true`) switches the incremental build of the language server on or off; see [Automatic build](#automatic-build).
 - `java` starts `biz.aQute.bnd.lsp.jar` with the configured Java runtime.
 - `node` starts the TypeScript language server directly.
 - `socket` connects to an already running LSP on `127.0.0.1:5007`.
