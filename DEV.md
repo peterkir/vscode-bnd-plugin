@@ -327,6 +327,19 @@ The wizard images are produced from an empty folder (`/tmp/bnd-demo/com.example.
 
 The script works around two upstream issues: it repairs the `url.`/`cache.` keys in the `swtbot-tests` fragment's `cnf/ext/swtbot_*.bnd` so the SWTBot P2 repository loads, and it starts the language server with `-Djdk.xml.maxGeneralEntitySizeLimit=0 -Djdk.xml.totalEntitySizeLimit=0`, because Java 24+ rejects the Eclipse Platform P2 index otherwise. Review new images before committing; the repository `.gitignore` excludes nothing under `docs/images/`.
 
+### User Documentation Site
+
+The user documentation is a Jekyll site in `docs/` (custom layout, no theme dependency), published at <https://peterkir.github.io/vscode-bnd-plugin/> by `.github/workflows/pages.yml` on every push to `main` that changes `docs/**`. Pages are Markdown files with front matter; the navigation is `docs/_data/navigation.yml`, and `docs/images/` is shared with README.md. Pages are written in English and must match the README, `package.json` settings and commands, and the bnd CLI behavior. `docs/FEATURE-MATRIX.md` and `docs/shared-workspace-conflicts.md` are excluded from the site and linked on GitHub instead. The `docs/**` files are not part of the VSIX (see `.vscodeignore`).
+
+Preview locally (Ruby and the `jekyll` gem; the `webrick` gem is needed for Ruby 3 or later):
+
+```bash
+jekyll serve --source docs --port 4000
+# open http://127.0.0.1:4000/vscode-bnd-plugin/
+```
+
+The site needs GitHub Pages with **Source: GitHub Actions** in the repository settings.
+
 ---
 
 ## 5. Packaging

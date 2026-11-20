@@ -1,0 +1,19 @@
+title: bnd / bndtools for VS Code
+description: User documentation for the bnd / bndtools / OSGi extension for Visual Studio Code.
+url: https://peterkir.github.io
+baseurl: /vscode-bnd-plugin
+lang: en
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  toc_levels: 2..3
+
+repository_url: https://github.com/peterkir/vscode-bnd-plugin
+marketplace_url: https://marketplace.visualstudio.com/items?itemName=klibio.bnd
+
+# Design documents stay in the repository; they are linked on GitHub instead of published.
+exclude:
+  - FEATURE-MATRIX.md
+  - shared-workspace-conflicts.md
