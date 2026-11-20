@@ -96,7 +96,7 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 | Build-before-launch check | – | ✓ | ✓ `buildBeforeLaunch` | ✓ `build` flag in `bnd.launch.prepare` | ◐ resolves before start | ✓ task dependencies | ✓ lifecycle |
 | Smoke-test running app over HTTP | ✗ | ✗ | ✗ | ✗ | ✓ `bnd_http_get` (loopback only, status/body expectation, retry) | ✗ | ✗ |
 | Native launcher / applaunch | ✗ | ✓ bnd Native Launcher | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Executable JAR packaging to run | ✓ `package` | ✓ export | ✓ `bnd.cli.export` | ✗ | ✗ | ✓ `Export` | ✓ `export` |
+| Executable JAR packaging to run | ✓ `package` | ✓ export | ✓ `bnd.cli.export`, `bnd.lsp.export` | ✓ `bnd.export` | ✗ | ✓ `Export` | ✓ `export` |
 | Launchpad (in-JVM framework for tests) | library | library | ✗ | ✗ | ✗ | library | library |
 
 ## 6. Testing
@@ -113,8 +113,8 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 
 | Feature | CLI | Bndtools | VS Code | LSP | MCP | Gradle | Maven |
 |---|---|---|---|---|---|---|---|
-| Executable JAR export | ✓ `export -E bnd.executablejar`, `package` | ✓ wizard | ✓ `bnd.cli.export` (picker) | ✗ | ✗ | ✓ `export.<name>` | ✓ `export` |
-| Runbundles export | ✓ `-E bnd.runbundles` | ✓ | ◐ via same command | ✗ | ✗ | ✓ `runbundles.<name>` | ✓ `bundlesOnly` |
+| Executable JAR export | ✓ `export -E bnd.executablejar`, `package` | ✓ wizard | ✓ `bnd.cli.export` (picker), `bnd.lsp.export` | ✓ `bnd.export` (default exporter, writes `<target>/export`) | ✗ | ✓ `export.<name>` | ✓ `export` |
+| Runbundles export | ✓ `-E bnd.runbundles` | ✓ | ✓ `bnd.lsp.export` (Run bundles folder), CLI command | ✓ `bnd.export` `exporter=bnd.runbundles` (folder) | ✗ | ✓ `runbundles.<name>` | ✓ `bundlesOnly` |
 | P2 repository / feature export | ✓ `export` (p2 exporter) | ✓ `org.bndtools.p2` | ◐ via CLI only | ✗ | ✗ | ◐ exporter parameter | ◐ exporter parameter |
 | Subsystem export | ✓ | ✓ | ◐ | ✗ | ✗ | ◐ | ◐ |
 | Wrap non-OSGi JAR | ✓ `wrap` | ✗ | ✓ `bnd.cli.wrap` | ✗ | ✗ | ✓ `Bundle` task | ✓ `bnd-process` |
@@ -153,7 +153,7 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 | Feature | CLI | Bndtools | VS Code | LSP | MCP | Gradle | Maven |
 |---|---|---|---|---|---|---|---|
 | Syntax highlighting | – | ✓ | ✓ TextMate (`.bnd`, `.bndrun`, `.mvn`) + semantic tokens | ✓ `semanticTokens/full` (keyword, property, variable, string, number, comment, macro, operator, type) | – | – | – |
-| Completion for instructions / headers / macros | – | ✓ `BndCompletionProcessor` | ✓ via LSP (Node fallback: static 153/138/48 lists) | ✓ triggers `- : = $ { ; ,`; `Syntax.HELP`, macros, repository bundles, Java versions, booleans | – | – | – |
+| Completion for instructions / headers / macros | – | ✓ `BndCompletionProcessor` | ✓ via LSP (Node fallback: static 153/138/48 lists) | ✓ triggers `- : = $ { ; ,`; `Syntax.HELP` instructions/headers, attributes/directives and their values after `;` from `Syntax` children, every macro of `Macro.getCommands()` with help, `-runee` from bndlib `EE`, repository bundles, Java versions, booleans | – | – | – |
 | Hover documentation | – | ✓ `BndHover` | ✓ via LSP | ✓ header docs, merged-instruction suffix explanation, macro context | – | – | – |
 | Form-based editor pages (Contents, Build, Run, Test, Bundle Description) | – | ✓ | ✗ (text only) | ✗ | – | – | – |
 | Outline / document symbols | – | ✓ | ✓ via LSP | ✓ `documentSymbol` (properties, clauses) | – | – | – |
@@ -209,9 +209,10 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 
 ## Gaps: LSP server vs. Bndtools / CLI
 
-- No references, rename, or formatting; no export, release, bump, index, remote.
+- No references, rename, or formatting; no release, bump, index, remote.
+- No test execution outside a launch (`test`, `junit`, `runtests`), no `verify`, `diff`, `wrap`, `dependencies`/`deliverables` listing.
+- Completion offers no package names for `Export-Package`/`Private-Package` and no file paths for `-include`/`-includeresource`; go-to-definition covers `-include` and workspace `-buildpath` projects only.
 - Quick fixes limited to three diagnostic codes.
-- VS Code extension does not yet expose `bnd.build.clean`, `bnd.baseline`, or the resolve dry-run flag.
 
 ## Gaps: MCP server vs. LSP / CLI
 
@@ -231,12 +232,12 @@ CLI commands not wired to a VS Code command (reachable only via terminal or the 
 
 ## Appendix B: LSP `workspace/executeCommand` ids (`fea-bnd-ls`)
 
-Build: `bnd.build.project`, `bnd.build.workspace`, `bnd.build.clean`, `bnd.resolve`, `bnd.baseline`, `bnd.macro.expand`
+Build: `bnd.build.project`, `bnd.build.workspace`, `bnd.build.clean`, `bnd.build.auto`, `bnd.resolve`, `bnd.baseline`, `bnd.macro.expand`, `bnd.export`
 JAR / repo: `bnd.jar.print`, `bnd.jar.printText`, `bnd.repo.list`
 Properties / resolution: `bnd.properties.effective`, `bnd.resolution.analyze`
 Launch: `bnd.launch.prepare`, `bnd.launch.dispose`
-Repositories: `bnd.repositories.list`, `.bundles`, `.versions`, `.feature`, `.get`, `.search`, `.actions`, `.runAction`, `.reload`, `.put`, `.fetch`, `bnd.workspace.offline`
-Wizard: `bnd.wizard.templates.list`, `bnd.wizard.plan`, `bnd.wizard.apply`, `bnd.wizard.create`, `bnd.wizard.dispose`
+Repositories: `bnd.repositories.list`, `.bundles`, `.versions`, `.feature`, `.get`, `.search`, `.listActions`, `.runAction`, `.reload`, `.put`, `.fetch`, `bnd.workspace.offline`
+Wizard: `bnd.wizard.templates.list`, `bnd.wizard.plan`, `bnd.wizard.apply`, `bnd.wizard.create`, `bnd.wizard.plan.dispose`
 
 Diagnostic codes with quick fixes: `bnd.propertyconflict`, `bnd.bundleactivator`, `bnd.bundleversion`.
 

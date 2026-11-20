@@ -16,12 +16,12 @@ suite('Extension manifest', () => {
     const packageJsonPath = path.join(workspaceRoot, 'package.json');
     const languageConfigPath = path.join(workspaceRoot, 'language-configuration.json');
 
-    test('offers run and debug on launch files in the bnd Explorer', () => {
+    test('offers run, debug and export on launch files in the bnd Explorer', () => {
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         const commands = pkg.contributes.menus['view/item/context']
             .filter((item: { when: string }) => item.when === 'view == bnd.explorer && viewItem =~ /\\blaunch\\b/')
             .map((item: { command: string }) => item.command);
-        assert.deepStrictEqual(commands, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests']);
+        assert.deepStrictEqual(commands, ['bnd.launch.run', 'bnd.launch.debug', 'bnd.launch.runTests', 'bnd.launch.debugTests', 'bnd.lsp.export']);
     });
 
     test('separates CLI palette commands and keeps the visibility toggle available', () => {
@@ -153,6 +153,7 @@ suite('Extension manifest', () => {
             'bnd.lsp.buildProject',
             'bnd.lsp.cleanProject',
             'bnd.lsp.baseline',
+            'bnd.lsp.export',
             'bnd.lsp.expandMacro',
             'bnd.launch.run',
             'bnd.launch.debug',
@@ -187,6 +188,7 @@ suite('Extension manifest', () => {
             'bnd.jar.printText',
             'bnd.launch.prepare',
             'bnd.launch.dispose',
+            'bnd.export',
             'bnd.repositories.list',
             'bnd.repositories.bundles',
             'bnd.repositories.versions',

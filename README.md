@@ -37,7 +37,7 @@ All completion items are pre-filled with **real examples from the bnd documentat
   - `-buildpath: osgi;version=4.1`
   - `-runbundles: org.apache.felix.framework;version='[7,8)'`
   - `-dsannotations: *`, `-runee: JavaSE-17`, `-standalone: ...`
-- **138 bnd macros** – triggered when the cursor is inside `${...}`:
+- **bnd macros** – triggered when the cursor is inside `${...}`. The Java server lists every macro bndlib provides for the file, including project and workspace macros, with the macro help; the Node fallback offers 138:
   - `${bsn}`, `${version}`, `${range;[==,+);${@}}`, `${repo;bsns}`
   - `${filter;<list>;<regex>}`, `${replace;<list>;<regex>;<replacement>}`
   - `${tstamp;yyyy-MM-dd}`, `${githead}`, `${system;git describe}`
@@ -45,6 +45,7 @@ All completion items are pre-filled with **real examples from the bnd documentat
   - `Bundle-SymbolicName: com.example.bundle`
   - `Export-Package: com.example.api;version=1.0`
   - `Require-Capability: osgi.identity; filter:='...'`
+- **Attributes and directives** – after `;` in a clause the Java server offers the attributes and directives bnd documents for the header, for example `version=` and `resolution:=` in `Import-Package`, and after `resolution:=` their values. `-runee` offers the execution environments bnd knows up to the running Java version.
 
 ![Completion list for -run instructions with documentation preview](docs/images/completions.png)
 
@@ -235,6 +236,8 @@ This means:
 The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources rebased onto upstream master. See [server/bundled-jars.json](server/bundled-jars.json) for the exact source commit, bundle versions, and checksums.
 
 `bnd: Build Project (LSP)`, `bnd: Clean Project (LSP)` and `bnd: Baseline Project (LSP)` act on the project of the active or selected bnd file without the bnd CLI. Clean on a workspace file (for example `cnf/build.bnd`) cleans every project. Baseline compares each bundle of the project with its `-baseline` repository and prints the per-package report to the **bnd Language Server** output channel.
+
+`bnd: Export Run (LSP)...` exports the active or selected `.bndrun` or `bnd.bnd` file, also from the Explorer and bnd Explorer context menus, like the Bndtools export commands. Choose **Executable JAR** (`bnd.executablejar`, started with `java -jar`) or **Run bundles folder** (`bnd.runbundles`). The workspace bundles of the run are built first. The result goes to `generated/export` of the owning project (the project's `target-dir`), and **Reveal** shows it in the file manager. Errors and warnings are written to the **bnd Language Server** output channel. Export requires a trusted workspace.
 
 #### Status and disabling the language server
 

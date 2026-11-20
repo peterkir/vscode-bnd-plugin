@@ -5,8 +5,19 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Executable, LanguageClient } from 'vscode-languageclient/node';
 import { executeServerCommand } from '../../extension';
+import { parseExportResult } from '../../bndExport';
 
 suite('LSP build commands', () => {
+    test('normalizes export replies', () => {
+        assert.deepStrictEqual(parseExportResult({ success: true, exporter: 'bnd.runbundles', output: '/x', errors: [], warnings: ['w'] }),
+            { success: true, exporter: 'bnd.runbundles', output: '/x', errors: [], warnings: ['w'] });
+        const failed = parseExportResult({ error: 'Exporting requires a trusted workspace.' });
+        assert.strictEqual(failed.success, false);
+        assert.deepStrictEqual(failed.errors, ['Exporting requires a trusted workspace.']);
+        assert.strictEqual(parseExportResult({ success: true, errors: ['bad'] }).success, false);
+        assert.strictEqual(parseExportResult(null).success, false);
+    });
+
     test('cleans, baselines and dry-run resolves through the bundled Java language server', async function () {
         this.timeout(120000);
         const jar = path.resolve(__dirname, '../../../../server/biz.aQute.bnd.lsp.jar');
@@ -52,6 +63,17 @@ suite('LSP build commands', () => {
             const resolved = await executeServerCommand(client, 'bnd.resolve', [vscode.Uri.file(bndrun).toString(), false]) as Record<string, unknown>;
             assert.notStrictEqual(resolved.written, true, JSON.stringify(resolved));
             assert.strictEqual(fs.readFileSync(bndrun, 'utf8'), bndrunText, 'dry run must not modify the .bndrun');
+
+            assert.ok(supported.includes('bnd.export'), 'Server must advertise bnd.export');
+            fs.writeFileSync(path.join(project, 'bnd.bnd'), 'Bundle-Version: 1.0.0\n-includeresource: a.txt;literal=a\n');
+            const exportRun = path.join(project, 'export.bndrun');
+            fs.writeFileSync(exportRun, '-runbundles: p;version=snapshot\n');
+            const exported = parseExportResult(await executeServerCommand(client, 'bnd.export',
+                [{ uri: vscode.Uri.file(exportRun).toString(), exporter: 'bnd.runbundles' }]));
+            assert.strictEqual(exported.success, true, JSON.stringify(exported));
+            assert.strictEqual(vscode.Uri.file(exported.output ?? '').toString(),
+                vscode.Uri.file(path.join(project, 'generated', 'export', 'export.bndrun')).toString());
+            assert.ok(fs.existsSync(path.join(exported.output ?? '', 'p.jar')), 'export must write the run bundles');
         } finally {
             await client.stop();
             fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

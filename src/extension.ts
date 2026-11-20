@@ -25,6 +25,7 @@ import {
 } from './autoBuild';
 import { registerCliCommands } from './bndCliCommands';
 import { registerExplorerView } from './bndExplorer';
+import { registerExportCommand } from './bndExport';
 import { registerLaunchSupport } from './bndLaunch';
 import { registerWorkspaceWizards } from './bndWizards';
 import { RepositoriesProvider, registerRepositoriesView } from './bndRepositories';
@@ -206,6 +207,15 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
             if (!client) throw new Error(serverUnavailableMessage());
             return executeServerCommand(client, command, args, token);
         },
+    }, outputChannel);
+    registerExportCommand(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args) => {
+            await clientReady;
+            if (!client) throw new Error(serverUnavailableMessage());
+            return executeServerCommand(client, command, args);
+        },
+        unavailableMessage: () => client ? undefined : serverUnavailableMessage(),
     }, outputChannel);
     repositoriesProvider = registerRepositoriesView(context, {
         supports: supportsServerCommand,

@@ -493,6 +493,11 @@
         "category": "bnd"
       },
       {
+        "command": "bnd.lsp.export",
+        "title": "Export Run (LSP)...",
+        "category": "bnd"
+      },
+      {
         "command": "bnd.lsp.expandMacro",
         "title": "Evaluate Macro (LSP)",
         "category": "bnd"
@@ -1083,6 +1088,11 @@
           "group": "1_bnd_launch@4"
         },
         {
+          "command": "bnd.lsp.export",
+          "when": "view == bnd.explorer && viewItem =~ /\\blaunch\\b/",
+          "group": "1_bnd_launch@5"
+        },
+        {
           "command": "bnd.showEffective",
           "when": "view == bnd.explorer && viewItem =~ /\\beffective\\b/",
           "group": "1_bnd_tools@1"
@@ -1297,6 +1307,11 @@
           "command": "bnd.launch.debugTests",
           "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
           "group": "bnd_launch@4"
+        },
+        {
+          "command": "bnd.lsp.export",
+          "when": "resourceScheme == file && (resourceExtname == .bndrun || resourceFilename == bnd.bnd)",
+          "group": "bnd_launch@5"
         }
       ],
       "commandPalette": [
@@ -1503,6 +1518,9 @@
         },
         {
           "command": "bnd.lsp.baseline"
+        },
+        {
+          "command": "bnd.lsp.export"
         },
         {
           "command": "bnd.lsp.expandMacro"
