@@ -1,0 +1,28 @@
+- title: Home
+  url: /
+- title: Installation
+  url: /installation/
+- title: Getting started
+  url: /getting-started/
+- title: Editing bnd files
+  url: /editing/
+- title: Workspace wizards
+  url: /workspace-wizards/
+- title: Explorer and Repositories
+  url: /repositories/
+- title: Resolution view
+  url: /resolution/
+- title: JAR Viewer
+  url: /jar-viewer/
+- title: Run and Debug
+  url: /run-debug/
+- title: Build and language server
+  url: /language-server/
+- title: bnd CLI commands
+  url: /cli/
+- title: Parallel use with Eclipse
+  url: /eclipse/
+- title: Configuration reference
+  url: /reference/
+- title: Troubleshooting
+  url: /troubleshooting/

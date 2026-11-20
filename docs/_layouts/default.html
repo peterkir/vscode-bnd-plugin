@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if page.url == '/' %}
+  <title>{{ site.title }}</title>
+  {% else %}
+  <title>{{ page.title }} | {{ site.title }}</title>
+  {% endif %}
+  <meta name="description" content="{{ page.description | default: site.description | escape }}">
+  <link rel="icon" href="{{ '/assets/icon.png' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/css/rouge-light.css' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/css/rouge-dark.css' | relative_url }}" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+  <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
+  <header class="site-header">
+    <label for="nav-toggle" class="nav-button" aria-label="Toggle navigation">&#9776;</label>
+    <a class="brand" href="{{ '/' | relative_url }}">
+      <img src="{{ '/assets/icon.png' | relative_url }}" alt="" width="28" height="28">
+      <span>bnd for VS Code</span>
+    </a>
+    <nav class="header-links" aria-label="External links">
+      <a href="{{ site.marketplace_url }}">Marketplace</a>
+      <a href="{{ site.repository_url }}/releases">Releases</a>
+      <a href="{{ site.repository_url }}">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation">
+      <ul>
+        {% for item in site.data.navigation %}
+        <li>
+          <a href="{{ item.url | relative_url }}"{% if page.url == item.url %} class="active" aria-current="page"{% endif %}>{{ item.title }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <main class="content">
+      <article>
+        {% if page.url != '/' %}<h1>{{ page.title }}</h1>{% endif %}
+        {{ content }}
+      </article>
+
+      {% assign nav = site.data.navigation %}
+      {% assign idx = -1 %}
+      {% for item in nav %}
+        {% if item.url == page.url %}
+          {% assign idx = forloop.index0 %}
+        {% endif %}
+      {% endfor %}
+      {% assign prev_idx = idx | minus: 1 %}
+      {% assign next_idx = idx | plus: 1 %}
+      <nav class="pager" aria-label="Pager">
+        {% if idx > 0 %}
+          {% assign prev = nav[prev_idx] %}
+          <a class="prev" href="{{ prev.url | relative_url }}"><small>Previous</small><br>&larr; {{ prev.title }}</a>
+        {% else %}<span></span>{% endif %}
+        {% if idx >= 0 and next_idx < nav.size %}
+          {% assign next = nav[next_idx] %}
+          <a class="next" href="{{ next.url | relative_url }}"><small>Next</small><br>{{ next.title }} &rarr;</a>
+        {% endif %}
+      </nav>
+
+      <footer class="site-footer">
+        <p>
+          Licensed under the <a href="{{ site.repository_url }}/blob/main/LICENSE">Eclipse Public License 2.0</a>.
+          Part of the <a href="https://bnd.bndtools.org">bnd / bndtools</a> ecosystem.
+          <a href="{{ site.repository_url }}/edit/main/docs/{{ page.path }}">Edit this page on GitHub</a>.
+        </p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
