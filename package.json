@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "bnd / bndtools / OSGi",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.29.0",
+  "version": "0.30.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -440,6 +440,11 @@
       {
         "command": "bnd.build.auto.toggle",
         "title": "Toggle Automatic Build",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.build.auto.menu",
+        "title": "Automatic Build Status...",
         "category": "bnd"
       },
       {
@@ -1485,6 +1490,10 @@
         },
         {
           "command": "bnd.build.auto.toggle",
+          "when": "bnd.build.autoSupported"
+        },
+        {
+          "command": "bnd.build.auto.menu",
           "when": "bnd.build.autoSupported"
         },
         {

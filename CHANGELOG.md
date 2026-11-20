@@ -1,10 +1,18 @@
 # Changelog
 
+## 0.30.0 (Unreleased)
+
+### Changed
+- The automatic build status bar item opens a menu to enable or disable automatic build or show its output, like the language server status item.
+
+### Fixed
+- When an extension update leaves the automatic build setting unregistered until the window reloads, the build commands explain the problem and offer to reload instead of failing to write the setting.
+
 ## 0.29.0 (Unreleased)
 
 ### Added
 - User documentation site at <https://peterkir.github.io/vscode-bnd-plugin/>, built from `docs/` with Jekyll and deployed by the new `Documentation site` workflow. It covers installation, every feature, the settings and command reference, and troubleshooting.
-- Automatic (incremental) build. The new `bnd.build.auto` setting (default `true`, requires a trusted workspace) is passed to the bnd language server, which builds the affected projects when a `.bnd` file is saved or compiled classes change. A **bnd: auto-build** status bar item next to **bnd LS** shows idle, building (with the project), failed (with the error count), off, and untrusted states and switches the build on click. The tooltip shows the last result and links to the new **bnd Build** output channel, which lists errors and warnings per project with timestamps. Successful builds raise no notification.
+- Automatic (incremental) build. The new `bnd.build.auto` setting (default `true`, requires a trusted workspace) is passed to the bnd language server, which builds the affected projects when a `.bnd` file is saved or compiled classes change. A **bnd: auto-build** status bar item next to **bnd LS** shows idle, building (with the project), failed (with the error count), off, and untrusted states. The tooltip shows the last result and links to the new **bnd Build** output channel, which lists errors and warnings per project with timestamps. Successful builds raise no notification.
 - Commands **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, **bnd: Disable Automatic Build**, and **bnd: Show Build Output**. The toggle writes `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it. Editing the setting directly is synchronized to the server and the status bar.
 - The file watchers of the language client additionally report compiled classes in `bin` and `bin.vscode`, which the server needs to rebuild after the Java language server compiled.
 - **bnd: Export Run (LSP)...** in the Command Palette and in the Explorer and bnd Explorer context menus of `.bndrun` and `bnd.bnd` files exports an executable JAR or a folder of the run bundles through the new language server command `bnd.export`, like the Bndtools export commands. It builds the workspace bundles of the run first, writes to `generated/export` of the owning project, and offers to reveal the result.

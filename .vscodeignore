@@ -43,4 +43,3 @@ docs/**
 scripts/
 server/bundled-jars.json
 AGENTS.md
-copilot-instructions.md

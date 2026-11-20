@@ -99,7 +99,7 @@ The Java language server compiles the sources; bnd packages the result.
 
 The setting `bnd.build.auto` (default `true`) controls it. It needs a trusted workspace: in an untrusted workspace the switch stays on but nothing is built.
 
-The **bnd: auto-build** item at the right of the status bar is the switch and shows the state. Click it, or run **bnd: Toggle Automatic Build**. **bnd: Enable Automatic Build** and **bnd: Disable Automatic Build** set the state explicitly. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it.
+The **bnd: auto-build** item at the right of the status bar shows the state. Click it, or run **bnd: Automatic Build Status...**, to enable or disable automatic build or open its output channel. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it. If VS Code reports that the setting is not registered after an extension update, reload the window.
 
 | Status bar text | Meaning |
 |---|---|
