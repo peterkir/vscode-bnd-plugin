@@ -2,7 +2,7 @@
 title: Configuration reference
 layout: default
 permalink: /reference/
-description: All settings, commands, keyboard shortcuts, status bar items, and output channels of the bnd / bndtools extension.
+description: All settings, commands, keyboard shortcuts, status bar items, and output channels of the OSGi with bnd/bndtools extension.
 ---
 
 <div class="toc-box" markdown="1">

@@ -2,7 +2,7 @@
 title: Installation
 layout: default
 permalink: /installation/
-description: Install the bnd / bndtools extension from the Marketplace or a VSIX file, and verify that it works.
+description: Install the OSGi with bnd/bndtools extension from the Marketplace or a VSIX file, and verify that it works.
 ---
 
 <div class="toc-box" markdown="1">
@@ -26,10 +26,10 @@ description: Install the bnd / bndtools extension from the Marketplace or a VSIX
 
 ## Install from the Marketplace
 
-The published extension is **`klibio.bnd`** ("bnd / bndtools / OSGi").
+The published extension is **`klibio.bnd`** ("OSGi with bnd/bndtools").
 
 1. Open the Extensions view with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> (macOS: <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>).
-2. Search for `bnd / bndtools` or `klibio.bnd`.
+2. Search for `OSGi with bnd/bndtools` or `klibio.bnd`.
 3. Select **Install**.
 
 Or use the command line:
@@ -104,7 +104,7 @@ VS Code updates Marketplace extensions automatically unless you disabled auto-up
 ## Uninstall
 
 1. Open the Extensions view.
-2. Search for `bnd / bndtools`.
+2. Search for `OSGi with bnd/bndtools`.
 3. Select the gear icon and choose **Uninstall**.
 
 Libraries the extension downloaded are kept in its global storage (`library/tool` and `library/lsp`). Files the extension created in your workspaces, such as `cnf/ext/vscode-outputs.bnd`, stay in place.

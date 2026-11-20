@@ -2,7 +2,7 @@
 title: Troubleshooting
 layout: default
 permalink: /troubleshooting/
-description: Fix common problems with the bnd / bndtools extension - language server startup, missing features, Java versions, and Eclipse coexistence.
+description: Fix common problems with the OSGi with bnd/bndtools extension - language server startup, missing features, Java versions, and Eclipse coexistence.
 ---
 
 <div class="toc-box" markdown="1">
