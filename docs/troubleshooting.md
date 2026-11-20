@@ -100,7 +100,7 @@ The `.bndrun` files from some fragments (for example Eclipse RCP) are unresolved
 
 - The **bnd: auto-build** item must be visible. It is hidden while the server is stopped, disabled, or too old.
 - It shows `(untrusted)` in an untrusted workspace; trust the workspace.
-- It shows `off` when `bnd.build.auto` is `false`. Click it to switch the build on.
+- It shows `off` when `bnd.build.auto` is `false`. Click it and select **Enable Automatic Build** to switch the build on.
 - Open **bnd: Show Build Output** to see errors and warnings per project.
 
 ## Eclipse and VS Code overwrite each other's output

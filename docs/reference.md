@@ -62,7 +62,7 @@ Only configure trusted template sources.
 
 ## Commands
 
-All commands are available in the Command Palette. Language server, view, and wizard commands use the prefix **bnd:**; CLI commands use **bnd-cli:**.
+Language server, view, and wizard commands use the prefix **bnd:**; CLI commands use **bnd-cli:**. Automatic build status, toggle, enable, and disable commands appear in the Command Palette only when the server supports automatic build.
 
 ### Language server and build
 
@@ -76,6 +76,7 @@ All commands are available in the Command Palette. Language server, view, and wi
 | bnd: Resolve Runbundles (LSP) | Dry-run resolve of a `.bndrun`. |
 | bnd: Export Run (LSP)... | Export an executable JAR or a run bundles folder. |
 | bnd: Evaluate Macro (LSP) | Evaluate a macro expression. |
+| bnd: Automatic Build Status... | Enable or disable automatic build, or show its output. |
 | bnd: Toggle / Enable / Disable Automatic Build | Switch `bnd.build.auto`. |
 | bnd: Show Build Output | Open the **bnd Build** output channel. |
 
@@ -132,7 +133,7 @@ On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd> where VS Code does.
 | Item | Shows |
 |---|---|
 | **bnd LS** | Language server state and mode. Click for the status menu. |
-| **bnd: auto-build** | Automatic build state. Click to toggle. |
+| **bnd: auto-build** | Automatic build state. Click for the enable/disable and output menu. |
 | **Eclipse** | An Eclipse instance has the workspace open. Click for the parallel-use menu. |
 
 ## Output channels

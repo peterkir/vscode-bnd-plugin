@@ -45,7 +45,7 @@ Legend: ✓ full · ◐ partial / indirect · ✗ missing · – not applicable 
 |---|---|---|---|---|---|---|---|
 | Build project | ✓ `build`, `project`, `do` | ✓ incremental builder | ◐ `bnd.cli.build` (terminal) + `bnd.lsp.buildProject` | ✓ `bnd.build.project` (`builtFiles`, errors, warnings) | ✓ `bnd_build` (`outputs`, diagnostics) | ✓ `jar` | ✓ `bnd-process` |
 | Build workspace | ✓ `build` (workspace), `__par` | ✓ | ✗ | ✓ `bnd.build.workspace` | ✗ (per project) | ✓ `*Dependencies`, `*Needed` | ✓ reactor |
-| Watch / live build | ✓ `build --watch`, `dev` | ✓ auto build | ✓ `bnd.build.auto` setting, status bar switch, `bnd.build.auto.*` commands (needs a server with `bndAutoBuild`); ◐ watch mode via CLI otherwise | ✓ automatic incremental build on `.bnd` save and class changes (`bnd.build.auto`, `bnd/buildStatus`); ◐ diagnostics on change (300 ms debounce) | ✗ | ✗ (Gradle `-t`) | ✗ |
+| Watch / live build | ✓ `build --watch`, `dev` | ✓ auto build | ✓ `bnd.build.auto` setting, status bar menu, `bnd.build.auto.*` commands (needs a server with `bndAutoBuild`); ◐ watch mode via CLI otherwise | ✓ automatic incremental build on `.bnd` save and class changes (`bnd.build.auto`, `bnd/buildStatus`); ◐ diagnostics on change (300 ms debounce) | ✗ | ✗ (Gradle `-t`) | ✗ |
 | Clean | ✓ `clean` | ✓ | ✓ `bnd.cli.clean` | ✓ `bnd.build.clean` (project file URI cleans project, workspace file URI cleans all projects) | ✗ | ✓ `clean*` | ✓ (mvn) |
 | Non-workspace bundle build (bnd instructions on plain JAR) | ✓ `create`, `wrap` | – | – | – | – | ✓ `Bundle` task / `biz.aQute.bnd.builder` | ✓ `bnd-process` |
 | Source generation (`-generate`) | ✓ `generate` | ✓ participant + markers | ✗ | ✗ | ✗ | ✓ (within jar) | ✓ `generate`, `generate-test` |

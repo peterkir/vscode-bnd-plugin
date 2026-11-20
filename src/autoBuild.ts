@@ -188,25 +188,25 @@ export function presentAutoBuild(state: AutoBuildState): AutoBuildView {
     if (state.enabled && !state.active) {
         text = '$(shield) bnd: auto-build (untrusted)';
         headline = 'Automatic build is on but paused: the workspace is not trusted.';
-        hint = 'Trust the workspace to build automatically. Click to turn the switch off.';
+        hint = 'Trust the workspace to build automatically. Click for build actions.';
     } else if (!state.enabled) {
         text = '$(circle-slash) bnd: auto-build off';
         headline = 'Automatic build is off.';
-        hint = 'Click to turn it on.';
+        hint = 'Click for build actions.';
     } else if (state.phase === 'building') {
         text = `$(sync~spin) bnd: building${state.current ? ` ${state.current}` : ''}`;
         headline = `Building${state.current ? ` **${escapeMarkdown(state.current)}**` : ''}`
             + (state.projects.length > 1 ? ` (${state.projects.length} projects queued: ${escapeMarkdown(state.projects.join(', '))})` : '');
-        hint = 'Click to turn automatic build off.';
+        hint = 'Click for build actions.';
     } else if (lastBuildFailed(state.last)) {
         text = `$(error) bnd: build failed (${failureCount(state.last!.summary)})`;
         headline = 'The last automatic build failed.';
-        hint = 'Click to turn automatic build off.';
+        hint = 'Click for build actions.';
         error = true;
     } else {
         text = '$(check) bnd: auto-build';
         headline = 'Automatic build is on.';
-        hint = 'Click to turn it off.';
+        hint = 'Click for build actions.';
     }
     const lines = [`**bnd automatic build**`, '', headline];
     if (state.last) lines.push('', `Last build ${clock(state.last.at)}: ${escapeMarkdown(describeSummary(state.last.summary))}`);

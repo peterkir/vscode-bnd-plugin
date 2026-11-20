@@ -67,7 +67,7 @@ git pull --ff-only origin main
 git switch -c fea-describe-change
 ```
 
-Make focused changes and update affected English documentation. For every code change, bump the extension version using `npm version patch --no-git-tag-version` (use `minor` for compatible features or `major` for breaking changes). This updates both `package.json` and `package-lock.json` without committing or tagging. Update `CHANGELOG.md` for user-visible changes. Documentation-only changes do not require a version bump.
+Follow [AGENTS.md](AGENTS.md) for repository and AI agent instructions. Make focused changes and, for every code change, update developer documentation (`DEV.md` or a relevant developer guide) and user documentation (`README.md` or a relevant user guide). Update the GitHub Pages source in `docs/` when applicable, and keep all affected documentation consistent with the implementation and with each other. For every code change, bump the extension version using `npm version patch --no-git-tag-version` (use `minor` for compatible features or `major` for breaking changes). This updates both `package.json` and `package-lock.json` without committing or tagging. Update `CHANGELOG.md` for user-visible changes. Documentation-only changes do not require a version bump.
 
 ### Build Scripts
 
@@ -211,6 +211,12 @@ Manual checks: open a bundle from the Explorer, navigate the tree with the keybo
 `src/bndLaunch.ts` registers the `bnd` debug type. `resolveDebugConfigurationWithSubstitutedVariables` sends `bnd.launch.prepare` with `{ uri, kind: "run" | "test", tests, build }`. The Java server (`BndLaunchService`) creates a `Run` for `.bndrun` files or uses the workspace `Project` for `bnd.bnd`, optionally builds dependencies, prepares a `ProjectLauncher` (or `ProjectTester` for tests), and keeps it alive under a UUID. The response contains `launchId`, `mainClass`, `classPaths`, `vmArgs`, `args`, `env`, `cwd`, `javaExecutable`, `runee`, `name`, and `warnings`, or `error`/`errors`. The client converts it to a `java` launch configuration, starts it with Debugger for Java, and cancels the original `bnd` session. When the Java session terminates, the client sends `bnd.launch.dispose` with the launch ID; the server calls `ProjectLauncher.cleanup()` and deletes temporary launcher files. Exception: a `noDebug` session with a terminal console terminates right after spawning the JVM, before it reads `launch*.properties`; the client keeps that launch per target and disposes it when the same target is prepared again. Server shutdown disposes all open launches. `bnd.launch.prepare` requires `workspaceTrusted: true`.
 
 Manual checks: run and debug from CodeLens and both Explorer context menus, then invoke the Command Palette with no launch file active and choose a target. Verify launch cancellation and unsaved-file prompts, test selection, breakpoints in imported workspace sources, and temporary-file cleanup after the Java session ends (for terminal runs without debugging: after relaunching the same target or restarting the server). Effective commands accept both a URI and a bnd Explorer node containing `uri`; verify **Open Effective to Side** on a tree selection without an active source editor.
+
+### Automatic Build
+
+`src/extension.ts` registers the status bar menu, setting commands, and file watchers. `src/autoBuild.ts` synchronizes `bnd.build.auto` with the server's `bnd.build.auto` command, handles `bnd/buildStatus` notifications, and presents the status and build output. The item appears only when the server advertises the `bndAutoBuild` experimental capability. Commands update User settings unless a workspace value already exists; if the setting is not registered, they offer to reload the window.
+
+For manual verification, use a trusted bnd workspace and a server with automatic build support. Save a `.bnd` file or change compiled classes under `bin` or `bin.vscode`, then check the status and **bnd Build** output. Use the status menu to disable and re-enable the build, verify the setting and server state follow, and check that an untrusted workspace shows the paused state. The automated coverage is in `src/test/suite/autoBuild.test.ts` and `src/test/suite/autoBuildServer.test.ts`.
 
 ### Automated Test Suite
 

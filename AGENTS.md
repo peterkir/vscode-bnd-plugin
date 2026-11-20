@@ -1,11 +1,12 @@
 # Agents for vscode-bnd
 
-This file defines recommended working modes for contributors and coding agents operating in this repository.
+This file is the repository's instruction source for contributors and AI coding agents.
 
 ## Project Context
 
 - Project type: VS Code extension + LSP server
 - Goal: improve editing and CLI usage support for the bnd tool
+- Architecture: extension host/client code is in `src/`, language-server code is in `server/src/`, and the TextMate grammar is in `syntaxes/bnd.tmLanguage.json`. Keep editor concerns in the client, language intelligence in the server, and generated command/reference data in data modules.
 - Upstream canonical docs:
   - https://github.com/bndtools/bnd/tree/master/docs
   - https://bnd.bndtools.org/
@@ -13,6 +14,7 @@ This file defines recommended working modes for contributors and coding agents o
   - https://bnd.bndtools.org/instructions/
   - https://bnd.bndtools.org/macros/
   - https://bnd.bndtools.org/headers/
+- For bnd data, prefer the upstream repository docs, then the published manual, then the command and reference hubs. Do not invent options or syntax.
 
 ## Agent Modes
 
@@ -37,6 +39,8 @@ Guardrails:
 - Keep behavior aligned with bnd CLI semantics.
 - Respect `bnd.cli.executable` as user-configured command.
 - Prefer minimal and reversible UX changes.
+- Keep command invocation safe and explicit, prefer workspace-relative picked paths when appropriate, and confirm destructive or publish-like operations.
+- Wire added CLI commands consistently through `package.json`, registration in `src/bndCliCommands.ts`, and command metadata/data sources.
 
 ### 2) Language Server Agent
 
@@ -56,6 +60,7 @@ Guardrails:
 - Keep responses fast and deterministic.
 - Avoid I/O in request handlers unless strictly needed.
 - Preserve protocol-compatible behavior.
+- Keep completion and hover content aligned with upstream bnd syntax, and prefer plain-text insertion snippets unless richer snippets are needed and tested.
 
 ### 3) Documentation Sync Agent
 
@@ -102,7 +107,9 @@ Guardrails:
 - Keep user-facing terms consistent with bnd documentation.
 - Write and maintain all repository documentation in English.
 - For every code change, update the extension version in `package.json` and `package-lock.json` using Semantic Versioning: patch for compatible fixes, minor for compatible features, major for breaking changes. Do not create tags or commits unless requested.
-- Review affected documentation for every change; update outdated commands, settings, examples, links, and version references. Validate the resulting documentation against the implementation and CLI semantics.
+- For every code change, update developer documentation (`DEV.md` or another relevant developer guide) and user documentation (`README.md` or another relevant user guide). Update the GitHub Pages source in `docs/` whenever the change applies to the site, and update `CHANGELOG.md` for user-visible changes. Keep all affected documentation consistent with each other and with the implementation.
+- Review affected documentation for every change; correct outdated commands, settings, examples, links, and version references. Validate the resulting documentation against the implementation, current CLI semantics, and canonical bnd documentation.
+- Use official examples where possible and keep instruction, header, macro, command, and option terminology consistent. Record assumptions when upstream documentation is ambiguous.
 - Run the complete test suite after every code change. Do not report a change as fully validated unless the entire suite passes; report blockers and skipped tests explicitly.
 
 ## Test and Build Workflow
@@ -143,6 +150,7 @@ A task is complete when:
 - Extension tests compile and pass (`npm test`).
 - The full test suite runs without unintentional skips; any blocker is disclosed rather than counted as a pass.
 - Affected commands or language features are validated in-context.
-- Documentation is in English, matches current code and CLI behavior, and its references remain accurate.
+- For changes to language data, manually sanity-check at least one completion and one hover case.
+- Developer and user documentation are updated for every code change, and the GitHub Pages source is updated when applicable. Documentation is in English, matches current code and CLI behavior, and its references remain accurate.
 - Code changes include the appropriate Semantic Versioning bump in both extension package files.
 - Changes are minimal, focused, and easy to review.

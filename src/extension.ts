@@ -105,7 +105,15 @@ function renderAutoBuild(state: AutoBuildState): void {
 
 async function setAutoBuild(enabled: boolean): Promise<void> {
     const config = vscode.workspace.getConfiguration('bnd');
-    const target = chooseConfigurationTarget(config.inspect<boolean>(autoBuildSetting));
+    const inspection = config.inspect<boolean>(autoBuildSetting);
+    if (inspection?.defaultValue === undefined) {
+        const choice = await vscode.window.showWarningMessage(
+            'The bnd automatic build setting is not registered. Reload the window to finish updating the extension.',
+            'Reload Window');
+        if (choice === 'Reload Window') await vscode.commands.executeCommand('workbench.action.reloadWindow');
+        return;
+    }
+    const target = chooseConfigurationTarget(inspection);
     await config.update(autoBuildSetting, enabled,
         target === 'workspace' ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     await autoBuild?.syncSetting();
@@ -119,7 +127,7 @@ function registerAutoBuild(context: vscode.ExtensionContext): void {
     autoBuildOutput = vscode.window.createOutputChannel('bnd Build');
     autoBuildItem = vscode.window.createStatusBarItem('bnd.build.status', vscode.StatusBarAlignment.Right, 98);
     autoBuildItem.name = 'bnd Automatic Build';
-    autoBuildItem.command = 'bnd.build.auto.toggle';
+    autoBuildItem.command = 'bnd.build.auto.menu';
     const output = autoBuildOutput;
     autoBuild = new AutoBuildController({
         readSetting: readAutoBuildSetting,
@@ -138,6 +146,18 @@ function registerAutoBuild(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('bnd.build.auto.enable', () => setAutoBuild(true)),
         vscode.commands.registerCommand('bnd.build.auto.disable', () => setAutoBuild(false)),
         vscode.commands.registerCommand('bnd.build.auto.showOutput', () => output.show(true)),
+        vscode.commands.registerCommand('bnd.build.auto.menu', async () => {
+            const enabled = readAutoBuildSetting();
+            const actions = [
+                {
+                    label: enabled ? '$(circle-slash) Disable Automatic Build' : '$(play) Enable Automatic Build',
+                    run: () => setAutoBuild(!enabled),
+                },
+                { label: '$(output) Show Build Output', run: () => output.show(true) },
+            ];
+            const choice = await vscode.window.showQuickPick(actions, { title: 'bnd Automatic Build' });
+            await choice?.run();
+        }),
     );
 }
 

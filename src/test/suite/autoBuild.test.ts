@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import {
     applyBuildStatus,
     AutoBuildController,
@@ -37,9 +38,25 @@ suite('Automatic build', () => {
         assert.strictEqual(setting.default, true);
         assert.strictEqual(setting.scope, 'window');
         assert.ok(setting.markdownDescription);
-        for (const command of ['toggle', 'enable', 'disable', 'showOutput'].map(name => `bnd.build.auto.${name}`)) {
+        for (const command of ['toggle', 'enable', 'disable', 'showOutput', 'menu'].map(name => `bnd.build.auto.${name}`)) {
             assert.ok(pkg.contributes.commands.some((entry: { command: string }) => entry.command === command), command);
             assert.ok(pkg.contributes.menus.commandPalette.some((entry: { command: string }) => entry.command === command), command);
+        }
+    });
+
+    test('registers the setting with VS Code and changes it through build commands', async () => {
+        await vscode.extensions.getExtension('klibio.bnd')!.activate();
+        const config = vscode.workspace.getConfiguration('bnd');
+        const before = config.inspect<boolean>('build.auto');
+        assert.strictEqual(before?.defaultValue, true, 'the setting must be registered with VS Code');
+        assert.strictEqual(before?.workspaceValue, undefined, 'this test requires no workspace override');
+        try {
+            await vscode.commands.executeCommand('bnd.build.auto.disable');
+            assert.strictEqual(config.inspect<boolean>('build.auto')?.globalValue, false);
+            await vscode.commands.executeCommand('bnd.build.auto.toggle');
+            assert.strictEqual(config.inspect<boolean>('build.auto')?.globalValue, true);
+        } finally {
+            await config.update('build.auto', before?.globalValue, vscode.ConfigurationTarget.Global);
         }
     });
 
