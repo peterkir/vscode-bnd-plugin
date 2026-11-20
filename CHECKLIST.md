@@ -37,6 +37,7 @@ Follow the [development guide](DEV.md) for local development and the [PR-to-Mark
 - [ ] Run `bnd: Build Project (LSP)` on a bnd project.
 - [ ] Run `bnd: Clean Project (LSP)` on a bnd project and confirm `generated/` is emptied.
 - [ ] Run `bnd: Baseline Project (LSP)` on a project with `-baseline` and check the output channel report.
+- [ ] With a server that supports automatic build, save a `.bnd` file and confirm the **bnd: auto-build** status bar item shows building, then idle; click it and confirm it shows `off` and that `bnd.build.auto` changes.
 - [ ] Run `bnd: Evaluate Macro (LSP)` and confirm the result is shown.
 - [ ] Run `bnd-cli: Toggle CLI Commands in Command Palette`; verify other CLI entries hide and return, the toggle stays visible, User settings are unchanged, and the extension's stored choice survives reload.
 

@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.28.1
+## 0.29.0 (Unreleased)
+
+### Added
+- Automatic (incremental) build. The new `bnd.build.auto` setting (default `true`, requires a trusted workspace) is passed to the bnd language server, which builds the affected projects when a `.bnd` file is saved or compiled classes change. A **bnd: auto-build** status bar item next to **bnd LS** shows idle, building (with the project), failed (with the error count), off, and untrusted states and switches the build on click. The tooltip shows the last result and links to the new **bnd Build** output channel, which lists errors and warnings per project with timestamps. Successful builds raise no notification.
+- Commands **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, **bnd: Disable Automatic Build**, and **bnd: Show Build Output**. The toggle writes `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it. Editing the setting directly is synchronized to the server and the status bar.
+- The file watchers of the language client additionally report compiled classes in `bin` and `bin.vscode`, which the server needs to rebuild after the Java language server compiled.
+
+### Changed
+- Requires a bnd language server that advertises the `bndAutoBuild` experimental capability for automatic build. With older servers, and with the Node server, the status bar item stays hidden and `bnd.build.auto` has no effect.
 
 ### Fixed
 - The Repositories view, the bnd Explorer, and the Eclipse parallel-use detection identify a bnd workspace only when a VS Code workspace folder itself contains `cnf/build.bnd`, as Eclipse Bndtools does. Before, every `cnf/build.bnd` below a workspace folder (for example in an `examples` directory) was listed as a separate workspace.

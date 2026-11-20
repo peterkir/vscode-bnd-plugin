@@ -12,6 +12,17 @@ import {
     StreamInfo,
     TransportKind,
 } from 'vscode-languageclient/node';
+import {
+    AutoBuildController,
+    AutoBuildState,
+    autoBuildCommand,
+    autoBuildSetting,
+    buildStatusNotification,
+    chooseConfigurationTarget,
+    classOutputGlob,
+    presentAutoBuild,
+    supportsAutoBuild,
+} from './autoBuild';
 import { registerCliCommands } from './bndCliCommands';
 import { registerExplorerView } from './bndExplorer';
 import { registerLaunchSupport } from './bndLaunch';
@@ -30,6 +41,11 @@ let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
 let serverStatus: ServerStatus = { state: 'stopped' };
 let serverStatusItem: vscode.StatusBarItem | undefined;
+let autoBuildItem: vscode.StatusBarItem | undefined;
+let autoBuildOutput: vscode.OutputChannel | undefined;
+let autoBuild: AutoBuildController | undefined;
+let autoBuildSupportedContext: boolean | undefined;
+let fileWatchers: vscode.FileSystemWatcher[] = [];
 let javaServerStop: (() => void) | undefined;
 let configRestartTimer: NodeJS.Timeout | undefined;
 export let outputChannel: vscode.LogOutputChannel;
@@ -63,6 +79,67 @@ function setServerStatus(status: ServerStatus): void {
     serverStatusItem.backgroundColor = view.error ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
 }
 
+function readAutoBuildSetting(): boolean {
+    return vscode.workspace.getConfiguration('bnd').get<boolean>(autoBuildSetting, true);
+}
+
+function renderAutoBuild(state: AutoBuildState): void {
+    if (autoBuildSupportedContext !== state.supported) {
+        autoBuildSupportedContext = state.supported;
+        void vscode.commands.executeCommand('setContext', 'bnd.build.autoSupported', state.supported);
+    }
+    if (!autoBuildItem) return;
+    const view = presentAutoBuild(state);
+    if (!view.visible) {
+        autoBuildItem.hide();
+        return;
+    }
+    const tooltip = new vscode.MarkdownString(view.tooltip, true);
+    tooltip.isTrusted = { enabledCommands: ['bnd.build.auto.showOutput'] };
+    autoBuildItem.text = view.text;
+    autoBuildItem.tooltip = tooltip;
+    autoBuildItem.backgroundColor = view.error ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
+    autoBuildItem.show();
+}
+
+async function setAutoBuild(enabled: boolean): Promise<void> {
+    const config = vscode.workspace.getConfiguration('bnd');
+    const target = chooseConfigurationTarget(config.inspect<boolean>(autoBuildSetting));
+    await config.update(autoBuildSetting, enabled,
+        target === 'workspace' ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
+    await autoBuild?.syncSetting();
+    if (autoBuild && !autoBuild.state.supported) {
+        void vscode.window.showInformationMessage(
+            'The running bnd Language Server has no automatic build. The setting takes effect with an updated server.');
+    }
+}
+
+function registerAutoBuild(context: vscode.ExtensionContext): void {
+    autoBuildOutput = vscode.window.createOutputChannel('bnd Build');
+    autoBuildItem = vscode.window.createStatusBarItem('bnd.build.status', vscode.StatusBarAlignment.Right, 98);
+    autoBuildItem.name = 'bnd Automatic Build';
+    autoBuildItem.command = 'bnd.build.auto.toggle';
+    const output = autoBuildOutput;
+    autoBuild = new AutoBuildController({
+        readSetting: readAutoBuildSetting,
+        send: args => client ? executeServerCommand(client, autoBuildCommand, args) : Promise.reject(new Error(serverUnavailableMessage())),
+        log: line => output.appendLine(line),
+        changed: renderAutoBuild,
+        now: () => Date.now(),
+    });
+    context.subscriptions.push(
+        autoBuildOutput,
+        autoBuildItem,
+        vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration(`bnd.${autoBuildSetting}`)) void autoBuild?.syncSetting();
+        }),
+        vscode.commands.registerCommand('bnd.build.auto.toggle', () => setAutoBuild(!readAutoBuildSetting())),
+        vscode.commands.registerCommand('bnd.build.auto.enable', () => setAutoBuild(true)),
+        vscode.commands.registerCommand('bnd.build.auto.disable', () => setAutoBuild(false)),
+        vscode.commands.registerCommand('bnd.build.auto.showOutput', () => output.show(true)),
+    );
+}
+
 function isServerEnabled(): boolean {
     return vscode.workspace.getConfiguration('bnd').get<boolean>('server.enabled', true);
 }
@@ -82,6 +159,7 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     setServerStatus(serverStatus);
     serverStatusItem.show();
     context.subscriptions.push(serverStatusItem);
+    registerAutoBuild(context);
     const eclipse = registerEclipseCoexistence(context, outputChannel);
     registerExplorerView(context);
     registerWorkspaceWizards(context, {
@@ -560,6 +638,7 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
     if (!config.get<boolean>('server.enabled', true)) {
         outputChannel.appendLine('bnd Language Server is disabled by bnd.server.enabled.');
         setServerStatus({ state: 'disabled' });
+        autoBuild?.stop();
         effectiveProvider?.refresh();
         repositoriesProvider?.refresh();
         resolutionProvider?.refresh();
@@ -647,12 +726,18 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         void refreshServerJar(context, launchedJar.pending, launchedJar.path);
     }
 
+    disposeFileWatchers();
+    fileWatchers = [
+        vscode.workspace.createFileSystemWatcher('**/*.{bnd,bndrun,mvn,packageinfo}'),
+        // Compiled classes drive incremental builds in the server.
+        vscode.workspace.createFileSystemWatcher(classOutputGlob),
+    ];
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'bnd' }],
-        initializationOptions: { workspaceTrusted: vscode.workspace.isTrusted, driver: 'vscode' },
+        initializationOptions: { workspaceTrusted: vscode.workspace.isTrusted, driver: 'vscode', autoBuild: readAutoBuildSetting() },
         outputChannel,
         synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{bnd,bndrun,mvn,packageinfo}'),
+            fileEvents: fileWatchers,
         },
         initializationFailedHandler: (error) => {
             const msg = error instanceof Error ? (error.stack || error.message) : String(error);
@@ -673,8 +758,13 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         // Like the library's own child-process handling: give the server 2 s to honor `exit`.
         if (event.newState === State.Stopped && javaServerStop) setTimeout(javaServerStop, 2000);
         if (client !== started) return;
-        if (event.newState === State.Stopped) setServerStatus({ state: 'stopped' });
-        else setServerStatus({ state: event.newState === State.Running ? 'running' : 'starting', kind });
+        if (event.newState === State.Stopped) {
+            setServerStatus({ state: 'stopped' });
+            autoBuild?.stop();
+        } else setServerStatus({ state: event.newState === State.Running ? 'running' : 'starting', kind });
+    });
+    started.onNotification(buildStatusNotification, params => {
+        if (client === started) autoBuild?.handleStatus(params);
     });
 
     clientReady = client.start();
@@ -689,6 +779,12 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
     effectiveProvider?.refresh();
     repositoriesProvider?.refresh();
     resolutionProvider?.refresh();
+    if (client === started) await autoBuild?.start(supportsAutoBuild(started.initializeResult?.capabilities.experimental));
+}
+
+function disposeFileWatchers(): void {
+    for (const watcher of fileWatchers) watcher.dispose();
+    fileWatchers = [];
 }
 
 async function supportsServerCommand(command: string): Promise<boolean> {
@@ -703,12 +799,14 @@ async function stopLanguageClient(): Promise<void> {
     await clientReady?.then(undefined, () => undefined);
     client = undefined;
     clientReady = undefined;
+    autoBuild?.stop();
     try {
         await active.stop();
     } catch (err) {
         outputChannel.appendLine(`bnd Language Server did not stop cleanly: ${err}`);
         javaServerStop?.();
     }
+    disposeFileWatchers();
 }
 
 // bnd workspace plugins may print to System.out, which the Java server shares with the protocol.
