@@ -143,12 +143,15 @@ export function parseActionLabel(label: string): ParsedAction {
     };
 }
 
-export async function findBndWorkspaces(): Promise<vscode.Uri[]> {
-    const files = await vscode.workspace.findFiles('**/cnf/build.bnd', '**/node_modules/**');
+/**
+ * Like bndtools, only a workspace folder root containing cnf/build.bnd is a bnd workspace;
+ * nested workspaces (for example examples or test fixtures) are ignored.
+ */
+export async function findBndWorkspaces(
+    folders: readonly vscode.Uri[] = vscode.workspace.workspaceFolders?.map(folder => folder.uri) ?? []): Promise<vscode.Uri[]> {
     const roots = new Map<string, vscode.Uri>();
-    for (const file of files) {
-        const root = vscode.Uri.joinPath(file, '..', '..');
-        roots.set(root.toString(), root);
+    for (const folder of folders) {
+        if (await bndWorkspaceExists(folder.toString())) roots.set(folder.toString(), folder);
     }
     return [...roots.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath));
 }

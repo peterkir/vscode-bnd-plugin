@@ -37,7 +37,7 @@ All completion items are pre-filled with **real examples from the bnd documentat
   - `-buildpath: osgi;version=4.1`
   - `-runbundles: org.apache.felix.framework;version='[7,8)'`
   - `-dsannotations: *`, `-runee: JavaSE-17`, `-standalone: ...`
-- **138 bnd macros** – triggered when the cursor is inside `${...}`:
+- **bnd macros** – triggered when the cursor is inside `${...}`. The Java server lists every macro bndlib provides for the file, including project and workspace macros, with the macro help; the Node fallback offers 138:
   - `${bsn}`, `${version}`, `${range;[==,+);${@}}`, `${repo;bsns}`
   - `${filter;<list>;<regex>}`, `${replace;<list>;<regex>;<replacement>}`
   - `${tstamp;yyyy-MM-dd}`, `${githead}`, `${system;git describe}`
@@ -45,6 +45,7 @@ All completion items are pre-filled with **real examples from the bnd documentat
   - `Bundle-SymbolicName: com.example.bundle`
   - `Export-Package: com.example.api;version=1.0`
   - `Require-Capability: osgi.identity; filter:='...'`
+- **Attributes and directives** – after `;` in a clause the Java server offers the attributes and directives bnd documents for the header, for example `version=` and `resolution:=` in `Import-Package`, and after `resolution:=` their values. `-runee` offers the execution environments bnd knows up to the running Java version.
 
 ![Completion list for -run instructions with documentation preview](docs/images/completions.png)
 
@@ -96,7 +97,7 @@ Launching requires workspace trust, the Java language server (the Node fallback 
 
 The **bnd** Activity Bar container shows an independent **Explorer** above **Repositories** by default. It offers the built-in Explorer's file actions in the same context-menu groups and with the same default keys: New File/Folder, Open to the Side, Open With, Reveal in File Explorer, Open in Integrated Terminal, Find in Folder, Cut/Copy/Paste (copies get `name copy.ext`), Copy Path/Relative Path, Rename (`F2`), Delete (to the Recycle Bin/Trash), and compare. Dragging moves files within the tree; files dropped from outside are copied. bnd actions (Run/Debug, Open Effective, JAR Viewer, Resolution) appear on matching files. Configure `bnd.explorer.exclude` with exact file/folder names to hide at every level (default `.git` and `node_modules`); it does not use the normal Explorer's `files.exclude`. Context-menu entries that other extensions add to the built-in Explorer are not available here; use **Reveal in Explorer View** for them. VS Code preserves any view order you customize.
 
-The **Repositories** view is a port of the bndtools Eclipse view. It lists one root per bnd workspace (a folder with `cnf/build.bnd`). Each root shows the Workspace repository, with projects and their bundles, followed by the configured repository plugins. Expand repositories to see bundles, versions, and Eclipse features from either P2 or OSGi indexed repositories. Features expose their included features, included bundles, and requirements directly from index metadata without downloading feature JARs. Advanced Search also keeps feature results expandable; member tooltips show requirement filters and optional status.
+The **Repositories** view is a port of the bndtools Eclipse view. It lists one root per bnd workspace: a VS Code workspace folder that contains `cnf/build.bnd`. As in Eclipse Bndtools, a `cnf/build.bnd` in a subdirectory (for example an example or test workspace) is not a separate bnd workspace. Each root shows the Workspace repository, with projects and their bundles, followed by the configured repository plugins. Expand repositories to see bundles, versions, and Eclipse features from either P2 or OSGi indexed repositories. Features expose their included features, included bundles, and requirements directly from index metadata without downloading feature JARs. Advanced Search also keeps feature results expandable; member tooltips show requirement filters and optional status.
 
 | Filtered Maven repository | P2 feature with included bundles |
 |---|---|
@@ -236,6 +237,8 @@ The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources reb
 
 `bnd: Build Project (LSP)`, `bnd: Clean Project (LSP)` and `bnd: Baseline Project (LSP)` act on the project of the active or selected bnd file without the bnd CLI. Clean on a workspace file (for example `cnf/build.bnd`) cleans every project. Baseline compares each bundle of the project with its `-baseline` repository and prints the per-package report to the **bnd Language Server** output channel.
 
+`bnd: Export Run (LSP)...` exports the active or selected `.bndrun` or `bnd.bnd` file, also from the Explorer and bnd Explorer context menus, like the Bndtools export commands. Choose **Executable JAR** (`bnd.executablejar`, started with `java -jar`) or **Run bundles folder** (`bnd.runbundles`). The workspace bundles of the run are built first. The result goes to `generated/export` of the owning project (the project's `target-dir`), and **Reveal** shows it in the file manager. Errors and warnings are written to the **bnd Language Server** output channel. Export requires a trusted workspace.
+
 #### Status and disabling the language server
 
 The **bnd LS** item at the right of the status bar shows the server state: starting, running (with the actual mode `java`, `node`, or `socket`), stopped, failed, or disabled. Click it, or run **bnd: Language Server Status...**, to enable or disable the server, restart it, or open its output channel.
@@ -243,6 +246,22 @@ The **bnd LS** item at the right of the status bar shows the server state: start
 Set `bnd.server.enabled` to `false`, or run **bnd: Enable/Disable Language Server**, to run the extension without a language server process. The command writes the setting to the workspace when a folder is open, otherwise to the User settings. While disabled, completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, the LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and the bnd CLI commands keep working.
 
 Disabling the bnd language server does not disable the [native Java project import](#native-java-project-import), which runs inside the Java language server. See [Sharing a workspace directory with Eclipse Bndtools](docs/shared-workspace-conflicts.md) for the current limits of using one directory from both IDEs.
+
+#### Automatic build
+
+With the Java language server, bnd projects build incrementally. The server builds the affected projects when a `.bnd` file is saved or when compiled classes change below `bin` (or `bin.vscode`); the Java language server compiles the sources, bnd packages the result. Set `bnd.build.auto` to `false` to turn this off (default `true`). The setting needs a trusted workspace: in an untrusted workspace the switch stays on, but the server builds nothing.
+
+The **bnd: auto-build** item at the right of the status bar is the switch and shows the state. Click it, or run **bnd: Toggle Automatic Build**, to turn the build on or off. **bnd: Enable Automatic Build** and **bnd: Disable Automatic Build** set the state explicitly. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it; editing the setting yourself has the same effect.
+
+| Item text | Meaning |
+|---|---|
+| `$(check) bnd: auto-build` | On and idle |
+| `$(sync~spin) bnd: building <project>` | A build is running |
+| `$(error) bnd: build failed (N)` | The last build reported errors; N is the number of errors. Error background until the next build finishes |
+| `$(circle-slash) bnd: auto-build off` | Switched off |
+| `$(shield) bnd: auto-build (untrusted)` | Switched on, but paused because the workspace is not trusted |
+
+The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds, with their errors and warnings per project, are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the language server is stopped, disabled, or too old to support automatic build; older servers ignore `bnd.build.auto`.
 
 **Architecture:**
 
@@ -364,6 +383,7 @@ For the embedded language server, configure the startup mode in `bnd.server.mode
 ```
 
 - `bnd.server.enabled: false` starts no language server; see [Status and disabling the language server](#status-and-disabling-the-language-server).
+- `bnd.build.auto` (default `true`) switches the incremental build of the language server on or off; see [Automatic build](#automatic-build).
 - `java` starts `biz.aQute.bnd.lsp.jar` with the configured Java runtime.
 - `node` starts the TypeScript language server directly.
 - `socket` connects to an already running LSP on `127.0.0.1:5007`.
