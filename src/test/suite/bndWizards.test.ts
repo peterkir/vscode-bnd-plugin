@@ -134,6 +134,7 @@ suite('bnd workspace creation wizard', () => {
                 assert.deepStrictEqual(templates, catalog.templates);
                 return true;
             },
+            saveDirtyFiles: async () => true,
             progress: async (_title, task) => { const token = new vscode.CancellationTokenSource();
                 try { return await task(token.token); } finally { token.dispose(); } },
             created: async () => { opened = true; },
@@ -166,6 +167,13 @@ suite('bnd workspace creation wizard', () => {
 
     test('template selection cancellation makes no creation request', async () => {
         ui.templates = async () => undefined;
+        await createWorkspace(server, ui);
+        assert.deepStrictEqual(commands.map(item => item.command), [wizardCommands.list, wizardCommands.dispose]);
+        assert.ok(!opened);
+    });
+
+    test('unsaved-file cancellation disposes catalog without creating', async () => {
+        ui.saveDirtyFiles = async () => false;
         await createWorkspace(server, ui);
         assert.deepStrictEqual(commands.map(item => item.command), [wizardCommands.list, wizardCommands.dispose]);
         assert.ok(!opened);

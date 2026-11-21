@@ -12,19 +12,17 @@ export interface ServerStatusPresentation {
     error: boolean;
 }
 
-const label = 'bnd LS';
-
 export function presentServerStatus(status: ServerStatus): ServerStatusPresentation {
     switch (status.state) {
         case 'disabled':
-            return { text: `$(circle-slash) ${label}`, tooltip: 'bnd Language Server: disabled by bnd.server.enabled', error: false };
+            return { text: '$(extensions) $(circle-slash)', tooltip: 'bnd Language Server: disabled by bnd.server.enabled', error: false };
         case 'starting':
-            return { text: `$(sync~spin) ${label}`, tooltip: `bnd Language Server: starting (${status.kind})`, error: false };
+            return { text: '$(extensions) $(sync~spin)', tooltip: `bnd Language Server: starting (${status.kind})`, error: false };
         case 'running':
-            return { text: `$(check) ${label}`, tooltip: `bnd Language Server: running (${status.kind})`, error: false };
+            return { text: '$(extensions) $(check)', tooltip: `bnd Language Server: running (${status.kind})`, error: false };
         case 'failed':
-            return { text: `$(error) ${label}`, tooltip: `bnd Language Server: failed to start: ${status.message}`, error: true };
+            return { text: '$(extensions) $(error)', tooltip: `bnd Language Server: failed to start: ${status.message}`, error: true };
         default:
-            return { text: `$(debug-disconnect) ${label}`, tooltip: 'bnd Language Server: stopped', error: false };
+            return { text: '$(extensions) $(debug-disconnect)', tooltip: 'bnd Language Server: stopped', error: false };
     }
 }

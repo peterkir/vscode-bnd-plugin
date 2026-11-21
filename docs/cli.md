@@ -21,7 +21,7 @@ Two prefixes appear in the Command Palette (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kb
 
 ## Show the CLI commands
 
-CLI commands are **hidden by default** to keep the palette short. Run **bnd-cli: Toggle CLI Commands in Command Palette** to show or hide them. This command always stays visible.
+CLI commands are **hidden by default** to keep the palette short. Open the compact package status item or run **bnd-cli: Toggle CLI Commands in Command Palette** to show or hide them. The **bnd Configuration** popup contains an on/off switch for CLI palette visibility. The toggle command always stays visible.
 
 - The choice is saved in the extension's global storage, applies to all workspaces of the current VS Code profile, and survives restarts.
 - No settings file is modified, so a broken `settings.json` cannot block the toggle.

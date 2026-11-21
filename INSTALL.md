@@ -107,7 +107,7 @@ The extension can launch the bnd server in different modes depending on your set
 }
 ```
 
-- `bnd.server.enabled: false` starts no language server process. The **bnd LS** status bar item shows the state and offers enable, disable, and restart actions. The Java project import in the Java language server is not affected.
+- `bnd.server.enabled: false` starts no language server process. The single compact bnd configuration status bar item opens switches for the language server, automatic build, and CLI commands. Turning off the language server also turns off automatic build. The Java project import in the Java language server is not affected.
 - `java` uses `biz.aQute.bnd.lsp.jar` and provides full bndlib-backed features. By default the bundled `server/biz.aQute.bnd.lsp.jar` is used; run **bnd: Select Language Server JAR...** to switch to a release, snapshot, custom URL, or local JAR (settings `bnd.server.jarSource`, `bnd.server.jarVersion`, `bnd.server.jarUrl`, `bnd.server.jarSha256`, `bnd.server.jar`).
 - `node` runs the TypeScript LSP directly, providing completion and hover support.
 - `socket` connects to a running TCP socket server.
@@ -115,7 +115,7 @@ The extension can launch the bnd server in different modes depending on your set
 
 ### Parallel Use with Eclipse Bndtools
 
-With `bnd.eclipse.detect` (default `true`), the extension reports an Eclipse instance that has the bnd workspace open through an **Eclipse** status bar item next to **bnd LS**. **bnd: Configure Parallel Use with Eclipse...** creates `cnf/ext/vscode-outputs.bnd`, which gives VS Code the output directories `bin.vscode`, `bin_test.vscode`, and `generated.vscode`, clears `java.project.resourceFilters` for the workspace, and removes the classpath container of earlier extension versions from Eclipse `.classpath` files; **bnd: Eclipse Parallel Use...** lists the related actions. The Java project import does not change the metadata of Eclipse Bndtools projects. See [Parallel use with Eclipse Bndtools](README.md#parallel-use-with-eclipse-bndtools) for the detection limits and the generated file, and [Sharing a workspace directory between Eclipse Bndtools and VS Code](docs/shared-workspace-conflicts.md) for the complete setup.
+With `bnd.eclipse.detect` (default `true`), the extension reports an Eclipse instance that has the bnd workspace open through an **Eclipse** status bar item next to the compact bnd configuration item. **bnd: Configure Parallel Use with Eclipse...** creates `cnf/ext/vscode-outputs.bnd`, which gives VS Code the output directories `bin.vscode`, `bin_test.vscode`, and `generated.vscode`, clears `java.project.resourceFilters` for the workspace, and removes the classpath container of earlier extension versions from Eclipse `.classpath` files; **bnd: Eclipse Parallel Use...** lists the related actions. The Java project import does not change the metadata of Eclipse Bndtools projects. See [Parallel use with Eclipse Bndtools](README.md#parallel-use-with-eclipse-bndtools) for the detection limits and the generated file, and [Sharing a workspace directory between Eclipse Bndtools and VS Code](docs/shared-workspace-conflicts.md) for the complete setup.
 
 ### Feature Requirements
 

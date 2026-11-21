@@ -132,8 +132,7 @@ On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd> where VS Code does.
 
 | Item | Shows |
 |---|---|
-| **bnd LS** | Language server state and mode. Click for the status menu. |
-| **bnd: auto-build** | Automatic build state. Click for the enable/disable and output menu. |
+| **bnd configuration** | The resized bnd logo icon. Click for a popup with on/off switches for the language server, automatic build, and CLI palette commands. |
 | **Eclipse** | An Eclipse instance has the workspace open. Click for the parallel-use menu. |
 
 ## Output channels

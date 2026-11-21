@@ -20,10 +20,9 @@ import {
     buildStatusNotification,
     chooseConfigurationTarget,
     classOutputGlob,
-    presentAutoBuild,
     supportsAutoBuild,
 } from './autoBuild';
-import { registerCliCommands } from './bndCliCommands';
+import { cliPaletteVisible, registerCliCommands, setCliPaletteVisible } from './bndCliCommands';
 import { registerExplorerView } from './bndExplorer';
 import { registerExportCommand } from './bndExport';
 import { registerLaunchSupport } from './bndLaunch';
@@ -41,8 +40,7 @@ import { ProtocolResyncStream } from './serverStream';
 let client: LanguageClient | undefined;
 let clientReady: Promise<void> | undefined;
 let serverStatus: ServerStatus = { state: 'stopped' };
-let serverStatusItem: vscode.StatusBarItem | undefined;
-let autoBuildItem: vscode.StatusBarItem | undefined;
+let bndStatusItem: vscode.StatusBarItem | undefined;
 let autoBuildOutput: vscode.OutputChannel | undefined;
 let autoBuild: AutoBuildController | undefined;
 let autoBuildSupportedContext: boolean | undefined;
@@ -73,11 +71,7 @@ export interface BndExtensionApi {
 
 function setServerStatus(status: ServerStatus): void {
     serverStatus = status;
-    if (!serverStatusItem) return;
-    const view = presentServerStatus(status);
-    serverStatusItem.text = view.text;
-    serverStatusItem.tooltip = view.tooltip;
-    serverStatusItem.backgroundColor = view.error ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
+    renderBndStatusItem();
 }
 
 function readAutoBuildSetting(): boolean {
@@ -89,21 +83,11 @@ function renderAutoBuild(state: AutoBuildState): void {
         autoBuildSupportedContext = state.supported;
         void vscode.commands.executeCommand('setContext', 'bnd.build.autoSupported', state.supported);
     }
-    if (!autoBuildItem) return;
-    const view = presentAutoBuild(state);
-    if (!view.visible) {
-        autoBuildItem.hide();
-        return;
-    }
-    const tooltip = new vscode.MarkdownString(view.tooltip, true);
-    tooltip.isTrusted = { enabledCommands: ['bnd.build.auto.showOutput'] };
-    autoBuildItem.text = view.text;
-    autoBuildItem.tooltip = tooltip;
-    autoBuildItem.backgroundColor = view.error ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
-    autoBuildItem.show();
+    renderBndStatusItem();
 }
 
 async function setAutoBuild(enabled: boolean): Promise<void> {
+    if (!isServerEnabled()) enabled = false;
     const config = vscode.workspace.getConfiguration('bnd');
     const inspection = config.inspect<boolean>(autoBuildSetting);
     if (inspection?.defaultValue === undefined) {
@@ -125,9 +109,6 @@ async function setAutoBuild(enabled: boolean): Promise<void> {
 
 function registerAutoBuild(context: vscode.ExtensionContext): void {
     autoBuildOutput = vscode.window.createOutputChannel('bnd Build');
-    autoBuildItem = vscode.window.createStatusBarItem('bnd.build.status', vscode.StatusBarAlignment.Right, 98);
-    autoBuildItem.name = 'bnd Automatic Build';
-    autoBuildItem.command = 'bnd.build.auto.menu';
     const output = autoBuildOutput;
     autoBuild = new AutoBuildController({
         readSetting: readAutoBuildSetting,
@@ -138,7 +119,6 @@ function registerAutoBuild(context: vscode.ExtensionContext): void {
     });
     context.subscriptions.push(
         autoBuildOutput,
-        autoBuildItem,
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration(`bnd.${autoBuildSetting}`)) void autoBuild?.syncSetting();
         }),
@@ -165,6 +145,35 @@ function isServerEnabled(): boolean {
     return vscode.workspace.getConfiguration('bnd').get<boolean>('server.enabled', true);
 }
 
+async function setServerEnabled(enabled: boolean): Promise<void> {
+    if (!enabled) await setAutoBuild(false);
+    await vscode.workspace.getConfiguration('bnd').update(
+        'server.enabled',
+        enabled,
+        vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
+}
+
+function renderBndStatusItem(): void {
+    if (!bndStatusItem) return;
+    const serverEnabled = isServerEnabled();
+    const autoEnabled = readAutoBuildSetting();
+    const cliEnabled = cliPaletteVisible(contextForStatusMenu);
+    bndStatusItem.text = '$(bnd-logo)';
+    const iconUri = vscode.Uri.joinPath(contextForStatusMenu.extensionUri, 'media', 'bndtools.svg').toString(true);
+    bndStatusItem.tooltip = new vscode.MarkdownString(
+        `![bnd](${iconUri})\n\n**bnd configuration**\n\n`
+        + `- Language Server: **${serverEnabled ? 'On' : 'Off'}**\n`
+        + `- Automatic Build: **${serverEnabled && autoEnabled ? 'On' : 'Off'}**\n`
+        + `- CLI Commands: **${cliEnabled ? 'On' : 'Off'}**\n\n`
+        + `Click to change the configuration.`);
+    bndStatusItem.backgroundColor = presentServerStatus(serverStatus).error
+        ? new vscode.ThemeColor('statusBarItem.errorBackground')
+        : undefined;
+    bndStatusItem.show();
+}
+
+let contextForStatusMenu: vscode.ExtensionContext;
+
 function serverUnavailableMessage(): string {
     return serverStatus.state === 'disabled'
         ? 'bnd Language Server is disabled. Enable it with the bnd.server.enabled setting.'
@@ -172,14 +181,14 @@ function serverUnavailableMessage(): string {
 }
 
 export function activate(context: vscode.ExtensionContext): BndExtensionApi {
+    contextForStatusMenu = context;
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
-    serverStatusItem = vscode.window.createStatusBarItem('bnd.server.status', vscode.StatusBarAlignment.Right, 100);
-    serverStatusItem.name = 'bnd Language Server';
-    serverStatusItem.command = 'bnd.server.menu';
-    setServerStatus(serverStatus);
-    serverStatusItem.show();
-    context.subscriptions.push(serverStatusItem);
+    bndStatusItem = vscode.window.createStatusBarItem('bnd.configuration.status', vscode.StatusBarAlignment.Right, 100);
+    bndStatusItem.name = 'bnd Configuration';
+    bndStatusItem.command = 'bnd.status.menu';
+    renderBndStatusItem();
+    context.subscriptions.push(bndStatusItem);
     registerAutoBuild(context);
     const eclipse = registerEclipseCoexistence(context, outputChannel);
     registerExplorerView(context);
@@ -292,15 +301,13 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
 
     // The setting change restarts or stops the server through the configuration listener above.
     context.subscriptions.push(
-        vscode.commands.registerCommand('bnd.server.toggle', () => vscode.workspace.getConfiguration('bnd').update(
-            'server.enabled', !isServerEnabled(),
-            vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global)),
+        vscode.commands.registerCommand('bnd.server.toggle', () => setServerEnabled(!isServerEnabled())),
         vscode.commands.registerCommand('bnd.server.menu', async () => {
             const enabled = isServerEnabled();
             const actions = [
                 {
                     label: enabled ? '$(circle-slash) Disable Language Server' : '$(play) Enable Language Server',
-                    run: () => vscode.commands.executeCommand('bnd.server.toggle'),
+                    run: () => setServerEnabled(!enabled),
                 },
                 ...(enabled ? [{
                     label: '$(debug-restart) Restart Language Server',
@@ -310,6 +317,45 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
             ];
             const choice = await vscode.window.showQuickPick(actions, { title: presentServerStatus(serverStatus).tooltip });
             await choice?.run();
+        }),
+        vscode.commands.registerCommand('bnd.status.menu', async () => {
+            interface ConfigurationPick extends vscode.QuickPickItem {
+                id: 'language-server' | 'auto-build' | 'cli-commands';
+            }
+            const serverEnabled = isServerEnabled();
+            const autoEnabled = serverEnabled && readAutoBuildSetting();
+            const cliEnabled = cliPaletteVisible(context);
+            const items: ConfigurationPick[] = [
+                { id: 'language-server', label: 'Language Server', description: 'Start and stop the bnd language server', picked: serverEnabled },
+                { id: 'auto-build', label: 'Automatic Build', description: 'Build affected bnd projects incrementally', picked: autoEnabled },
+                { id: 'cli-commands', label: 'CLI Commands', description: 'Show bnd CLI commands in the Command Palette', picked: cliEnabled },
+            ];
+            const quickPick = vscode.window.createQuickPick<ConfigurationPick>();
+            quickPick.title = 'bnd Configuration';
+            quickPick.canSelectMany = true;
+            quickPick.items = items;
+            quickPick.selectedItems = items.filter(item => item.picked);
+            quickPick.placeholder = 'Switch configurations on or off';
+
+            const choice = await new Promise<readonly ConfigurationPick[] | undefined>(resolve => {
+                quickPick.onDidAccept(() => resolve(quickPick.selectedItems));
+                quickPick.onDidHide(() => resolve(undefined));
+                quickPick.show();
+            });
+            quickPick.dispose();
+            if (!choice) return;
+
+            const enabled = new Set(choice.map(item => item.id));
+            const serverEnabledNext = enabled.has('language-server');
+            const autoEnabledNext = serverEnabledNext && enabled.has('auto-build');
+            const cliEnabledNext = enabled.has('cli-commands');
+
+            await setServerEnabled(serverEnabledNext);
+            await setAutoBuild(autoEnabledNext);
+            await setCliPaletteVisible(context, cliEnabledNext);
+            if (!serverEnabledNext && enabled.has('auto-build')) {
+                await vscode.window.showInformationMessage('Automatic Build was turned off because the bnd Language Server is off.');
+            }
         })
     );
 
