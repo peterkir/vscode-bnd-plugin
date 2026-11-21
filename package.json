@@ -1,8 +1,8 @@
 {
   "name": "bnd",
-  "displayName": "bnd / bndtools / OSGi",
+  "displayName": "OSGi with bnd/bndtools",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.30.0",
+  "version": "0.30.1",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -1603,7 +1603,7 @@
     "walkthroughs": [
       {
         "id": "bnd.walkthrough",
-        "title": "Get Started with bnd / bndtools",
+        "title": "Get Started with OSGi with bnd/bndtools",
         "description": "Learn the features of this extension: syntax highlighting, IntelliSense, hover docs, launch and debug, repositories, workspace wizards, and integrated CLI commands.",
         "steps": [
           {

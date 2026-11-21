@@ -1,5 +1,5 @@
-title: bnd / bndtools for VS Code
-description: User documentation for the bnd / bndtools / OSGi extension for Visual Studio Code.
+title: OSGi with bnd/bndtools
+description: User documentation for the OSGi with bnd/bndtools extension for Visual Studio Code.
 url: https://peterkir.github.io
 baseurl: /vscode-bnd-plugin
 lang: en

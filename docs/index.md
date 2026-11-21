@@ -7,7 +7,7 @@ description: Language support, repositories, resolution analysis, run and debug,
 
 <div class="hero" markdown="1">
 
-# bnd / bndtools for VS Code
+# OSGi with bnd/bndtools
 {: .no_toc}
 
 <p class="lead">Edit, build, resolve, run, and debug OSGi projects that use <a href="https://bnd.bndtools.org">bnd</a> without leaving Visual Studio Code.</p>

@@ -167,5 +167,5 @@ An exit code of `0` means the Java process shut down cleanly. Look earlier in th
 ## Uninstalling
 
 1. Open the Extensions view (`Ctrl+Shift+X`).
-2. Search for "bnd / bndtools".
+2. Search for "OSGi with bnd/bndtools".
 3. Click the gear icon and select **Uninstall**.

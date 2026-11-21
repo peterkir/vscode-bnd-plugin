@@ -95,7 +95,7 @@ A minimal `launch.bndrun` looks like this:
 
 ## Step 6: Use the built-in walkthrough
 
-VS Code includes an interactive walkthrough with the same topics. Run **Welcome: Open Walkthrough...** and select **Get Started with bnd / bndtools**.
+VS Code includes an interactive walkthrough with the same topics. Run **Welcome: Open Walkthrough...** and select **Get Started with OSGi with bnd/bndtools**.
 
 ## Where to go next
 

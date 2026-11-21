@@ -1,4 +1,4 @@
-# bnd / bndtools for VS Code
+# OSGi with bnd/bndtools
 
 A Visual Studio Code extension providing rich language support for **bnd** (`.bnd`) and **bndrun** (`.bndrun`) files used in [OSGi](https://www.osgi.org/) development with the [bnd/bndtools](https://bnd.bndtools.org) toolchain.
 
