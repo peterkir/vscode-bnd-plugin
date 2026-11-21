@@ -184,7 +184,7 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     contextForStatusMenu = context;
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
-    bndStatusItem = vscode.window.createStatusBarItem('bnd.configuration.status', vscode.StatusBarAlignment.Right, 100);
+    bndStatusItem = vscode.window.createStatusBarItem('bnd.status.configuration', vscode.StatusBarAlignment.Right, 100);
     bndStatusItem.name = 'bnd Configuration';
     bndStatusItem.command = 'bnd.status.menu';
     renderBndStatusItem();
