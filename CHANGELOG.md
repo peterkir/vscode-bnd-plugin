@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.30.13 (Unreleased)
+
+### Fixed
+- The bnd configuration status bar item uses a new identifier. Profiles that hid the item under its earlier identifier while testing development builds no longer keep it hidden. Hide it again from the status bar context menu if you do not want it.
+
 ## 0.30.12 (Unreleased)
 
 ### Fixed
