@@ -40,7 +40,8 @@ suite('Language server enablement', () => {
         ];
         const views = states.map(presentServerStatus);
         assert.deepStrictEqual(views.map(view => view.text), [
-            '$(circle-slash) bnd LS', '$(debug-disconnect) bnd LS', '$(sync~spin) bnd LS', '$(check) bnd LS', '$(error) bnd LS',
+            '$(extensions) $(circle-slash)', '$(extensions) $(debug-disconnect)', '$(extensions) $(sync~spin)',
+            '$(extensions) $(check)', '$(extensions) $(error)',
         ]);
         assert.deepStrictEqual(views.map(view => view.error), [false, false, false, false, true]);
         assert.match(views[0].tooltip, /disabled by bnd\.server\.enabled/);

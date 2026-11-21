@@ -1411,9 +1411,11 @@ export function registerCliCommands(context: vscode.ExtensionContext): void {
 
 export function registerCliPaletteVisibility(context: Pick<vscode.ExtensionContext, 'globalState' | 'subscriptions'>): void {
     const preferenceKey = 'bnd.cli.showCommands';
-    const visible = () => context.globalState.get<boolean>(preferenceKey)
-        ?? vscode.workspace.getConfiguration('bnd').get<boolean>('cli.showCommands', false);
-    const publish = () => vscode.commands.executeCommand('setContext', 'bnd.cli.commandsVisible', visible());
+    const visible = () => cliPaletteVisible(context);
+    const publish = () => {
+        const isVisible = visible();
+        return vscode.commands.executeCommand('setContext', 'bnd.cli.commandsVisible', isVisible);
+    };
 
     void publish();
     context.subscriptions.push(
@@ -1425,4 +1427,14 @@ export function registerCliPaletteVisibility(context: Pick<vscode.ExtensionConte
             if (event.affectsConfiguration(preferenceKey)) void publish();
         }),
     );
+}
+
+export function cliPaletteVisible(context: Pick<vscode.ExtensionContext, 'globalState'>): boolean {
+    return context.globalState.get<boolean>('bnd.cli.showCommands')
+        ?? vscode.workspace.getConfiguration('bnd').get<boolean>('cli.showCommands', false);
+}
+
+export async function setCliPaletteVisible(context: Pick<vscode.ExtensionContext, 'globalState'>, visible: boolean): Promise<void> {
+    await context.globalState.update('bnd.cli.showCommands', visible);
+    await vscode.commands.executeCommand('setContext', 'bnd.cli.commandsVisible', visible);
 }

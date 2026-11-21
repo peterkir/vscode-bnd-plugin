@@ -33,8 +33,32 @@ export interface WorkspaceCreationUI {
     indexes(): Promise<string[] | undefined>;
     templates(catalog: WorkspaceCatalog): Promise<WorkspaceTemplate[] | undefined>;
     confirmSources(templates: WorkspaceTemplate[]): Promise<boolean>;
+    saveDirtyFiles(): Promise<boolean>;
     progress<T>(title: string, task: (token: vscode.CancellationToken) => Promise<T>): Promise<T>;
     created(root: vscode.Uri): Promise<void>;
+}
+
+export async function saveDirtyFiles(
+    documents: readonly vscode.TextDocument[] = vscode.workspace.textDocuments,
+): Promise<boolean> {
+    const dirty = documents.filter(document => document.isDirty && document.uri.scheme === 'file');
+    if (!dirty.length) return true;
+    const choice = await vscode.window.showWarningMessage(
+        'Unsaved changes detected',
+        {
+            modal: true,
+            detail: `${dirty.length} unsaved file${dirty.length === 1 ? '' : 's'} must be saved before applying templates.`,
+        },
+        'Save and Continue',
+        'Cancel',
+    );
+    if (choice !== 'Save and Continue') return false;
+    for (const document of dirty) {
+        if (!(await document.save())) {
+            throw new Error(`Could not save unsaved file: ${document.uri.fsPath}`);
+        }
+    }
+    return true;
 }
 
 async function wizardRequest<T>(server: WizardServer, command: string, request: unknown,
@@ -80,6 +104,7 @@ export async function createWorkspace(server: WizardServer, ui: WorkspaceCreatio
         if (!selected?.length) return;
         const resolved = resolveTemplateSelection(catalog, selected);
         if (!(await ui.confirmSources(resolved))) return;
+        if (!(await ui.saveDirtyFiles())) return;
         const result = await ui.progress(mode === 'workspace' ? 'Create bnd workspace' : 'Add workspace fragments',
             token => wizardRequest<{ targetUri: string }>(server, wizardCommands.create, {
                 catalogId: catalog!.catalogId, targetUri: target.toString(), templates: selected.map(template => template.id),
@@ -241,6 +266,7 @@ export function creationUI(mode: WorkspaceWizardMode = 'workspace',
                 if (source) await vscode.env.openExternal(source.uri);
             }
         },
+        saveDirtyFiles,
         progress: (title, task) => Promise.resolve(vscode.window.withProgress({ title, location: vscode.ProgressLocation.Notification },
             (_progress, token) => task(token))),
         created: async root => {

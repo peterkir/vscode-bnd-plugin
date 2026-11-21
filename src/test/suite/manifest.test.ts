@@ -38,6 +38,8 @@ suite('Extension manifest', () => {
             entry.command.startsWith('bnd.lsp.') || entry.command.startsWith('bnd.server.'))) {
             assert.strictEqual(command.category, 'bnd', command.command);
         }
+        assert.ok(pkg.contributes.commands.some((entry: PackageJsonCommand) =>
+            entry.command === 'bnd.status.menu' && entry.category === 'bnd'));
         const setting = pkg.contributes.configuration.properties['bnd.cli.showCommands'];
         assert.strictEqual(setting.type, 'boolean');
         assert.strictEqual(setting.default, false);
@@ -108,6 +110,20 @@ suite('Extension manifest', () => {
         const container = pkg.contributes.viewsContainers.activitybar.find((item: { id: string }) => item.id === 'bnd');
         assert.strictEqual(container.icon, 'media/bndtools.svg');
         assert.ok(fs.existsSync(path.join(workspaceRoot, container.icon)));
+    });
+
+    test('activates the status bar entry after startup', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        assert.ok(pkg.activationEvents.includes('onStartupFinished'));
+    });
+
+    test('contributes a bnd logo icon for the status bar without a product icon theme', () => {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        assert.strictEqual(pkg.contributes.productIconThemes, undefined);
+        const icon = pkg.contributes.icons['bnd-logo'];
+        assert.ok(icon);
+        assert.strictEqual(icon.default.fontCharacter, '\\E000');
+        assert.ok(fs.existsSync(path.join(workspaceRoot, icon.default.fontPath.replace(/^\.\//, ''))));
     });
 
     test('passes Windows bndrun URIs with a literal drive colon to Java resolve', () => {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.30.12 (Unreleased)
+
+### Fixed
+- The bnd logo in the status bar is missing unless a bnd product icon theme was selected. It is now contributed as the `bnd-logo` icon, which works with every product icon theme, and the extension no longer changes `workbench.productIconTheme`. The glyph in `media/bndtools-status.woff` was mis-scaled and rendered blank; it is rebuilt from the bnd logo.
+
+## 0.30.10 (Unreleased)
+
+### Fixed
+- Workspace and fragment template application now asks to save unsaved file editors before continuing, avoiding the server-side unsaved-file rejection.
+- The status bar has one resized bnd logo configuration control. Its popup switches the language server, automatic build, and CLI commands on or off. Language server and automatic build remain enabled by default; CLI commands remain hidden by default.
+
 ## 0.30.0 (Unreleased)
 
 ### Changed

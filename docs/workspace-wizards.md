@@ -68,7 +68,7 @@ The finished workspace is stored in the repository as [examples/com.example.rcp]
 - **No build is started.** Run a build afterwards.
 - Existing unrelated files in the directory are preserved. An existing `cnf/build.bnd` is rejected for new workspaces; use the fragment wizard for existing workspaces.
 - Multiple fragments that supply the same file are composed in dependency order and are not merged automatically. Template `append` actions retain existing content; other supplied files replace existing contents, as the warning states.
-- Application rejects unsaved target editors and files that changed while generating, blocks symbolic-link destinations, and rolls back written files if it fails.
+- Before application starts, unsaved file editors are offered for saving with a **Save and Continue** confirmation. Applying can be canceled without saving or changing files. Application rejects files that change while generating, blocks symbolic-link destinations, and rolls back written files if it fails.
 - Limits: at most 5000 files and 32 MiB of output. Delete actions and Eclipse project templates are not supported.
 
 ## Template sources

@@ -186,25 +186,25 @@ export function presentAutoBuild(state: AutoBuildState): AutoBuildView {
     let hint: string;
     let error = false;
     if (state.enabled && !state.active) {
-        text = '$(shield) bnd: auto-build (untrusted)';
+        text = '$(extensions) $(shield)';
         headline = 'Automatic build is on but paused: the workspace is not trusted.';
         hint = 'Trust the workspace to build automatically. Click for build actions.';
     } else if (!state.enabled) {
-        text = '$(circle-slash) bnd: auto-build off';
+        text = '$(extensions) $(circle-slash)';
         headline = 'Automatic build is off.';
         hint = 'Click for build actions.';
     } else if (state.phase === 'building') {
-        text = `$(sync~spin) bnd: building${state.current ? ` ${state.current}` : ''}`;
+        text = `$(extensions) $(sync~spin)${state.current ? ` ${state.current}` : ''}`;
         headline = `Building${state.current ? ` **${escapeMarkdown(state.current)}**` : ''}`
             + (state.projects.length > 1 ? ` (${state.projects.length} projects queued: ${escapeMarkdown(state.projects.join(', '))})` : '');
         hint = 'Click for build actions.';
     } else if (lastBuildFailed(state.last)) {
-        text = `$(error) bnd: build failed (${failureCount(state.last!.summary)})`;
+        text = `$(extensions) $(error) ${failureCount(state.last!.summary)}`;
         headline = 'The last automatic build failed.';
         hint = 'Click for build actions.';
         error = true;
     } else {
-        text = '$(check) bnd: auto-build';
+        text = '$(extensions) $(check)';
         headline = 'Automatic build is on.';
         hint = 'Click for build actions.';
     }

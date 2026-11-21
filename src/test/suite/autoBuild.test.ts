@@ -94,8 +94,8 @@ suite('Automatic build', () => {
         assert.strictEqual(views.unsupported.visible, false);
         assert.deepStrictEqual(
             [views.on.text, views.off.text, views.untrusted.text, views.building.text, views.failed.text],
-            ['$(check) bnd: auto-build', '$(circle-slash) bnd: auto-build off', '$(shield) bnd: auto-build (untrusted)',
-                '$(sync~spin) bnd: building p1', '$(error) bnd: build failed (2)']);
+            ['$(extensions) $(check)', '$(extensions) $(circle-slash)', '$(extensions) $(shield)',
+                '$(extensions) $(sync~spin) p1', '$(extensions) $(error) 2']);
         assert.strictEqual(views.failed.error, true);
         assert.strictEqual(views.on.error, false);
         assert.match(views.building.tooltip, /2 projects queued/);
@@ -180,7 +180,7 @@ suite('Automatic build', () => {
             await controller.start(true);
             assert.deepStrictEqual(calls, [[], [false]]);
             assert.strictEqual(controller.state.enabled, false);
-            assert.strictEqual(presentAutoBuild(controller.state).text, '$(circle-slash) bnd: auto-build off');
+            assert.strictEqual(presentAutoBuild(controller.state).text, '$(extensions) $(circle-slash)');
         });
 
         test('pushes setting changes once and never echoes server notifications', async () => {
@@ -199,7 +199,7 @@ suite('Automatic build', () => {
             const { controller } = create({ active: false });
             await controller.start(true);
             assert.strictEqual(controller.state.reason, 'untrusted');
-            assert.strictEqual(presentAutoBuild(controller.state).text, '$(shield) bnd: auto-build (untrusted)');
+            assert.strictEqual(presentAutoBuild(controller.state).text, '$(extensions) $(shield)');
         });
 
         test('logs completed builds and ignores malformed notifications', async () => {
@@ -212,7 +212,7 @@ suite('Automatic build', () => {
             assert.deepStrictEqual(log, []);
             controller.handleStatus(status({ summary: failedSummary, messages: [{ project: 'b', severity: 'error', message: 'x' }] }));
             assert.strictEqual(log.length, 2);
-            assert.strictEqual(presentAutoBuild(controller.state).text, '$(error) bnd: build failed (2)');
+            assert.strictEqual(presentAutoBuild(controller.state).text, '$(extensions) $(error) 2');
         });
 
         test('hides the item again when the client stops', async () => {

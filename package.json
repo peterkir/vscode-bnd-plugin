@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "OSGi with bnd/bndtools",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.30.1",
+  "version": "0.30.12",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -33,9 +33,19 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onFileSystem:bnd-jar",
-    "workspaceContains:cnf/build.bnd"
+    "workspaceContains:cnf/build.bnd",
+    "onStartupFinished"
   ],
   "contributes": {
+    "icons": {
+      "bnd-logo": {
+        "description": "bnd logo",
+        "default": {
+          "fontPath": "./media/bndtools-status.woff",
+          "fontCharacter": "\\E000"
+        }
+      }
+    },
     "javaExtensions": [
       "./server/jdtls/org.bndtools.jdtls.adapter.jar"
     ],
@@ -435,6 +445,11 @@
       {
         "command": "bnd.server.menu",
         "title": "Language Server Status...",
+        "category": "bnd"
+      },
+      {
+        "command": "bnd.status.menu",
+        "title": "bnd Configuration...",
         "category": "bnd"
       },
       {

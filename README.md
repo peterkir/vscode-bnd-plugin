@@ -202,7 +202,7 @@ After template selection, one warning lists the destination, selected templates 
 
 Use **Open Template** in the warning to inspect a source in your browser (or the default application for a local file URL). If multiple sources are listed, choose which to open. The warning reappears afterward; opening a source does not approve creation or change files.
 
-Workspace creation preserves unrelated files already in the selected directory and rejects an existing `cnf/build.bnd`; use the fragment wizard for existing bnd workspaces. Fragment addition preserves untouched files and existing configuration not supplied by the fragments. Template `append` actions retain existing content; other supplied files replace their existing contents, as stated in the warning. Generation uses memory; per-file temporary writes provide atomic replacement without staging an entire workspace. Application rejects unsaved target editors and files changed while generating, blocks symbolic-link destinations, and rolls back files written if application fails.
+Workspace creation preserves unrelated files already in the selected directory and rejects an existing `cnf/build.bnd`; use the fragment wizard for existing bnd workspaces. Fragment addition preserves untouched files and existing configuration not supplied by the fragments. Template `append` actions retain existing content; other supplied files replace their existing contents, as stated in the warning. Before applying changes, the wizard offers to save unsaved file editors; choose **Save and Continue** or cancel without saving or changing files. Generation uses memory; per-file temporary writes provide atomic replacement without staging an entire workspace. Application rejects files changed while generating, blocks symbolic-link destinations, and rolls back files written if application fails.
 
 Creation requires a trusted window and an updated Java bnd language server supporting workspace wizards. Node fallback and older custom servers report unsupported operations. Template output is limited to 5000 files and 32 MiB. Delete actions and Eclipse project-template creation are not supported.
 
@@ -243,7 +243,7 @@ The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources reb
 
 #### Status and disabling the language server
 
-The **bnd LS** item at the right of the status bar shows the server state: starting, running (with the actual mode `java`, `node`, or `socket`), stopped, failed, or disabled. Click it, or run **bnd: Language Server Status...**, to enable or disable the server, restart it, or open its output channel.
+The resized bnd logo icon at the right of the status bar provides the language server state as a tooltip. Click it, or run **bnd: bnd Configuration...**, to open one popup with switches for the language server, automatic build, and CLI Command Palette visibility. The language server menu remains available for restart and output actions.
 
 Set `bnd.server.enabled` to `false`, or run **bnd: Enable/Disable Language Server**, to run the extension without a language server process. The command writes the setting to the workspace when a folder is open, otherwise to the User settings. While disabled, completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, the LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and the bnd CLI commands keep working.
 
@@ -253,15 +253,15 @@ Disabling the bnd language server does not disable the [native Java project impo
 
 With the Java language server, bnd projects build incrementally. The server builds the affected projects when a `.bnd` file is saved or when compiled classes change below `bin` (or `bin.vscode`); the Java language server compiles the sources, bnd packages the result. Set `bnd.build.auto` to `false` to turn this off (default `true`). The setting needs a trusted workspace: in an untrusted workspace the switch stays on, but the server builds nothing.
 
-The **bnd: auto-build** item at the right of the status bar shows the state. Click it, or run **bnd: Automatic Build Status...**, to enable or disable automatic build or open its output channel. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it; editing the setting yourself has the same effect. If VS Code reports that the setting is not registered after an extension update, reload the window.
+Automatic build is controlled by the same **bnd** status-bar popup. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. Turning off the language server automatically turns off automatic build. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it; editing the setting yourself has the same effect. If VS Code reports that the setting is not registered after an extension update, reload the window.
 
 | Item text | Meaning |
 |---|---|
-| `$(check) bnd: auto-build` | On and idle |
-| `$(sync~spin) bnd: building <project>` | A build is running |
-| `$(error) bnd: build failed (N)` | The last build reported errors; N is the number of errors. Error background until the next build finishes |
-| `$(circle-slash) bnd: auto-build off` | Switched off |
-| `$(shield) bnd: auto-build (untrusted)` | Switched on, but paused because the workspace is not trusted |
+| Automatic Build switch: On | On and idle |
+| Automatic Build switch: On, build running | A build is running |
+| Automatic Build switch: On, build failed | The last build reported errors |
+| Automatic Build switch: Off | Switched off |
+| Automatic Build switch: On, workspace untrusted | Switched on, but paused because the workspace is not trusted |
 
 The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds, with their errors and warnings per project, are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the language server is stopped, disabled, or too old to support automatic build; older servers ignore `bnd.build.auto`.
 
@@ -327,7 +327,7 @@ Set `bnd.eclipse.detect` to `false` to turn off the detection, the status bar it
 
 CLI commands use the `bnd-cli:` prefix in the **Command Palette** (`Ctrl+Shift+P`). Language-server and other extension actions use `bnd:`.
 
-CLI palette entries are hidden by default. Run **bnd-cli: Toggle CLI Commands in Command Palette** to show or hide them. This command always remains visible. The preference is saved in the extension's global storage, applies across workspaces in the current VS Code profile, and survives restarts. No User settings file is modified, so settings errors do not block the toggle. Before the first toggle, User setting `bnd.cli.showCommands` supplies the initial value (default `false`); afterward, the stored toggle choice takes precedence. Existing saved choices are preserved. This affects only palette visibility, not command execution or context menus.
+CLI palette entries are hidden by default. Open the compact package status item or run **bnd-cli: Toggle CLI Commands in Command Palette** to show or hide them. The **bnd Configuration** popup contains an on/off switch for CLI Command Palette visibility. The toggle command always remains visible. The preference is saved in the extension's global storage, applies across workspaces in the current VS Code profile, and survives restarts. No User settings file is modified, so settings errors do not block the toggle. Before the first toggle, User setting `bnd.cli.showCommands` supplies the initial value (default `false`); afterward, the stored toggle choice takes precedence. Existing saved choices are preserved. This affects only palette visibility, not command execution or context menus.
 
 | Command | Description |
 |---|---|

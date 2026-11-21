@@ -58,7 +58,7 @@ By default the server starts with `JAVA_HOME` or the `java` on your `PATH`. Set 
 
 ## Status and disabling the server
 
-The **bnd LS** item at the right of the status bar shows the state: starting, running (with the actual mode), stopped, failed, or disabled. Click it, or run **bnd: Language Server Status...**, to enable or disable the server, restart it, or open its output channel.
+The compact **bnd** item at the right of the status bar opens the configuration popup. Hover for the language server, automatic build, and CLI command states. The popup switches all three configurations on or off. The language server menu remains available for restart and output actions.
 
 To run the extension **without** a language server process set `bnd.server.enabled` to `false` or run **bnd: Enable/Disable Language Server**. The command writes the setting to the workspace when a folder is open, otherwise to the User settings.
 
@@ -99,15 +99,15 @@ The Java language server compiles the sources; bnd packages the result.
 
 The setting `bnd.build.auto` (default `true`) controls it. It needs a trusted workspace: in an untrusted workspace the switch stays on but nothing is built.
 
-The **bnd: auto-build** item at the right of the status bar shows the state. Click it, or run **bnd: Automatic Build Status...**, to enable or disable automatic build or open its output channel. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it. If VS Code reports that the setting is not registered after an extension update, reload the window.
+Automatic build is controlled by the same **bnd** configuration popup. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. Turning off the language server automatically turns off automatic build. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it. If VS Code reports that the setting is not registered after an extension update, reload the window.
 
 | Status bar text | Meaning |
 |---|---|
-| `bnd: auto-build` (check icon) | On and idle. |
-| `bnd: building <project>` (spinner) | A build is running. |
-| `bnd: build failed (N)` | The last build reported N errors. Error background until the next build finishes. |
-| `bnd: auto-build off` | Switched off. |
-| `bnd: auto-build (untrusted)` | On, but paused because the workspace is not trusted. |
+| Automatic Build switch: On | On and idle. |
+| Automatic Build switch: On, build running | A build is running. |
+| Automatic Build switch: On, build failed | The last build reported N errors. |
+| Automatic Build switch: Off | Switched off. |
+| Automatic Build switch: On, workspace untrusted | On, but paused because the workspace is not trusted. |
 
 The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds with their errors and warnings per project are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the server is stopped, disabled, or too old to support automatic build.
 

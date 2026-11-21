@@ -49,7 +49,7 @@ function javaResourceFilters(): string[] | undefined {
 }
 
 export function registerEclipseCoexistence(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): EclipseCoexistence {
-    // Priority just below the bnd LS item (100), which places it directly to its right.
+    // Place it directly to the right of the bnd configuration item (100).
     const item = vscode.window.createStatusBarItem('bnd.eclipse.status', vscode.StatusBarAlignment.Right, 99);
     item.name = 'Eclipse on bnd workspace';
     item.command = 'bnd.eclipse.menu';
