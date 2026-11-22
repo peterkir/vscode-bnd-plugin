@@ -163,3 +163,21 @@ suite('bnd CLI invocation (palette commands against the bnd JAR)', function () {
         });
     }
 });
+
+suite('bnd CLI isolation', () => {
+    // Only these modules may start processes or send text to terminals.
+    const allowed: Record<string, string> = {
+        'bndCliCommands.ts': 'the explicit bnd-cli: commands',
+        'extension.ts': 'starts the Java language server process',
+        'bndExplorer.ts': 'opens a plain terminal in a folder',
+    };
+
+    test('only the bnd-cli commands run the bnd CLI; every other feature uses the language server or own code', () => {
+        const sourceDir = path.resolve(__dirname, '../../../../src');
+        const offenders = fs.readdirSync(sourceDir)
+            .filter(name => name.endsWith('.ts') && !(name in allowed))
+            .filter(name => /child_process|createTerminal|\.sendText\(|ShellExecution|ProcessExecution/
+                .test(fs.readFileSync(path.join(sourceDir, name), 'utf8')));
+        assert.deepStrictEqual(offenders, [], 'Run bnd through the language server (bnd.* commands) or implement it in the extension, not through the bnd CLI');
+    });
+});

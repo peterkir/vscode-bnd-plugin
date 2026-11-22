@@ -22,6 +22,20 @@ export function workspaceRefreshChange(workspaceUri: string): { uri: string; typ
     return { uri: `${workspaceUri.replace(/\/+$/, '')}/cnf/build.bnd`, type: fileChanged };
 }
 
+export const targetFolderName = 'generated';
+
+/**
+ * The server ignores everything in a project's target folder, so deleting it never starts a build there.
+ * Reporting a change of the project's bnd.bnd makes the server build that project.
+ * Assumes the default target folder; a custom `target-dir` is not detected.
+ */
+export function targetFolderDeletionChange(deletedUri: string): { uri: string; type: number } | undefined {
+    const path = deletedUri.replace(/\/+$/, '');
+    const slash = path.lastIndexOf('/');
+    if (slash < 0 || path.slice(slash + 1) !== targetFolderName) return undefined;
+    return { uri: `${path.slice(0, slash)}/bnd.bnd`, type: fileChanged };
+}
+
 export type BuildPhase = 'idle' | 'building' | 'disabled';
 
 export interface BuildSummary {

@@ -22,6 +22,8 @@ import {
     classOutputGlob,
     deletedFilesGlob,
     supportsAutoBuild,
+    targetFolderDeletionChange,
+    targetFolderName,
     workspaceRefreshChange,
 } from './autoBuild';
 import { cliPaletteVisible, registerCliCommands, setCliPaletteVisible } from './bndCliCommands';
@@ -89,6 +91,11 @@ function renderAutoBuild(state: AutoBuildState): void {
     renderBndStatusItem();
 }
 
+// Commands run from a tree view receive the tree node instead of a Uri.
+function commandTarget(arg: vscode.Uri | { uri?: vscode.Uri } | undefined): vscode.Uri | undefined {
+    return arg instanceof vscode.Uri ? arg : arg?.uri;
+}
+
 // Reports the workspace refresh to the server, which then builds the stale projects.
 async function requestAutoBuild(): Promise<void> {
     const active = client;
@@ -135,8 +142,17 @@ function registerAutoBuild(context: vscode.ExtensionContext): void {
         changed: renderAutoBuild,
         now: () => Date.now(),
     });
+    const targetFolders = vscode.workspace.createFileSystemWatcher(`**/${targetFolderName}`, true, true, false);
     context.subscriptions.push(
         autoBuildOutput,
+        targetFolders,
+        targetFolders.onDidDelete(uri => {
+            const change = targetFolderDeletionChange(uri.toString());
+            const active = client;
+            if (!change || !active || !autoBuild?.state.active) return;
+            void active.sendNotification('workspace/didChangeWatchedFiles', { changes: [change] })
+                .then(undefined, error => output.appendLine(`Requesting a build after deleting ${uri.fsPath} failed: ${error}`));
+        }),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration(`bnd.${autoBuildSetting}`)) void autoBuild?.syncSetting();
         }),
@@ -409,8 +425,8 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('bnd.lsp.buildProject', async (uri?: vscode.Uri) => {
-            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+        vscode.commands.registerCommand('bnd.lsp.buildProject', async (arg?: vscode.Uri | { uri?: vscode.Uri }) => {
+            const targetUri = commandTarget(arg) ?? vscode.window.activeTextEditor?.document.uri;
             if (!targetUri) {
                 vscode.window.showWarningMessage('Please open a bnd file in a project.');
                 return;
@@ -420,15 +436,18 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
                 return;
             }
             try {
-                if (!(await supportsServerCommand('bnd.build.project'))) {
+                // The workspace folder itself is not a project: build all of its projects.
+                const workspace = (await findBndWorkspaces()).some(root => root.toString() === targetUri.toString());
+                const command = workspace ? 'bnd.build.workspace' : 'bnd.build.project';
+                if (!(await supportsServerCommand(command))) {
                     vscode.window.showWarningMessage('The selected bnd Language Server does not support project builds.');
                     return;
                 }
                 const res = await client.sendRequest('workspace/executeCommand', {
-                    command: 'bnd.build.project',
+                    command,
                     arguments: [targetUri.toString()],
                 });
-                vscode.window.showInformationMessage(`bnd project build result: ${JSON.stringify(res)}`);
+                vscode.window.showInformationMessage(`bnd ${workspace ? 'workspace' : 'project'} build result: ${JSON.stringify(res)}`);
             } catch (err: any) {
                 vscode.window.showErrorMessage(`Build failed: ${err?.message ?? err}`);
             }
@@ -436,8 +455,8 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('bnd.lsp.cleanProject', async (uri?: vscode.Uri) => {
-            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+        vscode.commands.registerCommand('bnd.lsp.cleanProject', async (arg?: vscode.Uri | { uri?: vscode.Uri }) => {
+            const targetUri = commandTarget(arg) ?? vscode.window.activeTextEditor?.document.uri;
             if (!targetUri) {
                 vscode.window.showWarningMessage('Please open a bnd file in a project or workspace.');
                 return;

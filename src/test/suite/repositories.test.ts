@@ -12,6 +12,7 @@ import {
     findBndWorkspaces,
     formatDropText,
     formatEntry,
+    instructionAt,
     packageFilter,
     parseActionLabel,
     repositoriesListCommand,
@@ -76,6 +77,25 @@ suite('Repositories view', () => {
         const entries = [entryFor(version)!, entryFor(bundle)!];
         assert.strictEqual(formatDropText(entries, '', '-buildpath: \\'), "\ta.b;version='1.2.3',\\\n\tc.d;version=latest");
         assert.strictEqual(formatDropText(entries, 'x', ''), "a.b;version='1.2.3',\\\n\tc.d;version=latest");
+    });
+
+    test('formats drops for the instruction under the cursor, including features', () => {
+        const feature: RepoNode = { type: 'feature', ws: 'file:///ws', repo, feature: { id: 'f.x', version: '2.0.0' } };
+        const version: RepoNode = { type: 'version', ws: 'file:///ws', repo, bsn: 'a.b', info: { version: '1.2.3' } };
+        const bundle: RepoNode = { type: 'bundle', ws: 'file:///ws', repo, bundle: { bsn: 'c.d' } };
+        const entries = [feature, version, bundle].map(node => entryFor(node)!);
+        assert.strictEqual(formatDropText(entries, '', '-runrequires: \\', '-runrequires'),
+            "\tosgi.identity;filter:='(&(osgi.identity=f.x)(type=org.eclipse.update.feature)(version>=2.0.0))',\\\n"
+            + "\tosgi.identity;filter:='(&(osgi.identity=a.b)(version>=1.2.3))',\\\n"
+            + "\tosgi.identity;filter:='(osgi.identity=c.d)'");
+        assert.strictEqual(formatDropText(entries, '', '-buildpath: \\', '-buildpath'),
+            "\ta.b;version='1.2.3',\\\n\tc.d;version=latest");
+        assert.strictEqual(formatDropText([entries[0]], '', '', '-buildpath'), '');
+        assert.strictEqual(formatEntry(entries[0]), "osgi.identity;filter:='(&(osgi.identity=f.x)(type=org.eclipse.update.feature)(version>=2.0.0))'");
+        const lines = ['-runrequires: \\', "\tosgi.identity;filter:='(osgi.identity=x)',\\", '', '-buildpath: a'];
+        assert.strictEqual(instructionAt(line => lines[line], 2), '-runrequires');
+        assert.strictEqual(instructionAt(line => lines[line], 3), '-buildpath');
+        assert.strictEqual(instructionAt(() => '# comment', 0), undefined);
     });
 
     test('reports unsupported servers and builds tree levels from server responses', async () => {

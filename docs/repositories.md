@@ -84,7 +84,7 @@ in repositories that implement the OSGi Repository API. Feature results stay exp
 - **Add Bundles to Repository...** adds JAR files to a writable repository. You can also drop JAR files from the Explorer onto it.
 - **Repository Actions...** runs actions contributed by repository plugins (the bnd `Actionable` interface).
 - **Analyze in Resolution View** (on version nodes) sends the selection to the [Resolution view]({{ '/resolution/' | relative_url }}).
-- **Drag and drop** bundles or versions into a bnd editor to insert `bsn;version=...` entries for `-buildpath`, `-runbundles`, and similar instructions.
+- **Drag and drop** bundles, versions, or features (single or multi-selection) into a bnd editor. The entries are formatted for the instruction under the drop position: `bsn;version=...` for `-buildpath`, `-runbundles`, and similar instructions, and `osgi.identity;filter:='...'` requirements for `-runrequires` and `-runblacklist`. Features are only inserted into those requirement instructions.
 
 ### The bnd-cache repository
 

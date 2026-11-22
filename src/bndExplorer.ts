@@ -104,6 +104,7 @@ export class BndExplorerProvider implements vscode.TreeDataProvider<FileNode>,
             const contexts = ['bndExplorerFile'];
             if (extension === '.bndrun' || filename === 'bnd.bnd') contexts.push('launch');
             if (extension === '.bnd' || extension === '.bndrun') contexts.push('effective');
+            if (extension === '.bnd') contexts.push('buildable');
             if (/^\.(bnd|jar)$/i.test(extension)) contexts.push('resolution');
             if (/^\.jar$/i.test(extension)) contexts.push('jar');
             item.contextValue = contexts.join(' ');
