@@ -251,7 +251,7 @@ Disabling the bnd language server does not disable the [native Java project impo
 
 #### Automatic build
 
-With the Java language server, bnd projects build incrementally. The server builds the affected projects when a `.bnd` file is saved or when compiled classes change below `bin` (or `bin.vscode`); the Java language server compiles the sources, bnd packages the result. Set `bnd.build.auto` to `false` to turn this off (default `true`). The setting needs a trusted workspace: in an untrusted workspace the switch stays on, but the server builds nothing.
+With the Java language server, bnd projects build incrementally. The server builds the affected projects when a `.bnd` file is saved, when compiled classes change below `bin` (or `bin.vscode`), or when a file is deleted from a project. **Refresh Workspace Files** in the bnd explorer also builds every project that bnd finds out of date. The Java language server compiles the sources, bnd packages the result. Set `bnd.build.auto` to `false` to turn this off (default `true`). The setting needs a trusted workspace: in an untrusted workspace the switch stays on, but the server builds nothing.
 
 Automatic build is controlled by the same **bnd** status-bar popup. **bnd: Toggle Automatic Build**, **bnd: Enable Automatic Build**, and **bnd: Disable Automatic Build** also change the setting. Turning off the language server automatically turns off automatic build. The commands write `bnd.build.auto` to the User settings, or to the workspace settings when the workspace already sets it; editing the setting yourself has the same effect. If VS Code reports that the setting is not registered after an extension update, reload the window.
 

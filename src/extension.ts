@@ -20,10 +20,13 @@ import {
     buildStatusNotification,
     chooseConfigurationTarget,
     classOutputGlob,
+    deletedFilesGlob,
     supportsAutoBuild,
+    workspaceRefreshChange,
 } from './autoBuild';
 import { cliPaletteVisible, registerCliCommands, setCliPaletteVisible } from './bndCliCommands';
 import { registerExplorerView } from './bndExplorer';
+import { findBndWorkspaces } from './bndRepositories';
 import { registerExportCommand } from './bndExport';
 import { registerLaunchSupport } from './bndLaunch';
 import { registerWorkspaceWizards } from './bndWizards';
@@ -84,6 +87,21 @@ function renderAutoBuild(state: AutoBuildState): void {
         void vscode.commands.executeCommand('setContext', 'bnd.build.autoSupported', state.supported);
     }
     renderBndStatusItem();
+}
+
+// Reports the workspace refresh to the server, which then builds the stale projects.
+async function requestAutoBuild(): Promise<void> {
+    const active = client;
+    if (!active || !autoBuild?.state.active) return;
+    try {
+        const roots = await findBndWorkspaces();
+        if (!roots.length || client !== active) return;
+        await active.sendNotification('workspace/didChangeWatchedFiles', {
+            changes: roots.map(root => workspaceRefreshChange(root.toString())),
+        });
+    } catch (error) {
+        outputChannel.appendLine(`Requesting a build after the workspace refresh failed: ${error}`);
+    }
 }
 
 async function setAutoBuild(enabled: boolean): Promise<void> {
@@ -191,7 +209,7 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     context.subscriptions.push(bndStatusItem);
     registerAutoBuild(context);
     const eclipse = registerEclipseCoexistence(context, outputChannel);
-    registerExplorerView(context);
+    registerExplorerView(context, () => void requestAutoBuild());
     registerWorkspaceWizards(context, {
         supports: supportsServerCommand,
         execute: async (command, args, token) => {
@@ -807,6 +825,8 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         vscode.workspace.createFileSystemWatcher('**/*.{bnd,bndrun,mvn,packageinfo}'),
         // Compiled classes drive incremental builds in the server.
         vscode.workspace.createFileSystemWatcher(classOutputGlob),
+        // Only deletions: creations and changes of other files do not reach the server.
+        vscode.workspace.createFileSystemWatcher(deletedFilesGlob, true, true, false),
     ];
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'bnd' }],

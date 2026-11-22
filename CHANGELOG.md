@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.0 (Unreleased)
+
+### Added
+- Automatic build also runs when a file is deleted from a project and when the workspace is refreshed with **Refresh Workspace Files** in the bnd explorer. A refresh builds the projects that bnd finds out of date.
+
 ## 0.30.13 (Unreleased)
 
 ### Fixed
