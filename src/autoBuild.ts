@@ -8,6 +8,20 @@ export const autoBuildSetting = 'build.auto';
 // Project.build() only packages compiled classes; the Java language server writes them below the output directories.
 export const classOutputGlob = '**/{bin,bin.vscode}/**/*.class';
 
+// Deleting any file can change what a project builds; the server ignores deletions it cannot attribute to a project input.
+export const deletedFilesGlob = '**/*';
+
+// LSP FileChangeType.Changed
+const fileChanged = 2;
+
+/**
+ * The server has no "build now" request. Reporting a change of cnf/build.bnd makes it refresh the workspace
+ * and build every project that bnd finds stale, which is what a refresh of the workspace should do.
+ */
+export function workspaceRefreshChange(workspaceUri: string): { uri: string; type: number } {
+    return { uri: `${workspaceUri.replace(/\/+$/, '')}/cnf/build.bnd`, type: fileChanged };
+}
+
 export type BuildPhase = 'idle' | 'building' | 'disabled';
 
 export interface BuildSummary {

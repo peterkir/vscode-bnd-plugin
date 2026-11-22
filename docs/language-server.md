@@ -92,8 +92,10 @@ The bundled server and the JDT LS adapter are built from bnd 7.6.0 development s
 
 With the Java language server, bnd projects **build incrementally**. The server builds the affected projects when
 
-- a `.bnd` file is saved, or
-- compiled classes change below `bin` (or `bin.vscode`).
+- a `.bnd` file is saved,
+- compiled classes change below `bin` (or `bin.vscode`),
+- a file is deleted from a project, or
+- the workspace is refreshed with **Refresh Workspace Files** in the bnd explorer. This builds every project that bnd finds out of date.
 
 The Java language server compiles the sources; bnd packages the result.
 

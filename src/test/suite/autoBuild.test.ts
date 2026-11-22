@@ -14,6 +14,7 @@ import {
     parseBuildStatus,
     presentAutoBuild,
     supportsAutoBuild,
+    workspaceRefreshChange,
 } from '../../autoBuild';
 
 const failedSummary = { built: ['a'], failed: ['b'], skipped: [], errors: 2, warnings: 1 };
@@ -58,6 +59,11 @@ suite('Automatic build', () => {
         } finally {
             await config.update('build.auto', before?.globalValue, vscode.ConfigurationTarget.Global);
         }
+    });
+
+    test('reports a workspace refresh as a change of the workspace configuration', () => {
+        assert.deepStrictEqual(workspaceRefreshChange('file:///ws'), { uri: 'file:///ws/cnf/build.bnd', type: 2 });
+        assert.deepStrictEqual(workspaceRefreshChange('file:///ws/'), { uri: 'file:///ws/cnf/build.bnd', type: 2 });
     });
 
     test('detects the server capability', () => {

@@ -174,7 +174,7 @@ async function transferInto(sources: vscode.Uri[], folder: vscode.Uri, move: boo
     return created;
 }
 
-export function registerExplorerView(context: vscode.ExtensionContext): BndExplorerProvider {
+export function registerExplorerView(context: vscode.ExtensionContext, onRefresh: () => void = () => undefined): BndExplorerProvider {
     const provider = new BndExplorerProvider();
     const watcher = vscode.workspace.createFileSystemWatcher('**/*', false, true, false);
     const view = vscode.window.createTreeView(explorerViewId, {
@@ -242,7 +242,10 @@ export function registerExplorerView(context: vscode.ExtensionContext): BndExplo
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('bnd.explorer')) provider.refresh();
         }),
-        vscode.commands.registerCommand('bnd.explorer.refresh', () => provider.refresh()),
+        vscode.commands.registerCommand('bnd.explorer.refresh', () => {
+            provider.refresh();
+            onRefresh();
+        }),
         vscode.commands.registerCommand('bnd.explorer.newFile', create(false)),
         vscode.commands.registerCommand('bnd.explorer.newFolder', create(true)),
         vscode.commands.registerCommand('bnd.explorer.openToSide', run(async (node?: FileNode, nodes?: FileNode[]) => {
