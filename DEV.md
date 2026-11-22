@@ -170,7 +170,7 @@ For a classpath refresh without clearing the workspace, run **Java: Reload Proje
 
 ### Repositories View
 
-File-specific actions in the bnd Explorer use the selected tree item's context value rather than editor resource keys. Run/Debug and Run/Debug Tests appear for `.bndrun` and `bnd.bnd` files; Effective appears for `.bnd`/`.bndrun`, Resolution for `.bnd`/`.jar`, and the JAR viewer for `.jar`. These actions do not depend on the active editor. Other `.bnd` files are not launch targets.
+File-specific actions in the bnd Explorer use the selected tree item's context value rather than editor resource keys. Run/Debug and Run/Debug Tests appear for `.bndrun` and `bnd.bnd` files; Effective appears for `.bnd`/`.bndrun`, Resolution for `.bnd`/`.jar`, and the JAR viewer for `.jar`. These actions do not depend on the active editor. Other `.bnd` files are not launch targets. Build Project and Clean Project (`bnd.lsp.buildProject`, `bnd.lsp.cleanProject`) appear on folders and on items with the `buildable` context (`.bnd` files); the commands accept a Uri or a tree node and call `bnd.build.workspace` instead of `bnd.build.project` when the target is a bnd workspace folder.
 
 `src/bndExplorer.ts` registers a separate `bnd.explorer` workspace file tree before `bnd.repositories`. It reads directories lazily through `workspace.fs` and has its own exact-name exclusions (`bnd.explorer.exclude`), without changing the native Explorer. The tree mirrors the built-in Explorer context menu (groups `navigation`, `3_compare`, `4_search`, `5_cutcopypaste`, `6_copypath`, `7_modification`) and its keybindings under `focusedView == bnd.explorer`. Create, rename, move and delete go through `WorkspaceEdit`, so rename/refactoring participants run and the operations can be undone; copy uses `workspace.fs.copy`. Menus that other extensions contribute to `explorer/context` cannot be reused for a custom tree. Workspace-folder, file create/delete and configuration changes refresh it. Manifest order is only the default; VS Code preserves user view customization.
 
@@ -190,7 +190,7 @@ File-specific actions in the bnd Explorer use the selected tree item's context v
 | `bnd.repositories.fetch` | `repo`, optional `bsn`, `version` | `downloaded`, `errors[]` |
 | `bnd.workspace.offline` | optional `offline` | current `offline` state |
 
-All commands require `workspaceTrusted: true`. Manual checks: browse the sample workspace, filter, run a package search, copy an entry, drag a version into `-buildpath`, drop a JAR on a writable repository, toggle offline, and verify the welcome text in Node mode.
+All commands require `workspaceTrusted: true`. Manual checks: browse the sample workspace, filter, run a package search, copy an entry, drag a version into `-buildpath` and a multi-selection of bundles and features into `-runrequires`, drop a JAR on a writable repository, toggle offline, and verify the welcome text in Node mode.
 
 ### Resolution View
 
@@ -212,11 +212,15 @@ Manual checks: open a bundle from the Explorer, navigate the tree with the keybo
 
 Manual checks: run and debug from CodeLens and both Explorer context menus, then invoke the Command Palette with no launch file active and choose a target. Verify launch cancellation and unsaved-file prompts, test selection, breakpoints in imported workspace sources, and temporary-file cleanup after the Java session ends (for terminal runs without debugging: after relaunching the same target or restarting the server). Effective commands accept both a URI and a bnd Explorer node containing `uri`; verify **Open Effective to Side** on a tree selection without an active source editor.
 
+### No bnd CLI outside the `bnd-cli:` commands
+
+Only the explicit `bnd-cli:` Command Palette commands (`src/bndCliCommands.ts`, hidden by default) run the bnd CLI. All other features use the Java language server (`bnd.*` server commands) or the extension's own code, and must not fall back to the CLI when the server lacks a capability. Besides the CLI commands, only `src/extension.ts` starts a process (the language server JVM) and `src/bndExplorer.ts` opens a plain terminal. The `bnd CLI isolation` suite in `src/test/suite/cliInvocation.test.ts` fails when another module uses `child_process`, terminals, or task executions. Agents: read the matching guardrail in [AGENTS.md](AGENTS.md) before adding a feature.
+
 ### Automatic Build
 
-`src/extension.ts` registers the status bar menu, setting commands, and file watchers. `src/autoBuild.ts` synchronizes `bnd.build.auto` with the server's `bnd.build.auto` command, handles `bnd/buildStatus` notifications, forwards file deletions (`deletedFilesGlob`) to the server, reports a workspace refresh as a change of `cnf/build.bnd` (`workspaceRefreshChange`, because the server has no build-now request), and presents the status and build output. The item appears only when the server advertises the `bndAutoBuild` experimental capability. Commands update User settings unless a workspace value already exists; if the setting is not registered, they offer to reload the window.
+`src/extension.ts` registers the status bar menu, setting commands, and file watchers. `src/autoBuild.ts` synchronizes `bnd.build.auto` with the server's `bnd.build.auto` command, handles `bnd/buildStatus` notifications, forwards file deletions (`deletedFilesGlob`) to the server, reports the deletion of a project's `generated` folder as a change of its `bnd.bnd` (`targetFolderDeletionChange`, because the server ignores the target folder), reports a workspace refresh as a change of `cnf/build.bnd` (`workspaceRefreshChange`, because the server has no build-now request), and presents the status and build output. The item appears only when the server advertises the `bndAutoBuild` experimental capability. Commands update User settings unless a workspace value already exists; if the setting is not registered, they offer to reload the window.
 
-For manual verification, use a trusted bnd workspace and a server with automatic build support. Save a `.bnd` file, change compiled classes under `bin` or `bin.vscode`, delete a file from a project, or run **Refresh Workspace Files** in the bnd explorer, then check the status and **bnd Build** output. Use the status menu to disable and re-enable the build, verify the setting and server state follow, and check that an untrusted workspace shows the paused state. The automated coverage is in `src/test/suite/autoBuild.test.ts` and `src/test/suite/autoBuildServer.test.ts`.
+For manual verification, use a trusted bnd workspace and a server with automatic build support. Save a `.bnd` file, change compiled classes under `bin` or `bin.vscode`, delete a file or the `generated` folder of a project, or run **Refresh Workspace Files** in the bnd explorer, then check the status and **bnd Build** output. Use the status menu to disable and re-enable the build, verify the setting and server state follow, and check that an untrusted workspace shows the paused state. The automated coverage is in `src/test/suite/autoBuild.test.ts` and `src/test/suite/autoBuildServer.test.ts`.
 
 ### Automated Test Suite
 

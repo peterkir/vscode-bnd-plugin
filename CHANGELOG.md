@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.32.2 (Unreleased)
+
+### Fixed
+- Dropping repository entries into a bnd editor formats them for the instruction under the cursor, also for multi-selections. `-runrequires` and `-runblacklist` get `osgi.identity;filter:='...'` requirements (with `version>=` for versions); other instructions such as `-buildpath` and `-runbundles` get `bsn;version=...`. Features can be dragged and are written as `osgi.identity` requirements with `type=org.eclipse.update.feature` (skipped for other instructions). Dropping after `-key:` or a trailing `\` starts the entries on a continuation line.
+
+## 0.32.1 (Unreleased)
+
+### Fixed
+- Deleting a project's `generated` folder starts an automatic build of that project. The language server ignores everything below the target folder, so the extension reports the deletion as a change of the project's `bnd.bnd`. Only the default target folder `generated` is detected.
+
+## 0.32.0 (Unreleased)
+
+### Added
+- The bnd explorer context menu offers **Build Project** and **Clean Project** on folders and `.bnd` files. On the workspace folder, build runs all projects of the workspace.
+
 ## 0.31.0 (Unreleased)
 
 ### Added

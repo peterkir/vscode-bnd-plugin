@@ -14,6 +14,7 @@ import {
     parseBuildStatus,
     presentAutoBuild,
     supportsAutoBuild,
+    targetFolderDeletionChange,
     workspaceRefreshChange,
 } from '../../autoBuild';
 
@@ -64,6 +65,13 @@ suite('Automatic build', () => {
     test('reports a workspace refresh as a change of the workspace configuration', () => {
         assert.deepStrictEqual(workspaceRefreshChange('file:///ws'), { uri: 'file:///ws/cnf/build.bnd', type: 2 });
         assert.deepStrictEqual(workspaceRefreshChange('file:///ws/'), { uri: 'file:///ws/cnf/build.bnd', type: 2 });
+    });
+
+    test('maps the deletion of a target folder to a change of the project', () => {
+        assert.deepStrictEqual(targetFolderDeletionChange('file:///ws/p/generated'), { uri: 'file:///ws/p/bnd.bnd', type: 2 });
+        assert.deepStrictEqual(targetFolderDeletionChange('file:///ws/p/generated/'), { uri: 'file:///ws/p/bnd.bnd', type: 2 });
+        assert.strictEqual(targetFolderDeletionChange('file:///ws/p/generated/x.jar'), undefined);
+        assert.strictEqual(targetFolderDeletionChange('file:///ws/p/my-generated'), undefined);
     });
 
     test('detects the server capability', () => {

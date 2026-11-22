@@ -60,7 +60,7 @@ interface FeatureItem {
 }
 interface SearchResult { repo: number; repoName: string; bsn?: string | null; version?: string | null; type?: string | null }
 
-export interface RepositoryEntry { bsn: string; version?: string; workspace?: boolean }
+export interface RepositoryEntry { bsn: string; version?: string; workspace?: boolean; feature?: boolean }
 
 export type RepoNode =
     | { type: 'workspace'; ws: string; label: string }
@@ -87,23 +87,51 @@ const array = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : 
 export function entryFor(node: RepoNode): RepositoryEntry | undefined {
     if (node.type === 'version') return { bsn: node.bsn, version: node.info.version };
     if (node.type === 'bundle') return { bsn: node.bundle.bsn, workspace: node.repo.kind === 'workspace' };
-    if (node.type === 'featureItem' && node.item.type !== 'feature') return { bsn: node.item.id, version: node.item.version ?? undefined };
+    if (node.type === 'feature') return { bsn: node.feature.id, version: node.feature.version || undefined, feature: true };
+    if (node.type === 'featureItem') {
+        return { bsn: node.item.id, version: node.item.version ?? undefined, feature: node.item.type === 'feature' || undefined };
+    }
     return undefined;
 }
 
-export function formatEntry(entry: RepositoryEntry): string {
+const identityInstruction = /^-(runrequires|runblacklist)(\..+)?$/;
+export const featureType = 'org.eclipse.update.feature';
+
+/**
+ * Formats an entry for the given bnd instruction. `-runrequires` and `-runblacklist` take `osgi.identity`
+ * requirements; every other instruction takes `bsn;version=...`. Without an instruction, features use the
+ * requirement form because they cannot be written as `bsn;version=...`.
+ */
+export function formatEntry(entry: RepositoryEntry, instruction?: string): string {
+    if (instruction ? identityInstruction.test(instruction) : entry.feature) {
+        const terms = [`(osgi.identity=${ldapEscape(entry.bsn)})`];
+        if (entry.feature) terms.push(`(type=${featureType})`);
+        if (entry.version) terms.push(`(version>=${ldapEscape(entry.version)})`);
+        return `osgi.identity;filter:='${terms.length > 1 ? `(&${terms.join('')})` : terms[0]}'`;
+    }
     if (entry.version) return `${entry.bsn};version='${entry.version}'`;
     return `${entry.bsn};version=${entry.workspace ? 'snapshot' : 'latest'}`;
 }
 
-/** Joins entries as a bnd list continuation; a blank line after a continued line gets indented. */
-export function formatDropText(entries: RepositoryEntry[], lineText: string, previousLineText: string): string {
-    const body = entries.map(formatEntry).join(',\\\n\t');
-    const indent = lineText.trim() === '' && previousLineText.trimEnd().endsWith('\\') ? '\t' : '';
+/** Returns the instruction (property key) whose value contains `line`, following `\` continuations upwards. */
+export function instructionAt(lineAt: (line: number) => string, line: number): string | undefined {
+    let start = line;
+    while (start > 0 && lineAt(start - 1).trimEnd().endsWith('\\')) start--;
+    return /^\s*([^\s:=#]+)\s*[:=]/.exec(lineAt(start))?.[1];
+}
+
+/**
+ * Joins entries as a bnd list continuation; a blank line after a continued line gets indented.
+ * Features are only valid in requirement instructions and are skipped elsewhere.
+ */
+export function formatDropText(entries: RepositoryEntry[], lineText: string, previousLineText: string, instruction?: string): string {
+    const usable = instruction && !identityInstruction.test(instruction) ? entries.filter(entry => !entry.feature) : entries;
+    const body = usable.map(entry => formatEntry(entry, instruction)).join(',\\\n\t');
+    const indent = body && lineText.trim() === '' && previousLineText.trimEnd().endsWith('\\') ? '\t' : '';
     return indent + body;
 }
 
-const ldapEscape = (value: string): string => value.replace(/[\\()]/g, c => `\\${c}`);
+const ldapEscape = (value: string): string => value.replace(/[\\()*]/g, c => `\\${c}`);
 
 export function packageFilter(name: string, range?: string): string {
     const pkg = `(osgi.wiring.package=${ldapEscape(name.trim())})`;
@@ -432,7 +460,7 @@ export class RepositoriesDragAndDrop implements vscode.TreeDragAndDropController
     async handleDrag(source: readonly RepoNode[], data: vscode.DataTransfer): Promise<void> {
         const entries = source.map(entryFor).filter((entry): entry is RepositoryEntry => !!entry);
         if (!entries.length) return;
-        data.set('text/plain', new vscode.DataTransferItem(entries.map(formatEntry).join(',\\\n\t')));
+        data.set('text/plain', new vscode.DataTransferItem(entries.map(entry => formatEntry(entry)).join(',\\\n\t')));
         data.set(repositoryEntryMime, new vscode.DataTransferItem(JSON.stringify(entries)));
         const versions = resolutionEntriesFor(source).filter(entry => entry.version !== undefined);
         if (versions.length) data.set(resolutionEntryMime, new vscode.DataTransferItem(JSON.stringify(versions)));
@@ -462,9 +490,18 @@ class RepositoryDropProvider implements vscode.DocumentDropEditProvider {
         const raw = await data.get(repositoryEntryMime)?.asString();
         if (!raw) return undefined;
         const entries = JSON.parse(raw) as RepositoryEntry[];
+        const instruction = instructionAt(line => document.lineAt(line).text, position.line);
         const previous = position.line > 0 ? document.lineAt(position.line - 1).text : '';
-        return new vscode.DocumentDropEdit(formatDropText(entries, document.lineAt(position.line).text, previous),
-            'Insert bnd repository entry', RepositoryDropProvider.kind);
+        const lineText = document.lineAt(position.line).text;
+        let text = formatDropText(entries, lineText, previous, instruction);
+        if (!text) return undefined;
+        const before = lineText.slice(0, position.character).trimEnd();
+        if (lineText.slice(position.character).trim() === '') {
+            // Dropping after `key:` or a trailing `\` must start the value on its own continuation line.
+            if (before.endsWith('\\')) text = `\n\t${text}`;
+            else if (/^\s*[^\s:=#]+\s*[:=]$/.test(before)) text = ` ${text}`;
+        }
+        return new vscode.DocumentDropEdit(text, 'Insert bnd repository entry', RepositoryDropProvider.kind);
     }
 }
 
@@ -644,7 +681,7 @@ export function registerRepositoriesView(context: vscode.ExtensionContext, serve
         })),
         vscode.commands.registerCommand('bnd.repositories.copyEntry', run(async (node?: RepoNode, nodes?: RepoNode[]) => {
             const entries = selected(node, nodes).map(entryFor).filter((entry): entry is RepositoryEntry => !!entry);
-            await copy(entries.map(formatEntry).join(',\\\n\t'));
+            await copy(entries.map(entry => formatEntry(entry)).join(',\\\n\t'));
         })),
         vscode.commands.registerCommand('bnd.repositories.revealFile', run(async (node?: RepoNode) => {
             const file = await vscode.window.withProgress({ location: { viewId: repositoriesViewId } }, () => jarFor(node ?? view.selection[0]));

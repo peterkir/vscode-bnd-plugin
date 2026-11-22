@@ -79,8 +79,8 @@ suite('bnd workspace Explorer', () => {
         const provider = new BndExplorerProvider();
         const cases: [string, boolean, string[]][] = [
             ['app.bndrun', false, ['launch', 'effective']],
-            ['bnd.bnd', false, ['launch', 'effective', 'resolution']],
-            ['other.bnd', false, ['effective', 'resolution']],
+            ['bnd.bnd', false, ['launch', 'effective', 'resolution', 'buildable']],
+            ['other.bnd', false, ['effective', 'resolution', 'buildable']],
             ['bundle.JAR', false, ['jar', 'resolution']],
             ['notes.txt', false, []],
             ['app.bndrun', true, []],
@@ -110,6 +110,34 @@ suite('bnd workspace Explorer', () => {
                     assert.ok(pattern, menu.when);
                     assert.strictEqual(new RegExp(pattern[1]).test(item.contextValue!), !directory, `${filename}: ${command}`);
                 }
+            }
+        } finally {
+            provider.dispose();
+        }
+    });
+
+    test('offers build and clean on folders and .bnd files only', () => {
+        const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'));
+        const menus = manifest.contributes.menus['view/item/context'];
+        const provider = new BndExplorerProvider();
+        try {
+            for (const command of ['bnd.lsp.buildProject', 'bnd.lsp.cleanProject']) {
+                const menu = menus.find((entry: { command: string; when: string }) =>
+                    entry.command === command && entry.when.startsWith('view == bnd.explorer'));
+                assert.ok(menu, command);
+                const pattern = /viewItem =~ \/(.+)\/$/.exec(menu.when);
+                assert.ok(pattern, menu.when);
+                const offered = (filename: string, directory: boolean, root = false): boolean => {
+                    const base = node(path.join(os.tmpdir(), filename), directory);
+                    return new RegExp(pattern[1]).test(provider.getTreeItem({ ...base, root }).contextValue!);
+                };
+                assert.ok(offered('project', true), `${command}: folder`);
+                assert.ok(offered('workspace', true, true), `${command}: workspace root`);
+                assert.ok(offered('bnd.bnd', false), `${command}: bnd.bnd`);
+                assert.ok(offered('other.bnd', false), `${command}: other.bnd`);
+                assert.ok(!offered('app.bndrun', false), `${command}: bndrun`);
+                assert.ok(!offered('bundle.jar', false), `${command}: jar`);
+                assert.ok(!offered('notes.txt', false), `${command}: text file`);
             }
         } finally {
             provider.dispose();

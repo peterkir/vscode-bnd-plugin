@@ -37,6 +37,7 @@ Responsibilities:
 Guardrails:
 
 - Keep behavior aligned with bnd CLI semantics.
+- Use the bnd CLI only in the explicit `bnd-cli:` commands of `src/bndCliCommands.ts`. Every other feature (build, clean, export, launch, resolve, baseline, repositories, wizards, effective properties, JAR viewer, automatic build) must go through the language server (`bnd.*` server commands) or the extension's own code. Never spawn `bnd`, run `bnd.cli.executable`, or send CLI text to a terminal from another module. If the server lacks a capability, say so to the user instead of falling back to the CLI. The test `bnd CLI isolation` in `src/test/suite/cliInvocation.test.ts` enforces this; extend its allow-list only deliberately.
 - Respect `bnd.cli.executable` as user-configured command.
 - Prefer minimal and reversible UX changes.
 - Keep command invocation safe and explicit, prefer workspace-relative picked paths when appropriate, and confirm destructive or publish-like operations.

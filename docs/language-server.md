@@ -94,7 +94,7 @@ With the Java language server, bnd projects **build incrementally**. The server 
 
 - a `.bnd` file is saved,
 - compiled classes change below `bin` (or `bin.vscode`),
-- a file is deleted from a project, or
+- a file or the project's `generated` folder is deleted (a custom `target-dir` is not detected), or
 - the workspace is refreshed with **Refresh Workspace Files** in the bnd explorer. This builds every project that bnd finds out of date.
 
 The Java language server compiles the sources; bnd packages the result.
@@ -115,11 +115,11 @@ The tooltip shows the state, the result of the last build, and a **Show output**
 
 ## Build, clean, and baseline commands
 
-These commands act on the project of the active or selected bnd file and do not need the bnd CLI.
+These commands act on the project of the active or selected bnd file and do not need the bnd CLI. **Build Project** and **Clean Project** are also in the bnd Explorer context menu on folders and `.bnd` files.
 
 | Command | Effect |
 |---|---|
-| **bnd: Build Project (LSP)** | Builds the project. |
+| **bnd: Build Project (LSP)** | Builds the project. On the workspace folder it builds all projects. |
 | **bnd: Clean Project (LSP)** | Cleans the project. On a workspace file such as `cnf/build.bnd` it cleans every project. |
 | **bnd: Baseline Project (LSP)** | Compares each bundle of the project with its `-baseline` repository and prints the per-package report to the **bnd Language Server** output channel. |
 | **bnd: Resolve Runbundles (LSP)** | Resolves the active or selected `.bndrun` file as a dry run and reports resolution errors. It does not modify the file. |
