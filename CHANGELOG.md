@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.32.5 (Unreleased)
+
+### Fixed
+- The Marketplace release and pre-release badges in the README showed "resource not found": shields.io had cached the failed lookup from before the `badges` branch existed. The badge URLs changed so the cache is bypassed.
+
 ## 0.32.4 (Unreleased)
 
 ### Changed
