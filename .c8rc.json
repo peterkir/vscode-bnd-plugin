@@ -1,6 +1,6 @@
 {
   "include": ["out/*.js", "out/test/*.js"],
-  "exclude": ["out/test/test/**"],
+  "exclude": ["out/test/test/**", "out/test/runTest.js"],
   "all": true,
   "reports-dir": "coverage",
   "temp-directory": "coverage/tmp"

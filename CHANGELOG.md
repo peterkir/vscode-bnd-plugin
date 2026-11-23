@@ -3,7 +3,7 @@
 ## 0.32.3 (Unreleased)
 
 ### Changed
-- The CI build reports test coverage in the run summary and uploads the coverage report. Many more tests cover downloads, the Resolution view, the bnd Explorer, command line helpers, and the Explorer build and clean commands.
+- The CI build reports test coverage in the run summary and uploads the coverage report. Many more tests cover downloads, the bnd library and language server JAR pickers, the `bnd-cli:` commands, the status and configuration menus, the Resolution view, the bnd Explorer, command line helpers, export, and the Explorer build and clean commands (about 81 % of lines).
 
 ## 0.32.2 (Unreleased)
 
