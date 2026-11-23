@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Executable, LanguageClient } from 'vscode-languageclient/node';
 import { BndExtensionApi, executeServerCommand } from '../../extension';
+import { Interaction } from './interaction';
 import { parseExportResult } from '../../bndExport';
 
 suite('LSP build commands', () => {
@@ -144,6 +145,50 @@ suite('LSP build commands', () => {
             await waitForMarkers(count => count === 0);
         } finally {
             await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+            fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    });
+
+    test('exports a run file through the command, reporting results and unsupported targets', async function () {
+        this.timeout(180000);
+        const api = await vscode.extensions.getExtension<BndExtensionApi>('klibio.bnd')!.activate();
+        await vscode.commands.executeCommand('bnd.server.restart');
+        const deadline = Date.now() + 100000;
+        while (api.getServerStatus().state !== 'running') {
+            assert.ok(Date.now() < deadline, `the language server did not start: ${JSON.stringify(api.getServerStatus())}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-export-command-'));
+        fs.mkdirSync(path.join(temporary, 'cnf'), { recursive: true });
+        fs.writeFileSync(path.join(temporary, 'cnf', 'build.bnd'), '');
+        const project = path.join(temporary, 'p');
+        fs.mkdirSync(project, { recursive: true });
+        const bndrun = path.join(project, 'launch.bndrun');
+        fs.writeFileSync(bndrun, '-runfw: org.missing.framework\n-runrequires: osgi.identity;filter:=\'(osgi.identity=missing)\'\n');
+        const notes = path.join(project, 'notes.txt');
+        fs.writeFileSync(notes, '');
+        const ui = new Interaction();
+        ui.install();
+        try {
+            await vscode.commands.executeCommand('bnd.lsp.export', vscode.Uri.file(notes));
+            assert.deepStrictEqual(ui.messages, ['Select a .bndrun or bnd.bnd file to export.']);
+
+            ui.picks.push(() => undefined);
+            await vscode.commands.executeCommand('bnd.lsp.export', { uri: vscode.Uri.file(bndrun) });
+            assert.strictEqual(ui.messages.length, 1, 'a dismissed format picker exports nothing');
+
+            for (const [index, argument] of [[1, { resourceUri: vscode.Uri.file(bndrun) }], [0, vscode.Uri.file(bndrun)]] as const) {
+                const before: number = ui.messages.length;
+                ui.picks.push(items => items[index]);
+                ui.buttons.push(undefined);
+                await vscode.commands.executeCommand('bnd.lsp.export', argument);
+                for (let attempt = 0; attempt < 100 && ui.messages.length === before; attempt++) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                assert.match(ui.messages[before], /^bnd export(ed| failed)/, JSON.stringify(ui.messages));
+            }
+        } finally {
+            ui.restore();
             fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
