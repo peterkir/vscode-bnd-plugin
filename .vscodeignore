@@ -43,3 +43,5 @@ docs/**
 scripts/
 server/bundled-jars.json
 AGENTS.md
+coverage/
+.c8rc.json

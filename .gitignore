@@ -7,3 +7,4 @@ test_workspace/
 .DS_Store
 Thumbs.db
 *.vsix
+coverage/

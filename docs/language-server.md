@@ -111,7 +111,7 @@ Automatic build is controlled by the same **bnd** configuration popup. **bnd: To
 | Automatic Build switch: Off | Switched off. |
 | Automatic Build switch: On, workspace untrusted | On, but paused because the workspace is not trusted. |
 
-The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds with their errors and warnings per project are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the server is stopped, disabled, or too old to support automatic build.
+After each build the markers of open bnd files are recomputed, so they match the build result. Errors and warnings of the build itself appear in the **bnd Build** output channel, not in the Problems view. The tooltip shows the state, the result of the last build, and a **Show output** link. Completed builds with their errors and warnings per project are listed with timestamps in the **bnd Build** output channel (**bnd: Show Build Output**). Successful builds raise no notification. The item is hidden while the server is stopped, disabled, or too old to support automatic build.
 
 ## Build, clean, and baseline commands
 

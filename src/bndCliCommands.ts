@@ -90,7 +90,7 @@ function configuredWindowsShellKind(): WindowsShellKind {
     return 'other';
 }
 
-function splitExecutableCommand(command: string): { executable: string; remainder: string } {
+export function splitExecutableCommand(command: string): { executable: string; remainder: string } {
     const trimmed = command.trim();
     const match = trimmed.match(/^("[^"]+"|'[^']+'|\S+)([\s\S]*)$/);
     if (!match) {
@@ -103,7 +103,7 @@ function splitExecutableCommand(command: string): { executable: string; remainde
     };
 }
 
-function toGitBashPath(executablePath: string): string {
+export function toGitBashPath(executablePath: string): string {
     const normalized = stripWrappedQuotes(executablePath);
     const drivePath = normalized.match(/^([A-Za-z]):[\\/](.*)$/);
     if (!drivePath) {
@@ -115,14 +115,14 @@ function toGitBashPath(executablePath: string): string {
     return `/${drive}/${tail}`;
 }
 
-function convertWindowsPathsToBash(text: string): string {
+export function convertWindowsPathsToBash(text: string): string {
     return text.replace(/(["']?)([A-Za-z]):[\\/]([^"'\n\r]+)(["']?)/g, (_match, q1, drive, rest, q2) => {
         const bashPath = `/${drive.toLowerCase()}/${rest.replace(/\\/g, '/')}`;
         return `${q1}${bashPath}${q2}`;
     });
 }
 
-function quoteForBash(value: string): string {
+export function quoteForBash(value: string): string {
     return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
@@ -600,7 +600,7 @@ export async function findJavaRuntimeHomeForRunee(runee: string): Promise<{ home
     return undefined;
 }
 
-function extractTargetFileFromArgs(args: string): string | undefined {
+export function extractTargetFileFromArgs(args: string): string | undefined {
     // Look for arguments ending with .bndrun or .bnd (e.g. "run foo.bndrun" or "resolve file.bndrun")
     const match = args.match(/(?:^|\s)["']?([^"'\r\n\t\s]+\.(?:bndrun|bnd))["']?(?:\s|$)/i);
     if (match) {
@@ -690,11 +690,11 @@ interface JavaRuntimeEntry {
     [key: string]: unknown;
 }
 
-function javaBinaryPath(runtimeHome: string): string {
+export function javaBinaryPath(runtimeHome: string): string {
     return path.join(runtimeHome, 'bin', process.platform === 'win32' ? 'java.exe' : 'java');
 }
 
-function normalizeFsPath(p: string): string {
+export function normalizeFsPath(p: string): string {
     return process.platform === 'win32' ? path.normalize(p).toLowerCase() : path.normalize(p);
 }
 

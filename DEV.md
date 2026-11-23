@@ -218,7 +218,7 @@ Only the explicit `bnd-cli:` Command Palette commands (`src/bndCliCommands.ts`, 
 
 ### Automatic Build
 
-`src/extension.ts` registers the status bar menu, setting commands, and file watchers. `src/autoBuild.ts` synchronizes `bnd.build.auto` with the server's `bnd.build.auto` command, handles `bnd/buildStatus` notifications, forwards file deletions (`deletedFilesGlob`) to the server, reports the deletion of a project's `generated` folder as a change of its `bnd.bnd` (`targetFolderDeletionChange`, because the server ignores the target folder), reports a workspace refresh as a change of `cnf/build.bnd` (`workspaceRefreshChange`, because the server has no build-now request), and presents the status and build output. The item appears only when the server advertises the `bndAutoBuild` experimental capability. Commands update User settings unless a workspace value already exists; if the setting is not registered, they offer to reload the window.
+`src/extension.ts` registers the status bar menu, setting commands, and file watchers. `src/autoBuild.ts` synchronizes `bnd.build.auto` with the server's `bnd.build.auto` command, handles `bnd/buildStatus` notifications, forwards file deletions (`deletedFilesGlob`) to the server, reports the deletion of a project's `generated` folder as a change of its `bnd.bnd` (`targetFolderDeletionChange`, because the server ignores the target folder), recomputes the diagnostics of open bnd documents after each finished build (`buildFinished`; the extension resends the unchanged text as `textDocument/didChange` because the server publishes diagnostics only on open/change/save and `didSave` would start another build), reports a workspace refresh as a change of `cnf/build.bnd` (`workspaceRefreshChange`, because the server has no build-now request), and presents the status and build output. The item appears only when the server advertises the `bndAutoBuild` experimental capability. Commands update User settings unless a workspace value already exists; if the setting is not registered, they offer to reload the window.
 
 For manual verification, use a trusted bnd workspace and a server with automatic build support. Save a `.bnd` file, change compiled classes under `bin` or `bin.vscode`, delete a file or the `generated` folder of a project, or run **Refresh Workspace Files** in the bnd explorer, then check the status and **bnd Build** output. Use the status menu to disable and re-enable the build, verify the setting and server state follow, and check that an untrusted workspace shows the paused state. The automated coverage is in `src/test/suite/autoBuild.test.ts` and `src/test/suite/autoBuildServer.test.ts`.
 
@@ -234,6 +234,14 @@ npm test
 `npm test` automatically runs `npm run pretest` (`compile:all` + `compile:tests`), then launches VS Code Extension Test Host.
 
 The automated test host is separate from the sample workspace launch above. It opens the extension test suite, not `example.bnd.rcp`. Tests that start the Java LSP use the bundled `server/biz.aQute.bnd.lsp.jar`; update that JAR with `npm run server:update` before testing Java LSP changes, because the suite fails when the JARs do not match `server/bundled-jars.json`. `npm test` uses a locally discoverable VS Code executable when available, otherwise the VS Code test runner may download one.
+
+#### Test coverage
+
+```bash
+npm run test:coverage
+```
+
+runs the same suite under `c8` (V8 coverage mapped back to `src/*.ts` through the source maps; `.c8rc.json` includes the extension build in `out/` and the modules the tests import from `out/test/`). CI runs this instead of plain `npm test`: the **Build & Package** job adds the table to the run summary and uploads `coverage/lcov.info` and the HTML report as the `coverage-report` artifact. Locally it prints a table and writes `coverage/lcov.info` and `coverage/lcov-report/` (git-ignored, not packaged). Measured at 0.32.3: about 69 % of lines, with the pure logic (`autoBuild.ts`, `serverStatus.ts`, `eclipseCoexistence.ts`, `serverStream.ts`, `bndCommandData.ts`) at 95–100 % and the terminal and QuickPick code in `bndCliCommands.ts`, `eclipseCoexistenceUi.ts` and the activation paths of `extension.ts` lowest. The Node language server in `server/src` and the Java server are not measured. Tests that need network access use a local HTTP server (`remoteLibrary.test.ts`); keep new tests offline the same way. The extension host runs the build in `out/` while tests import the copy in `out/test/`: a test can only reach state of the running extension through the object returned by `activate()` (`BndExtensionApi`).
 
 #### Upstream CLI Parity Tests
 

@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Executable, LanguageClient } from 'vscode-languageclient/node';
-import { executeServerCommand } from '../../extension';
+import { BndExtensionApi, executeServerCommand } from '../../extension';
 import { parseExportResult } from '../../bndExport';
 
 suite('LSP build commands', () => {
@@ -76,6 +76,74 @@ suite('LSP build commands', () => {
             assert.ok(fs.existsSync(path.join(exported.output ?? '', 'p.jar')), 'export must write the run bundles');
         } finally {
             await client.stop();
+            fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    });
+
+    test('builds and cleans from tree items, the way the bnd Explorer menu invokes the commands', async function () {
+        this.timeout(120000);
+        const api = await vscode.extensions.getExtension<BndExtensionApi>('klibio.bnd')!.activate();
+        await vscode.commands.executeCommand('bnd.server.restart');
+        const deadline = Date.now() + 100000;
+        while (api.getServerStatus().state !== 'running') {
+            assert.ok(Date.now() < deadline, `the language server did not start: ${JSON.stringify(api.getServerStatus())}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-explorer-build-'));
+        fs.mkdirSync(path.join(temporary, 'cnf'), { recursive: true });
+        fs.writeFileSync(path.join(temporary, 'cnf', 'build.bnd'), '');
+        const project = path.join(temporary, 'p');
+        fs.mkdirSync(project, { recursive: true });
+        fs.writeFileSync(path.join(project, 'bnd.bnd'), 'Bundle-Version: 1.0.0\n-includeresource: a.txt;literal=a\n');
+        const bundle = path.join(project, 'generated', 'p.jar');
+        try {
+            await vscode.commands.executeCommand('bnd.lsp.buildProject', { uri: vscode.Uri.file(path.join(project, 'bnd.bnd')) });
+            assert.ok(fs.existsSync(bundle), 'build from a .bnd tree item must write the bundle');
+
+            await vscode.commands.executeCommand('bnd.lsp.cleanProject', { uri: vscode.Uri.file(project) });
+            assert.ok(!fs.existsSync(bundle), 'clean from a folder tree item must remove the bundle');
+
+            await vscode.commands.executeCommand('bnd.lsp.buildProject', { uri: vscode.Uri.file(project) });
+            assert.ok(fs.existsSync(bundle), 'build from a folder tree item must write the bundle');
+            await vscode.commands.executeCommand('bnd.lsp.buildProject', vscode.Uri.file(temporary));
+        } finally {
+            fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    });
+
+    test('clears stale problem markers of an open bnd file when diagnostics are refreshed', async function () {
+        this.timeout(180000);
+        const api = await vscode.extensions.getExtension<BndExtensionApi>('klibio.bnd')!.activate();
+        await vscode.commands.executeCommand('bnd.server.restart');
+        const deadline = Date.now() + 100000;
+        while (api.getServerStatus().state !== 'running') {
+            assert.ok(Date.now() < deadline, `the language server did not start: ${JSON.stringify(api.getServerStatus())}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-refresh-diagnostics-'));
+        fs.mkdirSync(path.join(temporary, 'cnf'), { recursive: true });
+        fs.writeFileSync(path.join(temporary, 'cnf', 'build.bnd'), '');
+        const project = path.join(temporary, 'p');
+        fs.mkdirSync(project, { recursive: true });
+        const file = path.join(project, 'bnd.bnd');
+        fs.writeFileSync(file, 'Bundle-Version: 1.0.0\n-includeresource: missing.txt\n');
+        const uri = vscode.Uri.file(file);
+        const waitForMarkers = async (expected: (count: number) => boolean) => {
+            for (let attempt = 0; attempt < 100; attempt++) {
+                if (expected(vscode.languages.getDiagnostics(uri).length)) return;
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            assert.fail(`unexpected markers: ${JSON.stringify(vscode.languages.getDiagnostics(uri).map(d => d.message))}`);
+        };
+        try {
+            await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(uri), { preview: false });
+            await waitForMarkers(count => count > 0);
+
+            fs.writeFileSync(path.join(project, 'missing.txt'), 'present now');
+            await api.refreshDiagnostics();
+            await waitForMarkers(count => count === 0);
+        } finally {
+            await vscode.commands.executeCommand('workbench.action.closeAllEditors');
             fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });

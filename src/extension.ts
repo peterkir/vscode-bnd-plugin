@@ -72,6 +72,8 @@ export function resolveBndrunUri(uri: vscode.Uri): string {
 export interface BndExtensionApi {
     getServerStatus(): ServerStatus;
     getParallelEclipse(): EclipseInstance[];
+    /** Recomputes the problem markers of open bnd documents; also done after every automatic build. */
+    refreshDiagnostics(): Promise<void>;
 }
 
 function setServerStatus(status: ServerStatus): void {
@@ -94,6 +96,29 @@ function renderAutoBuild(state: AutoBuildState): void {
 // Commands run from a tree view receive the tree node instead of a Uri.
 function commandTarget(arg: vscode.Uri | { uri?: vscode.Uri } | undefined): vscode.Uri | undefined {
     return arg instanceof vscode.Uri ? arg : arg?.uri;
+}
+
+/**
+ * The server computes diagnostics only when a bnd document is opened, changed or saved, so a build that
+ * changed the outcome (for example compiled classes appearing) leaves stale markers. Resending the unchanged
+ * text makes it recompute them. didSave would also start another build.
+ */
+async function refreshBndDiagnostics(): Promise<void> {
+    const active = client;
+    if (!active) return;
+    try {
+        await clientReady;
+        if (client !== active) return;
+        for (const document of vscode.workspace.textDocuments) {
+            if (document.isClosed || document.languageId !== 'bnd' || document.uri.scheme !== 'file') continue;
+            await active.sendNotification('textDocument/didChange', {
+                textDocument: { uri: document.uri.toString(), version: document.version },
+                contentChanges: [{ text: document.getText() }],
+            });
+        }
+    } catch (error) {
+        outputChannel.appendLine(`Refreshing diagnostics after the build failed: ${error}`);
+    }
 }
 
 // Reports the workspace refresh to the server, which then builds the stale projects.
@@ -141,6 +166,7 @@ function registerAutoBuild(context: vscode.ExtensionContext): void {
         log: line => output.appendLine(line),
         changed: renderAutoBuild,
         now: () => Date.now(),
+        buildFinished: () => void refreshBndDiagnostics(),
     });
     const targetFolders = vscode.workspace.createFileSystemWatcher(`**/${targetFolderName}`, true, true, false);
     context.subscriptions.push(
@@ -586,7 +612,11 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
 
     // Register bnd CLI commands
     registerCliCommands(context);
-    return { getServerStatus: () => serverStatus, getParallelEclipse: () => eclipse.getDetected() };
+    return {
+        getServerStatus: () => serverStatus,
+        getParallelEclipse: () => eclipse.getDetected(),
+        refreshDiagnostics: refreshBndDiagnostics,
+    };
 }
 
 export function executeServerCommand(activeClient: LanguageClient, command: string, args: unknown[],

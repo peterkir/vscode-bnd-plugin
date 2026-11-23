@@ -1,8 +1,14 @@
 # Changelog
 
+## 0.32.3 (Unreleased)
+
+### Changed
+- The CI build reports test coverage in the run summary and uploads the coverage report. Many more tests cover downloads, the Resolution view, the bnd Explorer, command line helpers, and the Explorer build and clean commands.
+
 ## 0.32.2 (Unreleased)
 
 ### Fixed
+- Problem markers of open bnd files are recomputed after every automatic build. Before, a marker such as "Unused -privatepackage instructions" stayed until the file was edited or saved, even after the build packaged the classes.
 - Dropping repository entries into a bnd editor formats them for the instruction under the cursor, also for multi-selections. `-runrequires` and `-runblacklist` get `osgi.identity;filter:='...'` requirements (with `version>=` for versions); other instructions such as `-buildpath` and `-runbundles` get `bsn;version=...`. Features can be dragged and are written as `osgi.identity` requirements with `type=org.eclipse.update.feature` (skipped for other instructions). Dropping after `-key:` or a trailing `\` starts the entries on a continuation line.
 
 ## 0.32.1 (Unreleased)

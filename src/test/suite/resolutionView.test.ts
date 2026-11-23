@@ -214,6 +214,83 @@ suite('Resolution View', () => {
         }
     });
 
+    test('drives the webview: renders, analyzes, edits resources and reports errors', async () => {
+        const posted: any[] = [];
+        let receive: ((message: unknown) => void) | undefined;
+        let dispose: (() => void) | undefined;
+        const view = {
+            webview: {
+                options: undefined as unknown, html: '', cspSource: 'vscode-resource:',
+                postMessage: async (message: unknown) => { posted.push(message); return true; },
+                onDidReceiveMessage: (listener: (message: unknown) => void) => { receive = listener; return { dispose() { } }; },
+            },
+            onDidDispose: (listener: () => void) => { dispose = listener; return { dispose() { } }; },
+        } as unknown as vscode.WebviewView;
+        let saved: string[] = [];
+        const context = { workspaceState: {
+            get: () => saved,
+            update: async (_key: string, value: string[]) => { saved = value; },
+        } } as unknown as vscode.ExtensionContext;
+        let supported = true;
+        let analysis: unknown = { resources: ['a.jar', 7], requirements: [{ source: 'a.jar', namespace: 'osgi.ee', attributes: null }], capabilities: [] };
+        const provider = new ResolutionViewProvider(context, {
+            supports: async () => supported,
+            execute: async () => { if (analysis instanceof Error) throw analysis; return analysis; },
+        });
+        const send = async (message: unknown) => { receive!(message); await new Promise(resolve => setTimeout(resolve, 20)); };
+        const last = (type: string) => [...posted].reverse().find(message => message.type === type);
+        const jar = vscode.Uri.file(path.resolve('first.jar')).toString();
+        try {
+            provider.resolveWebviewView(view);
+            assert.ok((view.webview.options as { enableScripts: boolean }).enableScripts);
+            assert.match(view.webview.html, /Content-Security-Policy[^>]*script-src 'nonce-[A-Za-z0-9+/=]+'/);
+            await send({ type: 'ready' });
+            assert.deepStrictEqual(last('data').data, { resources: [], requirements: [], capabilities: [] });
+
+            await send({ type: 'addUris', uris: [jar, 'https://example.org/x.jar', 42] });
+            assert.deepStrictEqual(saved, [jar]);
+            assert.deepStrictEqual(last('resources').resources, [jar]);
+            assert.deepStrictEqual(last('data').data, {
+                resources: ['a.jar'],
+                requirements: [{ source: 'a.jar', namespace: 'osgi.ee', attributes: {}, directives: {}, optional: false, resolved: false }],
+                capabilities: [],
+            });
+
+            analysis = { requirements: [{ namespace: 5 }] };
+            await send({ type: 'refresh' });
+            assert.match(last('error').message, /Incompatible bnd resolution row/);
+            analysis = new Error('server exploded');
+            await send({ type: 'refresh' });
+            assert.strictEqual(last('error').message, 'server exploded');
+
+            supported = false;
+            await send({ type: 'refresh' });
+            assert.match(last('error').message, /updated Java bnd Language Server/);
+            supported = true;
+
+            await send({ type: 'addRepositoryEntries', entries: 'nonsense' });
+            assert.strictEqual(last('error').message, 'Invalid repository drag data.');
+
+            await send({ type: 'copy', text: 'copied text' });
+            assert.strictEqual(await vscode.env.clipboard.readText(), 'copied text');
+
+            await send({ type: 'remove', uri: 42 });
+            assert.deepStrictEqual(saved, [jar]);
+            await send({ type: 'remove', uri: jar });
+            assert.deepStrictEqual(saved, []);
+            await send({ type: 'addUris', uris: [jar] });
+            await send({ type: 'clear' });
+            assert.deepStrictEqual(saved, []);
+
+            const before = posted.length;
+            dispose!();
+            await provider.refresh();
+            assert.strictEqual(posted.length, before, 'a disposed view receives nothing');
+        } finally {
+            provider.dispose();
+        }
+    });
+
     test('contributes Resolution to the built-in Panel', () => {
         const packagePath = path.resolve(__dirname, '../../../../package.json');
         const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));

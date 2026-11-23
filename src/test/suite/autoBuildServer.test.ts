@@ -87,4 +87,60 @@ suite('Automatic build with the bundled Java language server', () => {
             fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
+
+    test('recomputes diagnostics when the unchanged text of an open document is resent', async function () {
+        this.timeout(120000);
+        const jar = path.resolve(__dirname, '../../../../server/biz.aQute.bnd.lsp.jar');
+        const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-diagnostics-'));
+        fs.mkdirSync(path.join(temporary, 'cnf'), { recursive: true });
+        fs.writeFileSync(path.join(temporary, 'cnf', 'build.bnd'), '');
+        const project = path.join(temporary, 'p');
+        fs.mkdirSync(project, { recursive: true });
+        const bnd = path.join(project, 'bnd.bnd');
+        const text = 'Bundle-Version: 1.0.0\n-includeresource: missing.txt\n';
+        fs.writeFileSync(bnd, text);
+        const uri = vscode.Uri.file(bnd).toString();
+
+        const published: number[] = [];
+        let notify: (() => void) | undefined;
+        const executable: Executable = { command: 'java', args: ['-jar', jar], options: { env: process.env } };
+        const client = new LanguageClient('testBndDiagnostics', 'Test bnd diagnostics', { run: executable, debug: executable }, {
+            documentSelector: [{ scheme: 'file', language: 'bnd' }],
+            initializationOptions: { workspaceTrusted: true, autoBuild: false },
+            outputChannel: vscode.window.createOutputChannel('Test bnd diagnostics', { log: true }),
+            middleware: {
+                handleDiagnostics: (diagnosticsUri, diagnostics) => {
+                    if (diagnosticsUri.toString() === uri) {
+                        published.push(diagnostics.length);
+                        notify?.();
+                    }
+                },
+            },
+        });
+        client.getFeature('workspace/executeCommand').initialize = () => {};
+        const next = () => new Promise<number>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`no diagnostics: ${JSON.stringify(published)}`)), 30000);
+            notify = () => {
+                clearTimeout(timer);
+                notify = undefined;
+                resolve(published[published.length - 1]);
+            };
+        });
+        try {
+            await client.start();
+            const first = next();
+            await client.sendNotification('textDocument/didOpen', { textDocument: { uri, languageId: 'bnd', version: 1, text } });
+            assert.ok(await first > 0, 'the missing resource must be reported');
+
+            fs.writeFileSync(path.join(project, 'missing.txt'), 'now present');
+            const second = next();
+            await client.sendNotification('textDocument/didChange', {
+                textDocument: { uri, version: 1 }, contentChanges: [{ text }],
+            });
+            assert.strictEqual(await second, 0, 'resending the unchanged text must refresh the markers');
+        } finally {
+            await client.stop();
+            fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    });
 });
