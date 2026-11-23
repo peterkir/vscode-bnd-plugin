@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.32.4 (Unreleased)
+
+### Changed
+- The README starts with a link to the extension on the Visual Studio Marketplace and shows badges for the CI build status, test coverage, and the latest Marketplace release, Marketplace pre-release and GitHub release. The `codecov` coverage badge and the Marketplace release and pre-release badges are shields.io endpoint files that CI publishes on the `badges` branch (`scripts/coverageBadge.mjs` and the new `node scripts/release.mjs badges <dir>`), so no external coverage service or secret is needed and the retired shields.io Marketplace badges are avoided.
+
 ## 0.32.3 (Unreleased)
 
 ### Changed

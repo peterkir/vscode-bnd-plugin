@@ -179,3 +179,66 @@ jobs:
             exit 0
           fi
           npx @vscode/vsce publish --pre-release --packagePath "bnd-$VERSION.vsix"
+
+  # Publishes the badges of README.md as shields.io endpoint files on the `badges` branch
+  # (raw.githubusercontent.com/<repo>/badges/<name>.json): the line coverage of this build and the latest
+  # Marketplace release and pre-release (shields.io no longer renders Marketplace badges itself).
+  badges:
+    name: Publish badges
+    needs: [build, prerelease]
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: badges
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Create badge files
+        run: |
+          mkdir -p "$RUNNER_TEMP/badges"
+          node scripts/coverageBadge.mjs coverage/lcov.info "$RUNNER_TEMP/badges/coverage.json"
+          # The Marketplace may be unreachable; keep the previous release badges in that case.
+          node scripts/release.mjs badges "$RUNNER_TEMP/badges" || echo "::warning::Marketplace versions unavailable; release badges not updated."
+
+      - name: Commit badge files to the badges branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$repo" badges > /dev/null; then
+            git clone -q --depth 1 --branch badges "$repo" "$RUNNER_TEMP/branch"
+          else
+            git init -q "$RUNNER_TEMP/branch"
+            git -C "$RUNNER_TEMP/branch" remote add origin "$repo"
+            git -C "$RUNNER_TEMP/branch" checkout -q --orphan badges
+          fi
+          cd "$RUNNER_TEMP/branch"
+          cp "$RUNNER_TEMP"/badges/*.json .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Badges are up to date."
+            exit 0
+          fi
+          git commit -q -m "Update badges for ${GITHUB_SHA}"
+          git push origin badges
