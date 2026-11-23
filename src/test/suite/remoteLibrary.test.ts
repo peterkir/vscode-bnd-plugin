@@ -14,10 +14,15 @@ import {
     downloadLibrary,
     fetchReleaseMetadata,
     fetchSnapshotVersions,
+    cmdConfigureLibrary,
+    ensureBndLibrary,
     libraryUri,
+    pickReleaseVersion,
+    pickSnapshotVersion,
     releaseSelection,
     snapshotSelection,
 } from '../../bndLibrary';
+import { Interaction } from './interaction';
 import { downloadServerJar, findCachedServerJar, refreshServerJar, ServerJarSettings } from '../../serverJar';
 
 interface Route {
@@ -235,6 +240,93 @@ suite('bnd library downloads', function () {
         server.routes.set('/dl/x.jar.sha1', { body: `${crypto.createHash('sha1').update(jarBytes).digest('hex')}  x.jar` });
         const target = await downloadLibrary(context(), { ...customSelection(`${server.url}/dl/x.jar`), sha1Url: `${server.url}/dl/x.jar.sha1` });
         assert.ok(fs.existsSync(target.fsPath));
+    });
+
+    suite('pickers and commands', () => {
+        const workspaceSettings = path.resolve(__dirname, '../../../../.vscode/settings.json');
+        let ui: Interaction;
+        let hadWorkspaceSettings: boolean;
+        let savedExecutable: string | undefined;
+
+        setup(() => {
+            hadWorkspaceSettings = fs.existsSync(workspaceSettings);
+            savedExecutable = vscode.workspace.getConfiguration('bnd').inspect<string>('cli.executable')?.globalValue;
+            ui = new Interaction();
+            ui.install();
+        });
+        teardown(async () => {
+            ui.restore();
+            const config = vscode.workspace.getConfiguration('bnd');
+            // Configuring the library writes to the workspace settings of the opened folder, which is this repository.
+            await config.update('cli.executable', undefined, vscode.ConfigurationTarget.Workspace);
+            if (!hadWorkspaceSettings) fs.rmSync(workspaceSettings, { force: true });
+            await config.update('cli.executable', savedExecutable, vscode.ConfigurationTarget.Global);
+        });
+
+        test('lists release versions newest first and accepts a typed version', async () => {
+            server.routes.set(`/release${artifactPath()}/maven-metadata.xml`, { body: metadata(['7.1.0', '7.2.0', '7.3.0']) });
+            let labels: string[] = [];
+            ui.picks.push(items => { labels = items.map((item: { label: string }) => item.label); return items[1]; });
+            assert.strictEqual(await pickReleaseVersion({ offerTrackLatest: true }), '7.3.0');
+            assert.deepStrictEqual(labels, ['latest', '7.3.0', '7.2.0', '7.1.0', 'Enter another version...']);
+
+            ui.picks.push(items => items[items.length - 1]);
+            ui.inputs.push('9.9.9');
+            assert.strictEqual(await pickReleaseVersion(), '9.9.9');
+            ui.picks.push(() => undefined);
+            assert.strictEqual(await pickReleaseVersion(), undefined);
+        });
+
+        test('lists snapshot versions newest first and rejects an empty list', async () => {
+            const base = `/snapshot${artifactPath()}`;
+            server.routes.set(`${base}/maven-metadata.xml`, { body: metadata(['7.3.0-SNAPSHOT', '7.4.0-SNAPSHOT']) });
+            ui.picks.push(items => items[0]);
+            assert.strictEqual(await pickSnapshotVersion({ offerTrackLatest: true }), 'latest');
+            ui.picks.push(items => items[0]);
+            assert.strictEqual(await pickSnapshotVersion(), '7.4.0-SNAPSHOT');
+
+            server.routes.set(`${base}/maven-metadata.xml`, { body: metadata(['1.0.0']) });
+            server.routes.set(`${base}/`, { body: '' });
+            await assert.rejects(pickSnapshotVersion(), /No biz\.aQute\.bnd snapshot versions found/);
+        });
+
+        test('configures the bnd library from a custom URL and reports failures', async () => {
+            server.routes.set('/dl/custom.jar', { body: jarBytes });
+            ui.picks.push(items => items.find((item: { label: string }) => item.label === 'Custom URL...'));
+            ui.inputs.push(`${server.url}/dl/custom.jar`);
+            await cmdConfigureLibrary(context());
+            const executable = vscode.workspace.getConfiguration('bnd').get<string>('cli.executable', '');
+            assert.ok(executable.includes('-jar') && executable.includes('custom.jar'), executable);
+            assert.ok(ui.messages.some(message => message.startsWith('Configured bnd CLI custom')), JSON.stringify(ui.messages));
+
+            ui.messages.length = 0;
+            ui.picks.push(items => items.find((item: { label: string }) => item.label === 'Custom URL...'));
+            ui.inputs.push(`${server.url}/dl/missing.jar`);
+            await cmdConfigureLibrary(context());
+            assert.ok(ui.messages.some(message => message.startsWith('Failed to configure bnd library')), JSON.stringify(ui.messages));
+
+            ui.messages.length = 0;
+            ui.picks.push(() => undefined);
+            await cmdConfigureLibrary(context());
+            assert.deepStrictEqual(ui.messages, []);
+        });
+
+        test('keeps a user-provided CLI and provisions the latest release when none is configured', async () => {
+            const config = vscode.workspace.getConfiguration('bnd');
+            await config.update('cli.executable', 'my-own-bnd', vscode.ConfigurationTarget.Global);
+            await ensureBndLibrary(context());
+            assert.strictEqual(server.requests.length, 0, 'a user-provided executable must not be replaced');
+
+            await config.update('cli.executable', undefined, vscode.ConfigurationTarget.Global);
+            server.routes.set(`/release${artifactPath()}/maven-metadata.xml`, { body: metadata(['7.2.0']) });
+            server.routes.set(`/release${artifactPath()}/7.2.0/biz.aQute.bnd-7.2.0.jar`, { body: jarBytes });
+            await ensureBndLibrary(context());
+            assert.match(vscode.workspace.getConfiguration('bnd').get<string>('cli.executable', ''), /biz\.aQute\.bnd-7\.2\.0\.jar/);
+
+            server.routes.clear();
+            await config.update('cli.executable', undefined, vscode.ConfigurationTarget.Workspace);
+            await ensureBndLibrary(context());
+        });
     });
 
     suite('language server JAR', () => {
