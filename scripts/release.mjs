@@ -5,6 +5,8 @@
 //   node scripts/release.mjs prerelease-version                 print the Marketplace pre-release version for this CI run
 //   node scripts/release.mjs published <version>                exit 0 when the version is on the Marketplace, 1 when not
 //                                                               (2 on query errors)
+//   node scripts/release.mjs badges <dir>                       write shields.io endpoint files release.json and
+//                                                               prerelease.json with the latest Marketplace versions
 //
 // `check` requires: tag vX.Y.Z (strict, no suffix), an annotated tag object, package.json and package-lock.json at
 // X.Y.Z, a "## X.Y.Z" section in CHANGELOG.md, X.Y.Z above every other v* tag, the bundled JAR lock intact, and on
@@ -154,11 +156,31 @@ function prereleaseVersion() {
     console.log(format([version[0], version[1] + 1, Number(run)]));
 }
 
+function badges() {
+    const dir = rest[0];
+    if (!dir) fail('usage: node scripts/release.mjs badges <dir>');
+    const { id, versions, error } = marketplaceVersions(readJson('package.json'));
+    if (error) fail(error);
+    const latest = preRelease => versions
+        .filter(entry => entry.preRelease === preRelease && parseVersion(entry.version))
+        .map(entry => parseVersion(entry.version))
+        .sort(compare)
+        .pop();
+    fs.mkdirSync(dir, { recursive: true });
+    for (const [file, label, preRelease, color] of [['release.json', 'release', false, 'blue'], ['prerelease.json', 'pre-release', true, 'orange']]) {
+        const version = latest(preRelease);
+        const badge = { schemaVersion: 1, label, message: version ? `v${format(version)}` : 'none', color: version ? color : 'lightgrey' };
+        fs.writeFileSync(path.join(dir, file), JSON.stringify(badge) + '\n');
+        console.log(`${id} ${label}: ${badge.message}`);
+    }
+}
+
 switch (command) {
     case 'check': check(); break;
     case 'prerelease-version': prereleaseVersion(); break;
     case 'published': published(); break;
+    case 'badges': badges(); break;
     default:
-        console.error('usage: node scripts/release.mjs check <tag> [--skip-marketplace] | prerelease-version | published <version>');
+        console.error('usage: node scripts/release.mjs check <tag> [--skip-marketplace] | prerelease-version | published <version> | badges <dir>');
         process.exit(2);
 }
