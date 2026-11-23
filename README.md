@@ -3,9 +3,9 @@
 **[Install from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=klibio.bnd)** · [Open in VS Code](vscode:extension/klibio.bnd) · [Documentation](https://peterkir.github.io/vscode-bnd-plugin/)
 
 [![CI build status](https://github.com/peterkir/vscode-bnd-plugin/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/peterkir/vscode-bnd-plugin/actions/workflows/ci.yml)
-[![codecov](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Fcoverage.json&cacheSeconds=3600)](https://github.com/peterkir/vscode-bnd-plugin/actions/workflows/ci.yml)
-[![Marketplace release](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Frelease.json&logo=visualstudiocode&cacheSeconds=3600)](https://marketplace.visualstudio.com/items?itemName=klibio.bnd)
-[![Marketplace pre-release](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Fprerelease.json&logo=visualstudiocode&cacheSeconds=3600)](https://marketplace.visualstudio.com/items?itemName=klibio.bnd)
+[![codecov](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Fcoverage.json&cacheSeconds=1800)](https://github.com/peterkir/vscode-bnd-plugin/actions/workflows/ci.yml)
+[![Marketplace release](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Frelease.json&logo=visualstudiocode&cacheSeconds=1800)](https://marketplace.visualstudio.com/items?itemName=klibio.bnd)
+[![Marketplace pre-release](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpeterkir%2Fvscode-bnd-plugin%2Fbadges%2Fprerelease.json&logo=visualstudiocode&cacheSeconds=1800)](https://marketplace.visualstudio.com/items?itemName=klibio.bnd)
 [![GitHub release](https://img.shields.io/github/v/release/peterkir/vscode-bnd-plugin?label=GitHub%20release&logo=github)](https://github.com/peterkir/vscode-bnd-plugin/releases/latest)
 
 A Visual Studio Code extension providing rich language support for **bnd** (`.bnd`) and **bndrun** (`.bndrun`) files used in [OSGi](https://www.osgi.org/) development with the [bnd/bndtools](https://bnd.bndtools.org) toolchain.
