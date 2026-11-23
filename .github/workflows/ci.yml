@@ -74,10 +74,32 @@ jobs:
           echo "$(curl -fsSL "${url}.sha1")  ${jar}" | sha1sum -c -
           echo "BND_CLI_JAR=${jar}" >> "$GITHUB_ENV"
 
-      - name: Test
-        run: xvfb-run -a npm test
+      # The complete suite under c8; the coverage data is also what the summary and artifact below report.
+      - name: Test with coverage
+        run: xvfb-run -a npm run test:coverage
         env:
           BND_SOURCE_REPO: ${{ github.workspace }}/bnd-src
+
+      - name: Report coverage
+        if: ${{ !cancelled() && hashFiles('coverage/tmp/*.json') != '' }}
+        run: |
+          {
+            echo "### Test coverage"
+            echo
+            echo '```'
+            npx c8 report --reporter=text | grep -v '^\s*$'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: |
+            coverage/lcov.info
+            coverage/lcov-report
+          retention-days: 30
 
       # vsce packages the whole workspace folder.
       - name: Remove bnd source checkout

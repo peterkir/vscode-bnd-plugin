@@ -144,6 +144,51 @@ suite('bnd workspace Explorer', () => {
         }
     });
 
+    test('copies dropped files with unique names and moves tree items between folders', async () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bnd-explorer-drop-'));
+        const provider = new BndExplorerProvider();
+        try {
+            const target = path.join(directory, 'target');
+            const other = path.join(directory, 'other');
+            fs.mkdirSync(target);
+            fs.mkdirSync(other);
+            fs.writeFileSync(path.join(target, 'a.txt'), 'existing');
+            fs.writeFileSync(path.join(directory, 'a.txt'), 'dropped');
+
+            const external = new vscode.DataTransfer();
+            external.set('text/uri-list', new vscode.DataTransferItem(
+                `# comment\r\n${vscode.Uri.file(path.join(directory, 'a.txt')).toString()}\r\n\r\n`));
+            await provider.handleDrop(node(path.join(target, 'a.txt')), external);
+            assert.strictEqual(fs.readFileSync(path.join(target, 'a copy.txt'), 'utf8'), 'dropped');
+            assert.strictEqual(fs.readFileSync(path.join(target, 'a.txt'), 'utf8'), 'existing');
+            await provider.handleDrop(node(target, true), external);
+            assert.ok(fs.existsSync(path.join(target, 'a copy 2.txt')));
+
+            fs.writeFileSync(path.join(directory, 'moved.txt'), 'm');
+            const internal = new vscode.DataTransfer();
+            internal.set('application/vnd.code.tree.bnd.explorer',
+                new vscode.DataTransferItem([node(path.join(directory, 'moved.txt'))]));
+            await provider.handleDrop(node(other, true), internal);
+            assert.ok(fs.existsSync(path.join(other, 'moved.txt')));
+            assert.ok(!fs.existsSync(path.join(directory, 'moved.txt')));
+
+            const into = new vscode.DataTransfer();
+            into.set('application/vnd.code.tree.bnd.explorer', new vscode.DataTransferItem([node(target, true)]));
+            await provider.handleDrop(node(path.join(target, 'a.txt')), into);
+            assert.ok(fs.existsSync(target), 'a folder cannot be moved into itself');
+
+            await provider.handleDrop(undefined, new vscode.DataTransfer());
+        } finally {
+            provider.dispose();
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    test('refreshes through the registered command', async () => {
+        await vscode.extensions.getExtension('klibio.bnd')!.activate();
+        await vscode.commands.executeCommand('bnd.explorer.refresh');
+    });
+
     test('names copies like the built-in Explorer', () => {
         assert.strictEqual(copyName('a.txt', 1), 'a copy.txt');
         assert.strictEqual(copyName('a.txt', 2), 'a copy 2.txt');

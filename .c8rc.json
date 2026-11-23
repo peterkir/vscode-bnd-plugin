@@ -1,0 +1,7 @@
+{
+  "include": ["out/*.js", "out/test/*.js"],
+  "exclude": ["out/test/test/**"],
+  "all": true,
+  "reports-dir": "coverage",
+  "temp-directory": "coverage/tmp"
+}

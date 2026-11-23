@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { cliArgs } from '../../bndCliCommands';
+import {
+    cliArgs, convertWindowsPathsToBash, extractTargetFileFromArgs, javaBinaryPath, normalizeFsPath,
+    quoteForBash, quoteForCommand, splitExecutableCommand, toGitBashPath,
+} from '../../bndCliCommands';
 
 const DEFAULT_TEST_WORKSPACE = path.join('biz.aQute.bnd', 'testdata', 'workspace');
 const PROJECT_DIR = 'p';
@@ -179,5 +182,41 @@ suite('bnd CLI isolation', () => {
             .filter(name => /child_process|createTerminal|\.sendText\(|ShellExecution|ProcessExecution/
                 .test(fs.readFileSync(path.join(sourceDir, name), 'utf8')));
         assert.deepStrictEqual(offenders, [], 'Run bnd through the language server (bnd.* commands) or implement it in the extension, not through the bnd CLI');
+    });
+});
+
+suite('bnd CLI command line helpers', () => {
+    test('splits the executable from its arguments, honouring quotes', () => {
+        assert.deepStrictEqual(splitExecutableCommand('  java -jar x.jar'), { executable: 'java', remainder: ' -jar x.jar' });
+        assert.deepStrictEqual(splitExecutableCommand('"C:\\Program Files\\java.exe" -jar x'),
+            { executable: '"C:\\Program Files\\java.exe"', remainder: ' -jar x' });
+        assert.deepStrictEqual(splitExecutableCommand("'/opt/my java/bin/java'"), { executable: "'/opt/my java/bin/java'", remainder: '' });
+        assert.deepStrictEqual(splitExecutableCommand(''), { executable: '', remainder: '' });
+    });
+
+    test('converts Windows paths for Git Bash', () => {
+        assert.strictEqual(toGitBashPath('"C:\\Tools\\bnd.jar"'), '/c/Tools/bnd.jar');
+        assert.strictEqual(toGitBashPath('/usr/bin/java'), '/usr/bin/java');
+        assert.strictEqual(convertWindowsPathsToBash('-jar "D:\\a b\\x.jar" run E:/y.bndrun'),
+            '-jar "/d/a b/x.jar" run /e/y.bndrun');
+        assert.strictEqual(convertWindowsPathsToBash('no paths here'), 'no paths here');
+    });
+
+    test('quotes values for bash and for the command line', () => {
+        assert.strictEqual(quoteForBash("it's"), `'it'"'"'s'`);
+        assert.strictEqual(quoteForCommand('/opt/java'), '/opt/java');
+        assert.strictEqual(quoteForCommand('/opt/my java'), '"/opt/my java"');
+        assert.strictEqual(quoteForCommand('"/opt/my java"'), '"/opt/my java"');
+    });
+
+    test('finds the target .bnd or .bndrun file in the arguments', () => {
+        assert.strictEqual(extractTargetFileFromArgs('run foo.bndrun'), 'foo.bndrun');
+        assert.strictEqual(extractTargetFileFromArgs('resolve "dir/my.bnd" --x'), 'dir/my.bnd');
+        assert.strictEqual(extractTargetFileFromArgs("export 'a.BNDRUN'"), 'a.BNDRUN');
+    });
+
+    test('builds platform specific Java paths', () => {
+        assert.ok(javaBinaryPath(path.join('opt', 'jdk')).startsWith(path.join('opt', 'jdk', 'bin', 'java')));
+        assert.strictEqual(normalizeFsPath(path.join('a', '..', 'b')), 'b');
     });
 });

@@ -266,6 +266,8 @@ export interface AutoBuildHost {
     log(line: string): void;
     changed(state: AutoBuildState): void;
     now(): number;
+    // Called when a build finished, so views derived from the build output can be recomputed.
+    buildFinished?(): void;
 }
 
 // Keeps the bnd.build.auto setting, the server switch and the status bar consistent.
@@ -310,6 +312,7 @@ export class AutoBuildController {
         const now = this.host.now();
         for (const line of formatBuildLog(status, now)) this.host.log(line);
         this.update(applyBuildStatus(this.current, status, now));
+        if (status.state === 'idle' && status.summary) this.host.buildFinished?.();
     }
 
     // Pushes the setting to the server when it differs from the last known server state.

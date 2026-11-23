@@ -153,6 +153,7 @@ suite('Automatic build', () => {
             const calls: unknown[][] = [];
             const log: string[] = [];
             const states: AutoBuildState[] = [];
+            const finished = { count: 0 };
             let setting = options.setting ?? true;
             let serverEnabled = options.serverEnabled ?? true;
             const host: AutoBuildHost = {
@@ -167,8 +168,9 @@ suite('Automatic build', () => {
                 log: line => log.push(line),
                 changed: next => states.push(next),
                 now: () => 0,
+                buildFinished: () => { finished.count++; },
             };
-            return { controller: new AutoBuildController(host), calls, log, states, setSetting: (value: boolean) => { setting = value; } };
+            return { controller: new AutoBuildController(host), calls, log, states, finished, setSetting: (value: boolean) => { setting = value; } };
         }
 
         test('stays hidden when the server lacks the capability', async () => {
@@ -227,6 +229,17 @@ suite('Automatic build', () => {
             controller.handleStatus(status({ summary: failedSummary, messages: [{ project: 'b', severity: 'error', message: 'x' }] }));
             assert.strictEqual(log.length, 2);
             assert.strictEqual(presentAutoBuild(controller.state).text, '$(extensions) $(error) 2');
+        });
+
+        test('reports finished builds only', async () => {
+            const { controller, finished } = create();
+            await controller.start(true);
+            controller.handleStatus(status({ state: 'building', projects: ['b'], current: 'b' }));
+            controller.handleStatus(status());
+            controller.handleStatus(status({ state: 'disabled', enabled: false, active: false }));
+            assert.strictEqual(finished.count, 0);
+            controller.handleStatus(status({ summary: failedSummary }));
+            assert.strictEqual(finished.count, 1);
         });
 
         test('hides the item again when the client stops', async () => {
