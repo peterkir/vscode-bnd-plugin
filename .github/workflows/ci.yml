@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: bndtools/bnd
-          ref: fea-bnd-ls
+          ref: master
           path: bnd-src
           sparse-checkout: |
             biz.aQute.bnd/src/aQute/bnd/main
