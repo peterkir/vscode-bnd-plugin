@@ -415,7 +415,7 @@ Include test results, any blocked/skipped checks, Java JAR provenance when chang
 
 ### Step 2: Test the Remote PR Build
 
-`.github/workflows/ci.yml` runs for PRs and pushes to `main`/`master`; pushing a feature branch alone does not trigger it until a PR exists. On Ubuntu 24.04 it installs locked dependencies with Node 20, verifies the bundled JARs against `server/bundled-jars.json`, compiles TypeScript, sets up Java 17, checks out bnd source from `fea-bnd-ls`, verifies a downloaded bnd CLI 7.4.0 JAR against its SHA-1, runs `xvfb-run -a npm test`, then packages and uploads `bnd-<version>.vsix` with 30-day retention. It does not rebuild the bundled Java JARs or run the separate JDT LS integration check.
+`.github/workflows/ci.yml` runs for PRs and pushes to `main`/`master`; pushing a feature branch alone does not trigger it until a PR exists. On Ubuntu 24.04 it installs locked dependencies with Node 20, verifies the bundled JARs against `server/bundled-jars.json`, compiles TypeScript, sets up Java 17, checks out bnd source from `master`, verifies a downloaded bnd CLI 7.5.0 JAR against its SHA-1, runs `xvfb-run -a npm test`, then packages and uploads `bnd-<version>.vsix` with 30-day retention. It does not rebuild the bundled Java JARs or run the separate JDT LS integration check.
 
 ```bash
 gh pr checks --watch
