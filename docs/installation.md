@@ -16,7 +16,7 @@ description: Install the OSGi with bnd/bndtools extension from the Marketplace o
 
 | Requirement | Details |
 |---|---|
-| Visual Studio Code | Version **1.140.0** or later. |
+| Visual Studio Code | Version **1.146.0** or later. |
 | Java runtime | **Java 17 or later**. The bundled bnd language server and the bnd CLI run on it. Without Java the extension falls back to the Node server (editing support only). |
 | Language Support for Java | Optional, but recommended. Extension `redhat.java` **1.56 or later**, whose JDT LS needs **Java 21 or later**. It enables the native import of bnd projects (source roots, classpath, compiler settings). |
 | Debugger for Java | Required only for [Run and Debug]({{ '/run-debug/' | relative_url }}). Extension `vscjava.vscode-java-debug`. |

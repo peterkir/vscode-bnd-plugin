@@ -9,7 +9,7 @@ Guide for developing, testing, packaging, publishing, and verifying the `vscode-
 - **Node.js**: v20 (matches GitHub Actions)
 - **npm**: v9 or later (bundled with Node.js)
 - **Java**: Java 17+ (required for bnd CLI JAR and Java-mode language server)
-- **VS Code**: 1.140.0 or higher
+- **VS Code**: 1.146.0 or higher
 - **GitHub CLI**: `gh`, authenticated with `gh auth login`, for PRs, CI artifacts, and release checks
 - **Release maintainers only**: access to publisher `klibio` and repository Actions secret `VSCE_PAT` with `Marketplace (Manage)` permissions. Never put tokens in commits, command arguments, or PR text.
 
