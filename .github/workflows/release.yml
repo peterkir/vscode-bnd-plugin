@@ -67,8 +67,10 @@ jobs:
   build:
     name: CI
     needs: validate
+    # The reusable workflow also defines the badges job, which needs contents: write; a lower caller
+    # permission makes the whole run fail at startup. The job is skipped for tag events.
     permissions:
-      contents: read
+      contents: write
     uses: ./.github/workflows/ci.yml
     with:
       ref: refs/tags/${{ inputs.tag || github.ref_name }}
