@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.32.6 (Unreleased)
+
+### Changed
+- The extension now requires Visual Studio Code 1.146.0 or later (`engines.vscode`) and builds against the `@types/vscode` 1.146.0 typings, the latest published typings. The documentation lists the new minimum version.
+
 ## 0.32.5 (Unreleased)
 
 ### Fixed

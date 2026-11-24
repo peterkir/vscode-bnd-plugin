@@ -40,7 +40,7 @@ If you want to rebuild the extension (e.g., after updating the completion data):
 
 - [Node.js](https://nodejs.org/) 20 (matches CI)
 - [npm](https://www.npmjs.com/) (bundled with Node.js)
-- VS Code 1.140.0 or later.
+- VS Code 1.146.0 or later.
 - Java 17 or later for the bundled bnd language server and bnd CLI. Native Java project import additionally requires Red Hat Java 1.56 or later and Java 21 or later for JDT LS.
 
 ### Build Steps

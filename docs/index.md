@@ -40,7 +40,7 @@ The extension (Marketplace ID `klibio.bnd`) brings the daily workflow of [Bndtoo
 
 | Component | Requirement |
 |---|---|
-| Visual Studio Code | 1.140.0 or later |
+| Visual Studio Code | 1.146.0 or later |
 | Java | 17 or later for the bundled language server and the bnd CLI |
 | Optional: Language Support for Java (`redhat.java`) | 1.56 or later, running JDT LS on Java 21 or later, for native bnd project import |
 | Optional: Debugger for Java (`vscjava.vscode-java-debug`) | Required for Run and Debug |
