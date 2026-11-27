@@ -53,7 +53,7 @@ npm ci --prefix server
 npm run compile:all
 ```
 
-`compile:all` compiles the extension client and the Node-based fallback LSP. The Java LSP is supplied separately as `server/biz.aQute.bnd.lsp.jar`.
+`compile:all` compiles the extension client and the Node-based fallback LSP. The Java LSP is supplied separately as `server/biz.aQute.bnd.lsp.jar`. The Java LSP reports `serverInfo.version` as `<Bundle-Version> (<Git-SHA>)` from its JAR manifest; the bnd status item tooltip shows it next to the extension build info.
 
 ---
 
@@ -73,7 +73,7 @@ Follow [AGENTS.md](AGENTS.md) for repository and AI agent instructions. Make foc
 
 | Command | Action |
 |---|---|
-| `npm run compile` | Compiles extension client (`src/` → `out/`) |
+| `npm run compile` | Compiles extension client (`src/` → `out/`) and writes `out/build-info.json` (version, Git commit, modified flag) via `scripts/buildInfo.mjs`; the VSIX ships this file and the bnd status item shows it |
 | `npm run compile:server` | Compiles TypeScript language server (`server/src/` → `server/out/`) |
 | `npm run compile:all` | Compiles both client and server |
 | `npm run compile:tests` | Compiles extension test suite |

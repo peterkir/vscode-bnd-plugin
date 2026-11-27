@@ -58,7 +58,7 @@ By default the server starts with `JAVA_HOME` or the `java` on your `PATH`. Set 
 
 ## Status and disabling the server
 
-The compact **bnd** item at the right of the status bar opens the configuration popup. Hover for the language server, automatic build, and CLI command states. The popup switches all three configurations on or off. The language server menu remains available for restart and output actions.
+The compact **bnd** item at the right of the status bar opens the configuration popup. Hover for the language server, automatic build, and CLI command states, and for the versions of the extension and the running language server, each with its Git commit. The **bnd Language Server** output channel logs both versions at startup. The popup switches all three configurations on or off. The language server menu remains available for restart and output actions.
 
 To run the extension **without** a language server process set `bnd.server.enabled` to `false` or run **bnd: Enable/Disable Language Server**. The command writes the setting to the workspace when a folder is open, otherwise to the User settings.
 

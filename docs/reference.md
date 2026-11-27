@@ -132,7 +132,7 @@ On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd> where VS Code does.
 
 | Item | Shows |
 |---|---|
-| **bnd configuration** | The resized bnd logo icon. Click for a popup with on/off switches for the language server, automatic build, and CLI palette commands. |
+| **bnd configuration** | The resized bnd logo icon. Click for a popup with on/off switches for the language server, automatic build, and CLI palette commands. The tooltip shows the extension and language server versions with their Git commits. |
 | **Eclipse** | An Eclipse instance has the workspace open. Click for the parallel-use menu. |
 
 ## Output channels

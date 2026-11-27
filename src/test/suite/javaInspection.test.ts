@@ -91,6 +91,9 @@ suite('Java runtime inspection', () => {
             assert.ok(client.initializeResult, 'Client should have initializeResult');
             assert.ok(client.initializeResult.capabilities, 'Capabilities should be present');
             assert.ok(client.initializeResult.capabilities.executeCommandProvider?.commands.includes(effectiveCommand));
+            const lock = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'server', 'bundled-jars.json'), 'utf8')).jars['biz.aQute.bnd.lsp.jar'];
+            assert.deepStrictEqual(client.initializeResult.serverInfo,
+                { name: 'bnd Language Server', version: `${lock['Bundle-Version']} (${lock['Git-SHA']})` });
             const disposed = await executeServerCommand(client, launchDisposeCommand, ['unknown-launch']);
             assert.deepStrictEqual(disposed, { disposed: false });
             const cancellation = new vscode.CancellationTokenSource();

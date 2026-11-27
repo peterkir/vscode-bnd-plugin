@@ -19,6 +19,7 @@ server/node_modules/vscode-bnd/**
 **/*.map
 out/**
 !out/extension.js
+!out/build-info.json
 server/out/**
 !server/out/server.js
 server/node_modules/**

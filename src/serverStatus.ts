@@ -12,6 +12,34 @@ export interface ServerStatusPresentation {
     error: boolean;
 }
 
+export interface BuildInfo {
+    version: string;
+    commit?: string;
+    dirty?: boolean;
+}
+
+export interface ServerInfo {
+    name: string;
+    version?: string;
+}
+
+const shortSha = (text: string) => text.replace(/\b([0-9a-f]{10})[0-9a-f]{30}\b/g, '$1');
+
+/** Markdown lines with the versions and Git commits of the extension and the running language server. */
+export function presentVersions(extension: BuildInfo, status: ServerStatus, server: ServerInfo | undefined): string[] {
+    const commit = extension.commit ? ` (\`${shortSha(extension.commit)}\`${extension.dirty ? ', modified' : ''})` : '';
+    const lines = [`- Extension: **${extension.version}**${commit}`];
+    if (status.state === 'running' && server) {
+        const version = server.version
+            ? shortSha(server.version).replace(/\(([0-9a-f]{7,40})\)/, '(`$1`)')
+            : 'version unknown';
+        lines.push(`- ${server.name} (${status.kind}): **${version}**`);
+    } else {
+        lines.push(`- Language Server: ${presentServerStatus(status).tooltip.replace(/^bnd Language Server: /, '')}`);
+    }
+    return lines;
+}
+
 export function presentServerStatus(status: ServerStatus): ServerStatusPresentation {
     switch (status.state) {
         case 'disabled':

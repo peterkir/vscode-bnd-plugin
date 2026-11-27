@@ -40,7 +40,7 @@ import { JarViewerProvider, jarPrintCommand } from './jarViewer';
 import { registerResolutionView, ResolutionViewProvider } from './resolutionView';
 import { registerSelectionEvaluation } from './selectionEvaluation';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
-import { presentServerStatus, ServerKind, ServerStatus } from './serverStatus';
+import { BuildInfo, presentServerStatus, presentVersions, ServerKind, ServerStatus } from './serverStatus';
 import { ProtocolResyncStream } from './serverStream';
 
 let client: LanguageClient | undefined;
@@ -226,6 +226,8 @@ function renderBndStatusItem(): void {
         + `- Language Server: **${serverEnabled ? 'On' : 'Off'}**\n`
         + `- Automatic Build: **${serverEnabled && autoEnabled ? 'On' : 'Off'}**\n`
         + `- CLI Commands: **${cliEnabled ? 'On' : 'Off'}**\n\n`
+        + `**Versions**\n\n`
+        + presentVersions(buildInfo, serverStatus, client?.initializeResult?.serverInfo).join('\n') + '\n\n'
         + `Click to change the configuration.`);
     bndStatusItem.backgroundColor = presentServerStatus(serverStatus).error
         ? new vscode.ThemeColor('statusBarItem.errorBackground')
@@ -234,6 +236,21 @@ function renderBndStatusItem(): void {
 }
 
 let contextForStatusMenu: vscode.ExtensionContext;
+let buildInfo: BuildInfo = { version: 'unknown' };
+
+/** Reads out/build-info.json written by `npm run compile`; falls back to the package.json version. */
+export function readBuildInfo(extensionPath: string, version: string): BuildInfo {
+    try {
+        const info = JSON.parse(fs.readFileSync(path.join(extensionPath, 'out', 'build-info.json'), 'utf8'));
+        return {
+            version,
+            commit: typeof info.commit === 'string' ? info.commit : undefined,
+            dirty: info.dirty === true,
+        };
+    } catch {
+        return { version };
+    }
+}
 
 function serverUnavailableMessage(): string {
     return serverStatus.state === 'disabled'
@@ -243,8 +260,10 @@ function serverUnavailableMessage(): string {
 
 export function activate(context: vscode.ExtensionContext): BndExtensionApi {
     contextForStatusMenu = context;
+    buildInfo = readBuildInfo(context.extensionPath, String(context.extension.packageJSON.version ?? 'unknown'));
     outputChannel = vscode.window.createOutputChannel('bnd Language Server', { log: true });
     context.subscriptions.push(outputChannel);
+    outputChannel.appendLine(`bnd extension ${buildInfo.version}${buildInfo.commit ? ` (${buildInfo.commit}${buildInfo.dirty ? ', modified' : ''})` : ''}`);
     bndStatusItem = vscode.window.createStatusBarItem('bnd.status.configuration', vscode.StatusBarAlignment.Right, 100);
     bndStatusItem.name = 'bnd Configuration';
     bndStatusItem.command = 'bnd.status.menu';
@@ -384,7 +403,9 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
                 }] : []),
                 { label: '$(output) Show Output', run: () => outputChannel.show() },
             ];
-            const choice = await vscode.window.showQuickPick(actions, { title: presentServerStatus(serverStatus).tooltip });
+            const version = serverStatus.state === 'running' ? client?.initializeResult?.serverInfo?.version : undefined;
+            const title = presentServerStatus(serverStatus).tooltip + (version ? ` - ${version}` : '');
+            const choice = await vscode.window.showQuickPick(actions, { title });
             await choice?.run();
         }),
         vscode.commands.registerCommand('bnd.status.menu', async () => {
@@ -930,6 +951,11 @@ async function startLanguageClient(context: vscode.ExtensionContext): Promise<vo
         },
     });
     await clientReady;
+    if (client === started) {
+        const info = started.initializeResult?.serverInfo;
+        outputChannel.appendLine(`${info?.name ?? 'bnd Language Server'} ${info?.version ?? '(version unknown)'} running (${kind})`);
+        renderBndStatusItem();
+    }
     effectiveProvider?.refresh();
     repositoriesProvider?.refresh();
     resolutionProvider?.refresh();
