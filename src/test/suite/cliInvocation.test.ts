@@ -173,6 +173,7 @@ suite('bnd CLI isolation', () => {
         'bndCliCommands.ts': 'the explicit bnd-cli: commands',
         'extension.ts': 'starts the Java language server process',
         'bndExplorer.ts': 'opens a plain terminal in a folder',
+        'bndLaunch.ts': 'runs the launched OSGi framework JVM prepared by the language server',
     };
 
     test('only the bnd-cli commands run the bnd CLI; every other feature uses the language server or own code', () => {

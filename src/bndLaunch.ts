@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { findJavaRuntimeHomeForRunee } from './bndCliCommands';
+import { bndJavaExecutable, findJavaRuntimeHomeForRunee } from './bndCliCommands';
 
 export const launchPrepareCommand = 'bnd.launch.prepare';
 export const launchDisposeCommand = 'bnd.launch.dispose';
@@ -143,6 +143,28 @@ export function toJavaDebugConfiguration(prepared: PreparedLaunch, config: BndLa
     return java;
 }
 
+export const launchTaskType = 'bnd-launch';
+
+/**
+ * Runs the JVM of a launch without debugging as a task in its own terminal. Debugger for Java names
+ * every terminal after the main class and VS Code reuses an idle one by name, so a second launch would
+ * type into, or interrupt, the framework still running in the first.
+ */
+export function toLaunchTask(java: vscode.DebugConfiguration, target: string, kind: LaunchKind,
+    scope: vscode.WorkspaceFolder | vscode.TaskScope.Workspace): vscode.Task {
+    const args = [...java.vmArgs, '-cp', (java.classPaths as string[]).join(path.delimiter), java.mainClass, ...java.args];
+    const task = new vscode.Task({ type: launchTaskType, target, kind }, scope, java.name, 'bnd',
+        new vscode.ProcessExecution(java.javaExec || 'java', args, { cwd: java.cwd, env: java.env }));
+    task.presentationOptions = {
+        reveal: vscode.TaskRevealKind.Always,
+        panel: vscode.TaskPanelKind.Dedicated,
+        clear: true,
+        showReuseMessage: false,
+        focus: true,
+    };
+    return task;
+}
+
 export function isLaunchTarget(fsPath: string): boolean {
     return fsPath.endsWith('.bndrun') || path.basename(fsPath) === 'bnd.bnd';
 }
@@ -162,8 +184,12 @@ function javaExecutableFromHome(home: string): string {
 export class BndDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     /** Launches whose JVM may outlive the debug session, keyed by target. */
     private readonly detached = new Map<string, string>();
+    /** Runs without debugging in their own terminal, keyed by target. */
+    private readonly running = new Map<string, { execution: vscode.TaskExecution; launchId: string }>();
+    private readonly taskEnded = new vscode.EventEmitter<vscode.TaskExecution>();
 
-    constructor(private readonly server: LaunchServer, private readonly log: vscode.LogOutputChannel) {}
+    constructor(private readonly server: LaunchServer, private readonly log: vscode.LogOutputChannel,
+        private readonly executeTask: (task: vscode.Task) => Thenable<vscode.TaskExecution> = task => vscode.tasks.executeTask(task)) {}
 
     async provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined): Promise<vscode.DebugConfiguration[]> {
         const configs = await discoverConfigurations(folder);
@@ -207,7 +233,8 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
             throw new Error('Launching requires the Java bnd Language Server with launch support. The Node server and older Java servers do not support it.');
         }
         if (!vscode.workspace.isTrusted) throw new Error('Launching requires a trusted workspace.');
-        if (!vscode.extensions.getExtension(javaDebugExtensionId)) {
+        const inTask = !!config.noDebug && (config.console ?? 'integratedTerminal') === 'integratedTerminal';
+        if (!inTask && !vscode.extensions.getExtension(javaDebugExtensionId)) {
             const install = 'Install Debugger for Java';
             void vscode.window.showErrorMessage('bnd launches require the Debugger for Java extension.', install).then(choice => {
                 if (choice === install) void vscode.commands.executeCommand('workbench.extensions.installExtension', javaDebugExtensionId);
@@ -215,6 +242,8 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
             return;
         }
 
+        // Relaunching a target replaces its previous run; other targets keep running.
+        await this.stopRun(target);
         const previous = this.detached.get(target);
         if (previous) {
             this.detached.delete(target);
@@ -239,12 +268,49 @@ export class BndDebugConfigurationProvider implements vscode.DebugConfigurationP
 
         const javaConfig = toJavaDebugConfiguration(prepared, config, javaExec);
         this.log.info(`Launching ${target} (${kind}) with main class ${prepared.mainClass}`);
+        if (inTask) {
+            javaConfig.javaExec ??= bndJavaExecutable();
+            try {
+                const execution = await this.executeTask(toLaunchTask(javaConfig, target, kind, folder ?? vscode.TaskScope.Workspace));
+                this.running.set(target, { execution, launchId: prepared.launchId });
+            } catch (err) {
+                await this.dispose(prepared.launchId);
+                throw err;
+            }
+            return;
+        }
         let started = false;
         try {
             started = await vscode.debug.startDebugging(folder, javaConfig, { noDebug: !!config.noDebug });
         } finally {
             if (!started) await this.dispose(prepared.launchId);
         }
+    }
+
+    /** Terminates the run of a target and waits until its JVM ended, so it releases -runstorage. */
+    private async stopRun(target: string): Promise<void> {
+        const run = this.running.get(target);
+        if (!run) return;
+        const ended = new Promise<void>(resolve => {
+            const timer = setTimeout(() => { listener.dispose(); resolve(); }, 10000);
+            const listener = this.taskEnded.event(execution => {
+                if (execution !== run.execution) return;
+                clearTimeout(timer);
+                listener.dispose();
+                resolve();
+            });
+        });
+        run.execution.terminate();
+        await ended;
+    }
+
+    onTaskEnded(execution: vscode.TaskExecution): void {
+        for (const [target, run] of this.running) {
+            if (run.execution !== execution) continue;
+            this.running.delete(target);
+            void this.dispose(run.launchId);
+        }
+        this.taskEnded.fire(execution);
     }
 
     async dispose(launchId: string): Promise<void> {
@@ -386,6 +452,7 @@ export function registerLaunchSupport(context: vscode.ExtensionContext, server: 
             provideDebugConfigurations: folder => discoverConfigurations(folder),
         }, vscode.DebugConfigurationProviderTriggerKind.Dynamic),
         vscode.debug.onDidTerminateDebugSession(session => provider.onSessionTerminated(session)),
+        vscode.tasks.onDidEndTask(event => provider.onTaskEnded(event.execution)),
         vscode.languages.registerCodeLensProvider({ language: 'bnd', scheme: 'file' }, codeLens),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('bnd.launch.codeLens')) codeLens.refresh();

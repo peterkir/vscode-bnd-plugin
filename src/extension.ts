@@ -38,6 +38,7 @@ import { registerEclipseCoexistence } from './eclipseCoexistenceUi';
 import { EffectivePropertiesProvider, effectiveCommand, parseEffectiveResult } from './effectiveProperties';
 import { JarViewerProvider, jarPrintCommand } from './jarViewer';
 import { registerResolutionView, ResolutionViewProvider } from './resolutionView';
+import { registerSelectionEvaluation } from './selectionEvaluation';
 import { cmdSelectServerJar, refreshServerJar, resolveServerJar } from './serverJar';
 import { presentServerStatus, ServerKind, ServerStatus } from './serverStatus';
 import { ProtocolResyncStream } from './serverStream';
@@ -297,6 +298,14 @@ export function activate(context: vscode.ExtensionContext): BndExtensionApi {
             return executeServerCommand(client, command, args, token);
         },
     }, outputChannel);
+    registerSelectionEvaluation(context, {
+        supports: supportsServerCommand,
+        execute: async (command, args, token) => {
+            await clientReady;
+            if (!client) throw new Error(serverUnavailableMessage());
+            return executeServerCommand(client, command, args, token);
+        },
+    });
     registerExportCommand(context, {
         supports: supportsServerCommand,
         execute: async (command, args) => {

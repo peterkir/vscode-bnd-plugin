@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.33.0 (Unreleased)
+
+### Added
+- Hovering an `-include` instruction, its value, or a macro in it lists the included files as links that open them in an editor; missing files are marked. The bundled language server is built from the bnd `fea-lsp-hover-include-links` branch.
+- Selecting text that contains macros, for example `${fms-home}/fcc_base`, and hovering over the selection shows the value it evaluates to in the context of the file (`.bndrun`, project, or workspace) through `bnd.macro.expand`. Requires the Java language server and workspace trust.
+
+### Fixed
+- **Run OSGi** on a second `.bndrun` file stopped the framework of the first one. Debugger for Java names every terminal `Run: Launcher` and VS Code reused the idle terminal, interrupting the running JVM. A run without debugging in the integrated terminal now starts the JVM as a `bnd-launch` task in a dedicated terminal per launch file, so several launch files run side by side; launching the same file again stops only its previous run. Launcher files are deleted when the JVM ends, and these runs no longer need the Debugger for Java.
+
 ## 0.32.6
 
 ### Changed

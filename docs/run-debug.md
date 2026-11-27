@@ -12,7 +12,7 @@ description: Run and debug OSGi frameworks and OSGi tests from .bndrun files and
 {:toc}
 </div>
 
-`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (main class, class path, `-runvm`, `-runprogramargs`, `-runenv`, working directory) and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) starts the JVM. Breakpoints, stepping, variables, and the Debug Console work as for any Java program.
+`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (main class, class path, `-runvm`, `-runprogramargs`, `-runenv`, working directory) and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) starts the JVM. Breakpoints, stepping, variables, and the Debug Console work as for any Java program. A run without debugging in the integrated terminal starts the JVM in a dedicated terminal per launch file instead, so several `.bndrun` files run side by side.
 
 ![Run OSGi and Debug OSGi CodeLens on a .bndrun file]({{ '/images/launch-codelens.png' | relative_url }})
 
@@ -62,7 +62,7 @@ Add a configuration of type `bnd`:
 | `kind` | `run` launches the framework. `test` runs OSGi tests through the bnd tester (`-testpath`, `-tester`). |
 | `tests` | Test names for `kind: test`, for example `com.example.FooTest` or `com.example.FooTest:testBar`. Empty runs all tests. |
 | `vmArgs`, `args`, `env` | Appended to `-runvm` and `-runprogramargs`; `env` values override `-runenv`. |
-| `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. |
+| `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. A run without debugging in the integrated terminal gets a dedicated terminal per launch file. |
 | `buildBeforeLaunch` | See [Build before launch](#build-before-launch). |
 | `javaExec` | Java executable. Defaults to the bnd `java` property, then a runtime matching `-runee` from `java.configuration.runtimes`, then `bnd.cli.javaExecutable`, `JAVA_HOME`, or `PATH`. |
 | `shortenCommandLine` | `none`, `jarmanifest`, `argfile`, or `auto` (default). Passed to the Java debugger. |
@@ -88,6 +88,7 @@ An OSGi test configuration looks like this:
 
 - The Java runtime defaults to the bnd `java` property, then a runtime that matches `-runee`.
 - `-runjdb` is ignored because the Java debugger owns the JDWP connection.
-- When a debug session ends the extension deletes the temporary launcher files. A **Run** without debugging in a terminal ends its session right after the JVM starts, so its launcher files stay until the same target is launched again or the language server shuts down.
+- When a debug session ends the extension deletes the temporary launcher files.
+- A **Run** without debugging in the integrated terminal starts the JVM as a task in its own terminal, named after the launch, without the Debugger for Java. Different `.bndrun` files, also of the same project, run side by side in separate terminals. Launching the same file again stops its previous run first. The launcher files are deleted when the JVM ends. With `externalTerminal`, the launcher files stay until the same target is launched again or the language server shuts down.
 - A launch whose `-runstorage` is held by another launch fails before the JVM starts and names the holder.
 - To produce a deployable artifact instead, use **bnd: Export Run (LSP)...** (see [Build and language server]({{ '/language-server/#export-a-run' | relative_url }})).

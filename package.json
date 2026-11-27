@@ -2,7 +2,7 @@
   "name": "bnd",
   "displayName": "OSGi with bnd/bndtools",
   "description": "Language support for bnd and bndrun files — editor intelligence, bnd CLI, repository browsing, and OSGi resolution analysis",
-  "version": "0.32.6",
+  "version": "0.33.0",
   "license": "EPL-2.0",
   "publisher": "klibio",
   "icon": "media/swirl-128.png",
@@ -661,6 +661,28 @@
         "icon": "$(references)"
       }
     ],
+    "taskDefinitions": [
+      {
+        "type": "bnd-launch",
+        "required": [
+          "target"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Absolute path of the launched .bndrun or bnd.bnd file."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "test"
+            ],
+            "description": "Whether the framework or the OSGi tests run."
+          }
+        }
+      }
+    ],
     "debuggers": [
       {
         "type": "bnd",
@@ -738,7 +760,7 @@
                   "externalTerminal"
                 ],
                 "default": "integratedTerminal",
-                "description": "Where the Java debugger runs the OSGi framework. The integrated terminal supports the Gogo shell."
+                "description": "Where the OSGi framework runs. The integrated terminal supports the Gogo shell. A run without debugging in the integrated terminal gets a dedicated terminal per launch file, so different .bndrun files run side by side."
               },
               "buildBeforeLaunch": {
                 "type": "boolean",

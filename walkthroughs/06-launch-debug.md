@@ -41,11 +41,11 @@ For later classpath changes, use **Java: Reload Projects** without clearing the 
 | `kind` | `run` launches the framework; `test` runs OSGi tests through the bnd tester. |
 | `tests` | Test names for `kind: test`, e.g. `com.example.FooTest` or `com.example.FooTest:testBar`. Empty runs all tests. |
 | `vmArgs`, `args`, `env` | Appended to `-runvm`, `-runprogramargs`, and `-runenv`. |
-| `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. |
+| `console` | `integratedTerminal` (default, supports the Gogo shell), `internalConsole`, or `externalTerminal`. A run without debugging in the integrated terminal gets a dedicated terminal per launch file. |
 | `buildBeforeLaunch` | `true` builds before validation; `false` skips builds. If omitted, bnd validates bundles first and asks to build only when bundle files are missing. |
 | `javaExec` | Java executable. Defaults to the bnd `java` property, then a runtime matching `-runee` from `java.configuration.runtimes`, `bnd.cli.javaExecutable`, `JAVA_HOME`, or `PATH`. |
 | `shortenCommandLine` | Passed to the Java debugger. Default `auto`. |
 | `sourcePaths` | Additional debugger source roots appended to sources of launched workspace bundles. |
 | `projectName` | Optional imported Java project used by the Java debugger. |
 
-`-runjdb` is ignored because the Java debugger owns the JDWP connection. Temporary launcher files are deleted when the debug session ends. A **Run** (without debugging) in a terminal ends its session right after the JVM starts, so its launcher files are kept until the same target is launched again or the language server shuts down.
+`-runjdb` is ignored because the Java debugger owns the JDWP connection. Temporary launcher files are deleted when the debug session ends. A **Run** (without debugging) in the integrated terminal starts the JVM in its own terminal per launch file, so different `.bndrun` files run side by side; launching the same file again stops its previous run, and the launcher files are deleted when the JVM ends.

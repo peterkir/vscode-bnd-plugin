@@ -242,6 +242,59 @@ suite('bnd launch', () => {
         }
     });
 
+    test('runs each launch file without debugging in its own task terminal and replaces only a relaunched target', async () => {
+        const calls: unknown[][] = [];
+        let next = 0;
+        const server: LaunchServer = {
+            supports: async () => true,
+            execute: async (command, args) => {
+                calls.push([command, ...args]);
+                return command === launchPrepareCommand ? { ...prepared, launchId: `id-${++next}`, javaExecutable: '/jdk/bin/java' } : { disposed: true };
+            },
+        };
+        const channel = log();
+        const executions: { task: vscode.Task; terminated: boolean }[] = [];
+        const window = vscode.window as unknown as Record<string, unknown>;
+        const originalProgress = window.withProgress;
+        window.withProgress = async (_options: unknown, task: () => Promise<unknown>) => task();
+        try {
+            let provider: BndDebugConfigurationProvider;
+            provider = new BndDebugConfigurationProvider(server, channel, async task => {
+                const execution = {
+                    task, terminated: false,
+                    terminate() { this.terminated = true; provider.onTaskEnded(this as unknown as vscode.TaskExecution); },
+                };
+                executions.push(execution);
+                return execution as unknown as vscode.TaskExecution;
+            });
+            const launch = (target: string) => provider.resolveDebugConfigurationWithSubstitutedVariables(undefined,
+                { type: 'bnd', request: 'launch', name: `bnd run: ${target}`, target, noDebug: true });
+            await launch('/ws/p/a.bndrun');
+            await launch('/ws/p/b.bndrun');
+            assert.strictEqual(executions.length, 2);
+            assert.deepStrictEqual(executions.map(item => item.terminated), [false, false]);
+            assert.deepStrictEqual(executions.map(item => item.task.definition.target), ['/ws/p/a.bndrun', '/ws/p/b.bndrun']);
+            assert.deepStrictEqual(executions.map(item => item.task.name), ['bnd run: /ws/p/a.bndrun', 'bnd run: /ws/p/b.bndrun']);
+            assert.strictEqual(executions[0].task.presentationOptions.panel, vscode.TaskPanelKind.Dedicated);
+            const execution = executions[0].task.execution as vscode.ProcessExecution;
+            assert.strictEqual(execution.process, '/jdk/bin/java');
+            assert.deepStrictEqual(execution.args, [...prepared.vmArgs, '-cp', prepared.classPaths[0], prepared.mainClass, ...prepared.args]);
+            assert.strictEqual(execution.options?.cwd, prepared.cwd);
+            assert.ok(!calls.some(call => call[0] === launchDisposeCommand), 'running launches keep their launcher files');
+
+            await launch('/ws/p/a.bndrun');
+            assert.deepStrictEqual(executions.map(item => item.terminated), [true, false, false]);
+            assert.deepStrictEqual(calls.filter(call => call[0] === launchDisposeCommand), [[launchDisposeCommand, 'id-1']]);
+
+            provider.onTaskEnded(executions[1] as unknown as vscode.TaskExecution);
+            await new Promise(resolve => setTimeout(resolve, 10));
+            assert.deepStrictEqual(calls.filter(call => call[0] === launchDisposeCommand).map(call => call[1]), ['id-1', 'id-2']);
+        } finally {
+            window.withProgress = originalProgress;
+            channel.dispose();
+        }
+    });
+
     test('offers run and test CodeLens actions', async () => {
         const provider = new BndLaunchCodeLensProvider();
         const bndrun = await vscode.workspace.openTextDocument({ language: 'bnd', content: '-runfw: x\n' });
