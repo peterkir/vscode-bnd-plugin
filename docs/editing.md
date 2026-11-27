@@ -56,6 +56,11 @@ Hover over an instruction, header, or macro name to see
 
 ![Hover documentation for -buildpath]({{ '/images/hover.png' | relative_url }})
 
+With the Java language server, two more hovers are available:
+
+- **Included files.** Hover over an `-include` instruction or its value to list the included files as links. Clicking a link opens the file. Macros expand in the context of the edited file, `~` and `-` prefixes are ignored, and relative paths resolve against the directory of the file. Missing files are marked as such.
+- **Evaluated selection.** Select text that contains macros, for example `${fms-home}/fcc_base` in a `-runproperties` value, and hover over the selection. The hover shows the value the text evaluates to in the context of the file: the `.bndrun`, the project, or the workspace. Continuation lines in the selection are joined. This requires workspace trust and uses the saved contents of the file.
+
 ## Diagnostics and quick fixes
 
 With the Java language server, problems reported by bnd while building, running, and verifying appear inline and in the Problems panel. Press <kbd>Ctrl</kbd>+<kbd>.</kbd> on a problem to see quick fixes.

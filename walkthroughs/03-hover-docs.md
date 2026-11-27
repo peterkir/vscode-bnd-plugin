@@ -18,6 +18,8 @@ Hovering over a recognised keyword opens an inline documentation panel.
 - **Instructions** — e.g. `-buildpath`, `-runbundles`, `-dsannotations`, `-runee`
 - **OSGi headers** — e.g. `Bundle-SymbolicName`, `Export-Package`, `Require-Capability`
 - **Macro names** — e.g. `bsn`, `version`, `range`, `filter`
+- **`-include` values** — lists the included files as links that open them (Java language server)
+- **A selection** — select text with macros, such as `${fms-home}/fcc_base`, and hover over it to see its value evaluated in the context of the file (Java language server, trusted workspace)
 
 ## Example
 

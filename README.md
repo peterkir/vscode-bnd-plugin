@@ -68,6 +68,7 @@ Hover over any instruction keyword, OSGi header, or macro name to see:
 
 ![Hover documentation for -buildpath](docs/images/hover.png)
 
+With the Java language server, hovering over an `-include` instruction or its value lists the included files as links that open them in an editor; files that do not exist are marked. Select text containing macros, for example `${fms-home}/fcc_base`, and hover over the selection to see its value evaluated in the context of the file (the `.bndrun`, project, or workspace). Selection evaluation requires workspace trust; it uses the saved contents of the file.
 ### Diagnostics and Quick Fixes
 
 In `java` server mode, the bundled language server reports bnd build, run, and verification problems inline and offers quick fixes (`Ctrl+.`) for:
@@ -92,7 +93,7 @@ This feature requires workspace trust and a Java language server advertising `bn
 
 ### Run and Debug
 
-`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files. A run without debugging in a terminal keeps its launcher files until the same target is launched again or the language server shuts down, because the JVM reads them after the session ends.
+`.bndrun` files and bnd projects launch through VS Code's **Run and Debug** facility. The Java language server prepares the launch with bnd's `ProjectLauncher` (`bnd.launch.prepare`), and the [Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug) extension starts the JVM, so breakpoints, stepping, and the Debug Console work as usual. When the session ends, the extension calls `bnd.launch.dispose` to delete temporary launcher files. A run without debugging in the integrated terminal (the default `console`) runs the JVM as a task in a dedicated terminal per launch file, so several `.bndrun` files of a project run side by side; it does not need the Debugger for Java. Launching the same file again stops its previous run first. Its launcher files are deleted when the JVM ends.
 
 ![Run OSGi and Debug OSGi CodeLens on a .bndrun file](docs/images/launch-codelens.png)
 
