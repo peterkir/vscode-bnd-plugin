@@ -4,7 +4,8 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { BndExtensionApi } from '../../extension';
-import { presentServerStatus, ServerStatus } from '../../serverStatus';
+import { readBuildInfo } from '../../extension';
+import { presentServerStatus, presentVersions, ServerStatus } from '../../serverStatus';
 
 async function waitFor<T>(what: string, timeout: number, probe: () => T | undefined | Promise<T | undefined>): Promise<T> {
     const deadline = Date.now() + timeout;
@@ -48,6 +49,30 @@ suite('Language server enablement', () => {
         assert.match(views[2].tooltip, /starting \(java\)/);
         assert.match(views[3].tooltip, /running \(node\)/);
         assert.match(views[4].tooltip, /no Java/);
+    });
+
+    test('presents the versions and Git commits of the extension and the language server', () => {
+        const sha = 'a6d53ebdd89c999be8050b3f7acda1ebab9861ae';
+        const extension = { version: '0.33.0', commit: sha, dirty: true };
+        const running: ServerStatus = { state: 'running', kind: 'java' };
+        assert.deepStrictEqual(presentVersions(extension, running, { name: 'bnd Language Server', version: `7.6.0.202611271341 (${sha})` }), [
+            '- Extension: **0.33.0** (`a6d53ebdd8`, modified)',
+            '- bnd Language Server (java): **7.6.0.202611271341 (`a6d53ebdd8`)**',
+        ]);
+        assert.deepStrictEqual(presentVersions({ version: '0.33.0' }, { state: 'running', kind: 'socket' }, { name: 'custom' }), [
+            '- Extension: **0.33.0**',
+            '- custom (socket): **version unknown**',
+        ]);
+        assert.strictEqual(presentVersions(extension, { state: 'disabled' }, undefined)[1],
+            '- Language Server: disabled by bnd.server.enabled');
+    });
+
+    test('reads the build info written by the compile step', () => {
+        const extension = vscode.extensions.getExtension('klibio.bnd')!;
+        const info = readBuildInfo(extension.extensionPath, extension.packageJSON.version);
+        assert.strictEqual(info.version, extension.packageJSON.version);
+        assert.match(info.commit ?? '', /^[0-9a-f]{40}$/, 'npm run compile records the Git commit');
+        assert.deepStrictEqual(readBuildInfo(path.join(os.tmpdir(), 'no-such-extension'), '1.2.3'), { version: '1.2.3' });
     });
 
     test('stops the server while bnd.server.enabled is false and starts it again', async function () {

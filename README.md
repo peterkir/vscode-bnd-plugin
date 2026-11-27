@@ -252,7 +252,7 @@ The bundled Java server and JDT-LS adapter use bnd 7.6.0 development sources reb
 
 #### Status and disabling the language server
 
-The resized bnd logo icon at the right of the status bar provides the language server state as a tooltip. Click it, or run **bnd: bnd Configuration...**, to open one popup with switches for the language server, automatic build, and CLI Command Palette visibility. The language server menu remains available for restart and output actions.
+The resized bnd logo icon at the right of the status bar provides the language server state as a tooltip. The tooltip also lists the extension version with the Git commit it was built from, and the version of the running language server with its Git commit (for example `7.6.0.202611271341 (5671cf6b21)`); the Output channel **bnd Language Server** logs both at startup. Click it, or run **bnd: bnd Configuration...**, to open one popup with switches for the language server, automatic build, and CLI Command Palette visibility. The language server menu remains available for restart and output actions.
 
 Set `bnd.server.enabled` to `false`, or run **bnd: Enable/Disable Language Server**, to run the extension without a language server process. The command writes the setting to the workspace when a folder is open, otherwise to the User settings. While disabled, completion, hover, diagnostics, quick fixes, the Effective, Repositories and Resolution views, JAR Print, the LSP commands, workspace creation, and bnd launches are unavailable. Syntax highlighting, the bnd Explorer, the JAR tree, and the bnd CLI commands keep working.
 

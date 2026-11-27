@@ -1791,7 +1791,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile:all && npm run bundle",
     "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --minify && esbuild server/src/server.ts --bundle --outfile=server/out/server.js --format=cjs --platform=node --target=node20 --minify",
-    "compile": "tsc -p ./tsconfig.json",
+    "compile": "tsc -p ./tsconfig.json && node scripts/buildInfo.mjs",
     "compile:server": "tsc -p ./server/tsconfig.json",
     "compile:tests": "tsc -p ./tsconfig.test.json",
     "compile:all": "npm run compile && npm run compile:server",
